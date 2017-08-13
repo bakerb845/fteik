@@ -1040,7 +1040,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd1(node)) THEN
@@ -1232,7 +1232,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd2(node)) THEN
@@ -1424,7 +1424,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd3(node)) THEN
@@ -1616,7 +1616,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd4(node)) THEN
@@ -1808,7 +1808,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd5(node)) THEN
@@ -2000,7 +2000,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd6(node)) THEN
@@ -2192,7 +2192,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd7(node)) THEN
@@ -2384,7 +2384,7 @@
                                                    ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
                   ENDIF
                ENDDO
-               !$OMP SIMD !DIR$ IVDEP
+               !DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                DO node=node1,node2 !loop=1,n2
                   loop = node - node1 + 1 !node = knode + loop - 1
                   IF (lupd8(node)) THEN

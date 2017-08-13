@@ -1361,12 +1361,12 @@ print *, minval(ttimes), maxval(ttimes)
 !>     - Operate on a local velocity/traveltime stencil to provide user opportunity
 !>       to emphasize cache-coherency; particularly in level set sweeping.
 !>             
-      PURE REAL(C_DOUBLE) FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
-                                                    i, j, k,                         &
-                                                    sgntz, sgntx, sgnty,             &
-                                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
-                          RESULT(tupd) &
-                          BIND(C, NAME='fteik_localSolver64fF')
+      PURE REAL(C_DOUBLE)  &
+      FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
+                                     i, j, k,                         &
+                                     sgntz, sgntx, sgnty,             &
+                                     sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
+      RESULT(tupd) BIND(C, NAME='fteik_localSolver64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : fteik_localSolverExplicit64fF
       IMPLICIT NONE 
@@ -1620,6 +1620,8 @@ print *, minval(ttimes), maxval(ttimes)
 !>    @param[in] i          iz'th grid point.  This is Fortran indexed.
 !>    @param[in] j          ix'th grid point.  This is Fortran indexed.
 !>    @param[in] k          iy'th grid point.  This is Fortran indexed.
+!>    @param[in] nz         Number of z grid points in travel time field.
+!>    @param[in] nzx        Number of z and x grid points in travel time field (=nx*nz).
 !>    @param[in] sgntz      The travel time stencil shift in z for the given sweep.
 !>    @param[in] sgntx      The travel time stencil shift in x for the given sweep.
 !>    @param[in] sgnty      The travel time stencil shift in y for the given sweep.
@@ -1672,6 +1674,8 @@ print *, minval(ttimes), maxval(ttimes)
 !>    @param[in] i              iz'th grid point.  This is Fortran indexed.
 !>    @param[in] j              ix'th grid point.  This is Fortran indexed.
 !>    @param[in] k              iy'th grid point.  This is Fortran indexed.
+!>    @param[in] nzm1           Number of cells in velocity field in z (=nz - 1).
+!>    @param[in] nzm1_nxm1      Number of cells in velocity in x and z (=(nz-1)*(nx-1)).
 !>    @param[in] sgnvz          The velocity stencil shift in z for the given sweep.
 !>    @param[in] sgnvx          The velocity stencil shift in x for the given sweep.
 !>    @param[in] sgnvy          The velocity stencil shift in y for the given sweep.
@@ -1835,9 +1839,9 @@ print *, minval(ttimes), maxval(ttimes)
 !>    @param[out] sgntz    Stencil direction in z for travel times for this sweep.
 !>    @param[out] sgntx    Stencil direction in x for travel times for this sweep.
 !>    @param[out] sgnty    Stencil direction in y for travel times for this sweep.
-!>    @param[out] sgntz    Stencil offset in z for velocity model for this sweep.
-!>    @param[out] sgntx    Stencil offset in x for velocity model for this sweep.
-!>    @param[out] sgnty    Stencil offset in y for velocity model for this sweep.
+!>    @param[out] sgnvz    Stencil offset in z for velocity model for this sweep.
+!>    @param[out] sgnvx    Stencil offset in x for velocity model for this sweep.
+!>    @param[out] sgnvy    Stencil offset in y for velocity model for this sweep.
 !>    @param[out] sgnrz    Double precision version of sgntz for local solver.
 !>    @param[out] sgnrx    Double precision version of sgntx for local solver.
 !>    @param[out] sgnry    Double precision version of sgnty for local solver. 
@@ -1938,11 +1942,18 @@ print *, minval(ttimes), maxval(ttimes)
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Compute analytic travel time at the point (i,j,k) in a homogeneous model.
+!>    @brief Compute analytic travel time at the point (i,j,,k) in a homogeneous model.
 !>
-!>    @param[in] i     iz'th grid point (Fortran numbered).
-!>    @param[in] j     ix'th grid point (Fortran numbered).
-!>    @param[in] k     iy'th grid point (Fortran numbered).
+!>    @param[in] i      iz'th grid point (Fortran numbered).
+!>    @param[in] j      ix'th grid point (Fortran numbered).
+!>    @param[in] k      iy'th grid point (Fortran numbered).
+!>    @param[in] dz     Grid spacing (meters) in z.
+!>    @param[in] dx     Grid spacing (meters) in x.
+!>    @param[in] dy     Grid spacing (meters) in y.
+!>    @param[in] zsa    Source offset (meters) in z.
+!>    @param[in] xsa    Source offset (meters) in x.
+!>    @param[in] ysa    Source offset (meters) in y.
+!>    @param[in] szero  Slowness at source (s/m).  
 !>
 !>    @result The travel time from the source at (zsa,xsa,ysa) to the (i,j,k)'th grid
 !>            point given a constant slowness around the source.
@@ -1955,8 +1966,6 @@ print *, minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright CeCILL-3
 !>
-!>    Note This is now a Fortran90 function where the slowness and source position
-!>    are passed in through the model.
 !>
       PURE REAL(C_DOUBLE) FUNCTION fteik_tAna64fF(i, j, k, dz, dx, dy,   &
                                                   zsa, xsa, ysa, szero)  &
@@ -1964,7 +1973,7 @@ print *, minval(ttimes), maxval(ttimes)
       !$OMP DECLARE SIMD(fteik_tAna64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
       IMPLICIT NONE
-      REAL(C_DOUBLE), INTENT(IN), VALUE :: dx, dy, dz, szero, xsa, ysa, zsa
+      REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, szero, zsa, xsa, ysa
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
       REAL(C_DOUBLE) d0, diffz, diffz2, diffx, diffx2, diffy, diffy2
       diffz = (DBLE(i) - zsa)*dz
@@ -1977,36 +1986,42 @@ print *, minval(ttimes), maxval(ttimes)
       fteik_tAna64fF = szero*SQRT(d0) !sqrt(diffz2 + diffx2 + diffy2);
       RETURN
       END FUNCTION
-!
-!     REAL(C_DOUBLE) FUNCTION T_ANA64F(i, j, k)        &
-!                             BIND(C, NAME='t_ana64f')
-!     USE ISO_C_BINDING
-!     USE FTEIK_UTILS64F, ONLY : dx, dy, dz, szero, xsa, ysa, zsa
-!     IMPLICIT NONE
-!     INTEGER(C_INT), INTENT(IN) :: i, j, k
-!     REAL(C_DOUBLE) d0, diffz, diffz2, diffx, diffx2, diffy, diffy2
-!     diffz = (DBLE(i) - zsa)*dz
-!     diffx = (DBLE(j) - xsa)*dx
-!     diffy = (DBLE(k) - ysa)*dy
-!     diffz2 = diffz*diffz
-!     diffx2 = diffx*diffx
-!     diffy2 = diffy*diffy
-!     d0 = diffz2 + diffx2 + diffy2
-!     t_ana64f = szero*SQRT(d0) !sqrt(diffz2 + diffx2 + diffy2);
-!     RETURN
-!     END FUNCTION
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Compute derivative of analytic travel time at point (i,jk)
-!>           in homgeneous model.
+!>    @brief Compute derivative of analytic travel time and derivative of times
+!>           at point (i,j,k) in a homogeneous model.
+!>
+!>    @param[in] i      iz'th grid point (Fortran numbered).
+!>    @param[in] j      ix'th grid point (Fortran numbered).
+!>    @param[in] k      iy'th grid point (Fortran numbered).
+!>    @param[in] dz     Grid spacing (meters) in z.
+!>    @param[in] dx     Grid spacing (meters) in x.
+!>    @param[in] dy     Grid spacing (meters) in y.
+!>    @param[in] zsa    Source offset (meters) in z.
+!>    @param[in] xsa    Source offset (meters) in x.
+!>    @param[in] ysa    Source offset (meters) in y.
+!>    @param[in] szero  Slowness at source (s/m).  
+!>
+!>    @param[out] t_anad   Derivative of analytic travel time at point (i,j,k).
+!>    @param[out] tzc      Derivative of analytic travel time in z.
+!>    @param[out] txc      Derivative of analytic travel time in x.
+!>    @param[out] tyc      Derivative of analytic travel time in y.
+!>
+!>    @author Mark Noble, Alexandrine, Gesret, and Ben Baker.
+!>
+!>    @version 2
+!>
+!>    @date July 2017
+!>
+!>    @copyright CeCILL-3
+!>
+!>
       PURE SUBROUTINE fteik_tAnaD64fF(t_anad, tzc, txc, tyc, i, j, k,   &
                                       dz, dx, dy, zsa, xsa, ysa, szero) &
                               BIND(C, NAME='fteik_tAnaD64fF')
       !$OMP DECLARE SIMD(fteik_tAnaD64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
-!     USE FTEIK_UTILS64F, ONLY : dx, dy, dz, szero, xsa, ysa, zsa
-!     USE FTEIK_UTILS64F, ONLY : zero
       IMPLICIT NONE
       REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
