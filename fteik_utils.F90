@@ -1361,12 +1361,44 @@ print *, minval(ttimes), maxval(ttimes)
 !>     - Operate on a local velocity/traveltime stencil to provide user opportunity
 !>       to emphasize cache-coherency; particularly in level set sweeping.
 !>             
-      PURE REAL(C_DOUBLE) FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,        &
+      PURE REAL(C_DOUBLE) FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
                                                     i, j, k,                         &
                                                     sgntz, sgntx, sgnty,             &
                                                     sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
-                              RESULT(tupd) &
-                              BIND(C, NAME='fteik_localSolver64fF')
+                          RESULT(tupd) &
+                          BIND(C, NAME='fteik_localSolver64fF')
+      USE ISO_C_BINDING
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolverExplicit64fF
+      IMPLICIT NONE 
+      REAL(C_DOUBLE), INTENT(IN) :: tt(8), slowLoc(7)
+      REAL(C_DOUBLE), INTENT(IN) :: sgnrz_dzi, sgnrx_dxi, sgnry_dyi
+      INTEGER(C_INT), INTENT(IN) :: i, j, k, sgntx, sgnty, sgntz
+      LOGICAL(C_BOOL), INTENT(IN) :: linitk
+      tupd = fteik_localSolverExplicit64fF(tt(1), tt(2), tt(3), tt(4),         &
+                                           tt(5), tt(6), tt(7), tt(8),         &
+                                           slowLoc(1), slowLoc(2), slowLoc(3), slowLoc(4), &
+                                           slowLoc(5), slowLoc(6), slowLoc(7),             &
+                                           linitk,                                         &
+                                           i, j, k,                          &
+                                           sgntz, sgntx, sgnty,              &
+                                           sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+      RETURN
+      END FUNCTION
+
+
+
+      PURE REAL(C_DOUBLE)                                                     &
+      FUNCTION fteik_localSolverExplicit64fF(tv, te, tn, tev,                 &
+                                             ten, tnv, tnve, tt0,             &
+                                             slow1, slow2, slow3, slow4,      &
+                                             slow5, slow6, slow7,             &
+                                             linitk,                          &
+                                             i, j, k,                         &
+                                             sgntz, sgntx, sgnty,             &
+                                             sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
+      RESULT(tupd) BIND(C, NAME='fteik_localSolverExplicit64fF')
+      !$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
+      !$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : fteik_tAnaD64fF, fteik_tAna64fF
       USE FTEIK_UTILS64F, ONLY : FTEIK_HUGE
@@ -1375,34 +1407,44 @@ print *, minval(ttimes), maxval(ttimes)
                                  dsum, dsumi, epsSolver, &
                                  dz2dx2, dz2dy2, dx2dy2, &
                                  dz2i_dx2i, dz2i_dy2i, dx2i_dy2i, &
-                                 dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i, & 
+                                 dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i, &
                                  dz2i_p_dy2i_inv, dz2i_p_dx2i_inv, dx2i_p_dy2i_inv, &
                                  szero, szero2
       USE FTEIK_UTILS64F, ONLY : xsi, ysi, zsi
       IMPLICIT NONE
-      REAL(C_DOUBLE), INTENT(IN) :: tt(8), slowLoc(7)
-      REAL(C_DOUBLE), INTENT(IN) :: sgnrz_dzi, sgnrx_dxi, sgnry_dyi
-      INTEGER(C_INT), INTENT(IN) :: i, j, k, sgntx, sgnty, sgntz
-      LOGICAL(C_BOOL), INTENT(IN) :: linitk
+      REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0
+      REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
+                                           slow5, slow6, slow7
+      REAL(C_DOUBLE), INTENT(IN), VALUE :: sgnrz_dzi, sgnrx_dxi, sgnry_dyi !, &
+      !                                     dx, dy, dz, xsa, ysa, zsa, &
+      !                                     dx2i, dy2i, dz2i, &
+      !                                     dsum, dsumi, epsSolver, &
+      !                                     dz2dx2, dz2dy2, dx2dy2, &
+      !                                     dz2i_dx2i, dz2i_dy2i, dx2i_dy2i, &
+      !                                     dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i, & 
+      !                                     dz2i_p_dy2i_inv, dz2i_p_dx2i_inv,      &
+      !                                     dx2i_p_dy2i_inv, szero, szero2
+      INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, sgntx, sgnty, sgntz !, xsi, ysi, zsi
+      LOGICAL(C_BOOL), INTENT(IN), VALUE :: linitk
       ! local variables
       REAL(C_DOUBLE) apoly, bpoly, cpoly, dpoly,                                &
                      four_sref2, sref, sref2,                                   &
                      t0c, t1, t1d, t1d_t2d_min, t2, t2d, t3, t3d,               &
                      ta, tb, tab, tab2, tac, tac2, tbc, tbc2, tc,               &
                      taue, tauev, tauen, taun, taunv, taunve, tauv,             &
-                     te, ten, tev, tmin, tn, tnv, tv, tnve, txc, tyc, tzc, tt0
+                     tmin, txc, tyc, tzc
       LOGICAL(C_BOOL) ltmin_eps, ltmin_eps_notk
       ! Initialze the output to a large value
       tupd = FTEIK_HUGE
       ! Get the local times of surrounding points
-      tv   = tt(1) ! tt(i-sgntz,j,k)
-      te   = tt(2) ! tt(i,j-sgntx,k)
-      tn   = tt(3) ! tt(i,j,k-sgnty)
-      tev  = tt(4) ! tt(i-sgntz,j-sgntx,k)
-      ten  = tt(5) ! tt(i,j-sgntx,k-sgnty)
-      tnv  = tt(6) ! tt(i-sgntz,j,k-sgnty)
-      tnve = tt(7) ! tt(i-sgntz,j-sgntx,k-sgnty)
-      tt0  = tt(8) ! tt(i, j, k)
+      !tv   = tt(1) ! tt(i-sgntz,j,k)
+      !te   = tt(2) ! tt(i,j-sgntx,k)
+      !tn   = tt(3) ! tt(i,j,k-sgnty)
+      !tev  = tt(4) ! tt(i-sgntz,j-sgntx,k)
+      !ten  = tt(5) ! tt(i,j-sgntx,k-sgnty)
+      !tnv  = tt(6) ! tt(i-sgntz,j,k-sgnty)
+      !tnve = tt(7) ! tt(i-sgntz,j-sgntx,k-sgnty)
+      !tt0  = tt(8) ! tt(i, j, k)
       ! Check time to see when to switch to plane approximation
       tmin = MIN(tv, te, tn)
       ! This gets computed over and over and over...
@@ -1441,11 +1483,11 @@ print *, minval(ttimes), maxval(ttimes)
       t2  = FTEIK_HUGE ! Big
       t3  = FTEIK_HUGE ! Big
       ! V plane
-      t1 = tv + dz*slowLoc(1)
+      t1 = tv + dz*slow1 !t1 = tv + dz*slowLoc(1)
       ! WE plane
-      t2 = te + dx*slowLoc(2)
+      t2 = te + dx*slow2 !t2 = te + dx*slowLoc(2)
       ! NS plane
-      t3 = tn + dy*slowLoc(3)
+      t3 = tn + dy*slow3 !t3 = tn + dy*slowLoc(3)
       t1d = MIN(t1, t2, t3)
       !-------------------------------------2D operators---------------------------------!
       t2d = FTEIK_HUGE  !Big;
@@ -1453,7 +1495,7 @@ print *, minval(ttimes), maxval(ttimes)
       t2  = FTEIK_HUGE  !Big;
       t3  = FTEIK_HUGE  !Big;
       ! ZX (VE) plane
-      sref = slowLoc(4)
+      sref = slow4 !sref = slowLoc(4)
       IF ( (tv < te + dx*sref) .AND. (te < tv + dz*sref) ) THEN
          sref2 = sref*sref
          IF (ltmin_eps_notk .OR. k /= ysi) THEN
@@ -1478,7 +1520,7 @@ print *, minval(ttimes), maxval(ttimes)
          ENDIF 
       ENDIF
       ! ZY (VN) plane
-      sref = slowLoc(5)
+      sref = slow5 !sref = slowLoc(5)
       IF ( (tv < tn + dy*sref) .AND. (tn < tv + dz*sref) ) THEN
          sref2 = sref*sref
          IF (ltmin_eps_notk .OR. j /= xsi) THEN
@@ -1503,7 +1545,7 @@ print *, minval(ttimes), maxval(ttimes)
          ENDIF
       ENDIF
       ! XY (EN) plane
-      sref = slowLoc(6)
+      sref = slow6 !sref = slowLoc(6)
       IF ( (te < tn + dy*sref) .AND. (tn < te + dx*sref) ) THEN
          sref2 = sref*sref
          IF (ltmin_eps_notk .OR. i /= zsi) THEN
@@ -1530,7 +1572,7 @@ print *, minval(ttimes), maxval(ttimes)
       t2d = MIN(t1, t2, t3)
       !-------------------------------------3D operators---------------------------------!
       t3d = FTEIK_HUGE
-      sref = slowLoc(7)
+      sref = slow7 !sref = slowLoc(7)
       t1d_t2d_min = MIN(t1d, t2d)
       IF ( t1d_t2d_min > MAX(tv, te, tn) ) THEN
          sref2 = sref*sref

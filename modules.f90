@@ -171,11 +171,11 @@
             INTEGER(C_INT), INTENT(OUT) :: ierr
             END SUBROUTINE
 
-            !!$OMP DECLARE SIMD(fteik_localSolver64fF)
-            PURE REAL(C_DOUBLE) FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,           &
-                                                        i, j, k,                         &
-                                                        sgntz, sgntx, sgnty,             &
-                                                        sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
+            PURE REAL(C_DOUBLE) &
+            FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
+                                           i, j, k,                         &
+                                           sgntz, sgntx, sgnty,             &
+                                           sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
                                     RESULT(tupd) &
                                     BIND(C, NAME='fteik_localSolver64fF')
             USE ISO_C_BINDING
@@ -184,6 +184,28 @@
             REAL(C_DOUBLE), INTENT(IN) ::  sgnrz_dzi, sgnrx_dxi, sgnry_dyi
             INTEGER(C_INT), INTENT(IN) :: i, j, k, sgntx, sgnty, sgntz
             LOGICAL(C_BOOL), INTENT(IN) :: linitk
+            END FUNCTION
+
+            PURE REAL(C_DOUBLE)                                                 &
+            FUNCTION fteik_localSolverExplicit64fF(tv, te, tn, tev,                  &
+                                                   ten, tnv, tnve, tt0,              &
+                                                   slow1, slow2, slow3, slow4,       &
+                                                   slow5, slow6, slow7,              &
+                                                   linitk,                           &
+                                                   i, j, k,                          &
+                                                   sgntz, sgntx, sgnty,              &
+                                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)  &
+            RESULT(tupd) BIND(C, NAME='fteik_localSolverExplicit64fF')
+            !$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
+            !$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
+                                                 slow5, slow6, slow7
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: sgnrz_dzi, sgnrx_dxi, sgnry_dyi
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, sgntx, sgnty, sgntz
+            LOGICAL(C_BOOL), INTENT(IN), VALUE :: linitk
             END FUNCTION
 
             SUBROUTINE fteik_setGridSizeF(nzIn, nxIn, nyIn, ierr) &
@@ -442,99 +464,115 @@
       MODULE FTEIK_AUTOCODE
          INTERFACE
             PURE SUBROUTINE fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
-                                                                ttimes, ttloc)     &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep1TravelTimes64fF')
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep1TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep1TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx,   &
-                                                                ttimes, ttloc)      &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep2TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep2TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep2TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
-                                                                ttimes, ttloc)    &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep3TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep3TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep3TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
-                                                                ttimes, ttloc)    &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep4TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep4TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep4TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
-                                                                ttimes, ttloc)    &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep5TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep5TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep5TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
-                                                                ttimes, ttloc)     &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep6TravelTimes64fF')
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep6TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep6TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
-                                                               ttimes, ttloc)    &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep7TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep7TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep7TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
-            PURE SUBROUTINE fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
-                                                               ttimes, ttloc)    &
-            !                                              tt1, tt2, tt3, tt4, &
-            !                                              tt5, tt6, tt7, tt8) &
-                       BIND(C, NAME='fteik_prefetchSweep8TravelTimes64fF')
+            PURE SUBROUTINE fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
+                                                               !ttimes, ttloc) &
+                                                               ttimes, tt1, tt2, tt3, tt4, &
+                                                               tt5, tt6, tt7, tt8)         &
+            BIND(C, NAME='fteik_prefetchSweep8TravelTimes64fF')
+            !$OMP DECLARE SIMD(fteik_prefetchSweep8TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: i, j, k, nz, nx, ny, nzx
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
             REAL(C_DOUBLE), INTENT(IN) :: ttimes(nz*nx*ny)
-            REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8) !tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8 
+            REAL(C_DOUBLE), INTENT(OUT) :: tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+            !REAL(C_DOUBLE), INTENT(OUT) :: ttloc(8)
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, &

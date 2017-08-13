@@ -93,11 +93,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                             i, j, k,                       &
@@ -126,11 +126,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep2Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                             i, j, k,                       &
@@ -159,11 +159,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep3Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                             i, j, k,                       &
@@ -192,11 +192,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep4Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                             i, j, k,                       &
@@ -225,11 +225,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep5Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttwork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttwork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                             i, j, k,                       &
@@ -258,11 +258,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep6Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                             i, j, k,                       &
@@ -291,11 +291,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep7Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                             i, j, k,                       &
@@ -324,11 +324,11 @@ call cpu_time(t0)
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep8Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                      slow, slowWork)
-               CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                       ttWork(1), ttWork(2), &
-!                                                       ttWork(3), ttWork(4), &
-!                                                       ttWork(5), ttWork(6), &
-!                                                       ttWorK(7), ttwork(8))
+               CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                        ttWork(1), ttWork(2), &
+                                                        ttWork(3), ttWork(4), &
+                                                        ttWork(5), ttWork(6), &
+                                                        ttWorK(7), ttwork(8))
                ! apply the finite differencing
                tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                             i, j, k,                       &
@@ -362,11 +362,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                                i, j, k,                       &
@@ -395,11 +395,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep2Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                                i, j, k,                       &
@@ -428,11 +428,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep3Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                                i, j, k,                       &
@@ -461,11 +461,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep4Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                                i, j, k,                       &
@@ -494,11 +494,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep5Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                                i, j, k,                       &
@@ -527,11 +527,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep6Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                                i, j, k,                       &
@@ -560,11 +560,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep7Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWork)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &
                                                i, j, k,                       &
@@ -593,11 +593,11 @@ call cpu_time(t0)
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep8Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
                                                         slow, slowWork)
-                  CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, ttWorK)
-!                                                          ttWork(1), ttWork(2), &
-!                                                          ttWork(3), ttWork(4), &
-!                                                          ttWork(5), ttWork(6), &
-!                                                          ttWorK(7), ttwork(8))
+                  CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
+                                                           ttWork(1), ttWork(2), &
+                                                           ttWork(3), ttWork(4), &
+                                                           ttWork(5), ttWork(6), &
+                                                           ttWorK(7), ttwork(8))
                   ! apply the finite differencing
                   tupd = fteik_localSolver64fF(ttWork, slowWork, linitk,      &   
                                                i, j, k,                       &
