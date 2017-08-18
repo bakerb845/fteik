@@ -88,7 +88,7 @@
       USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
       USE FTEIK_UTILS64F, ONLY : lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
       USE FTEIK_UTILS64F, ONLY : levelPtr
-      USE FTEIK_UTILS64F, ONLY : tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+      USE FTEIK_UTILS64F, ONLY : tt1 
       USE FTEIK_UTILS64F, ONLY : zero
       USE FTEIK_UTILS64F, ONLY : fteik_setUpdateNodesF
       USE FTEIK_GRAPH
@@ -146,21 +146,7 @@
     1 CONTINUE
 print *, maxLevelSize
       ALLOCATE(tt1(maxLevelSize))
-      ALLOCATE(tt2(maxLevelSize))
-      ALLOCATE(tt3(maxLevelSize))
-      ALLOCATE(tt4(maxLevelSize))
-      ALLOCATE(tt5(maxLevelSize))
-      ALLOCATE(tt6(maxLevelSize))
-      ALLOCATE(tt7(maxLevelSize))
-      ALLOCATE(tt8(maxLevelSize))
       tt1(:) = zero
-      tt2(:) = zero
-      tt3(:) = zero 
-      tt4(:) = zero
-      tt5(:) = zero
-      tt6(:) = zero
-      tt7(:) = zero
-      tt8(:) = zero
       ! set the update grid
       CALL fteik_setUpdateNodesF(1, nlevels, .FALSE., levelPtr, ijkv1, lupd1, ierrs(1))
       CALL fteik_setUpdateNodesF(2, nlevels, .FALSE., levelPtr, ijkv2, lupd2, ierrs(2))
@@ -342,7 +328,7 @@ print *, maxLevelSize
       USE FTEIK_UTILS64F, ONLY : nLevels, maxLevelSize, nsweep
       USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
       USE FTEIK_UTILS64F, ONLY : levelPtr
-      USE FTEIK_UTILS64F, ONLY : tt1, tt2, tt3, tt4, tt5, tt6, tt7, tt8
+      USE FTEIK_UTILS64F, ONLY : tt1
       USE FTEIK_UTILS64F, ONLY : lhaveGrid, lhaveSource, lhaveSlownessModel
       USE FTEIK_UTILS64F, ONLY : zero
       IMPLICIT NONE
@@ -374,13 +360,6 @@ print *, maxLevelSize
       IF (ALLOCATED(ijkv7))     DEALLOCATE(ijkv7)
       IF (ALLOCATED(ijkv8))     DEALLOCATE(ijkv8)
       IF (ALLOCATED(tt1))       DEALLOCATE(tt1)
-      IF (ALLOCATED(tt2))       DEALLOCATE(tt2)
-      IF (ALLOCATED(tt3))       DEALLOCATE(tt3)
-      IF (ALLOCATED(tt4))       DEALLOCATE(tt4)
-      IF (ALLOCATED(tt5))       DEALLOCATE(tt5)
-      IF (ALLOCATED(tt6))       DEALLOCATE(tt6)
-      IF (ALLOCATED(tt7))       DEALLOCATE(tt7)
-      IF (ALLOCATED(tt8))       DEALLOCATE(tt8)
       dz = zero; dx = zero; dy = zero
       zsa = zero; xsa = zero; ysa = zero
       z0 = zero; x0 = zero; y0 = zero

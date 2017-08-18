@@ -27,8 +27,7 @@
          REAL(C_DOUBLE) szero
          INTEGER(C_INT) xsi, ysi, zsi
          ! private variables for solver to compute on startup
-         REAL(C_DOUBLE), ALLOCATABLE :: tt1(:), tt2(:), tt3(:), tt4(:), &
-                                        tt5(:), tt6(:), tt7(:), tt8(:)
+         REAL(C_DOUBLE), ALLOCATABLE :: tt1(:)
          !DIR$ ATTRIBUTES ALIGN: 64 :: tt1
          REAL(C_DOUBLE) szero2
          REAL(C_DOUBLE) dxi, dyi, dzi
