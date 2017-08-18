@@ -34,7 +34,8 @@
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : fteik_setGridSizeF, fteik_setGridSpacingF, &
                                  fteik_setModelOriginF, fteik_setNumberOfSweepsF, &
-                                 fteik_setSphericalToCartesianEpsilonF, fteik_computeGraphF
+                                 fteik_setSphericalToCartesianEpsilonF, &
+                                 fteik_computeGraphF, fteik_setReceivers64fF
       USE FTEIK_UTILS64F, ONLY : lhaveGrid, lhaveGridSpacing, lhaveSource, &
                                  lhaveSlownessModel, lhaveTravelTimes
       IMPLICIT NONE
@@ -44,6 +45,7 @@
       INTEGER(C_INT), INTENT(IN) :: nxIn, nyIn, nzIn
       INTEGER(C_INT), INTENT(IN) :: nsweepIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) xt(1), yt(1), zt(1)
       lhaveGrid = .FALSE.
       lhaveGridSpacing = .FALSE.
       lhaveSource = .FALSE.
@@ -74,6 +76,11 @@
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_initializeF: Failed to compute graph'
          RETURN
+      ENDIF
+      CALL fteik_setReceivers64fF(-1, xt, yt, zt, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_initializeF: Strange error in zero-ing out receivers'
+         ierr = 0
       ENDIF
       RETURN
       END SUBROUTINE
@@ -147,7 +154,7 @@
 print *, maxLevelSize
       ALLOCATE(tt1(maxLevelSize))
       tt1(:) = zero
-      ! set the update grid
+      ! Set the update grid.  This will mask nodes on the boundary.
       CALL fteik_setUpdateNodesF(1, nlevels, .FALSE., levelPtr, ijkv1, lupd1, ierrs(1))
       CALL fteik_setUpdateNodesF(2, nlevels, .FALSE., levelPtr, ijkv2, lupd2, ierrs(2))
       CALL fteik_setUpdateNodesF(3, nlevels, .FALSE., levelPtr, ijkv3, lupd3, ierrs(3))
@@ -156,20 +163,190 @@ print *, maxLevelSize
       CALL fteik_setUpdateNodesF(6, nlevels, .FALSE., levelPtr, ijkv6, lupd6, ierrs(6))
       CALL fteik_setUpdateNodesF(7, nlevels, .FALSE., levelPtr, ijkv7, lupd7, ierrs(7))
       CALL fteik_setUpdateNodesF(8, nlevels, .FALSE., levelPtr, ijkv8, lupd8, ierrs(8))
-      !CALL fteik_setUpdateNodesF(1, nlevels, .FALSE., levelPtr1, ijkv1, lupd1, ierrs(1))
-      !CALL fteik_setUpdateNodesF(2, nlevels, .FALSE., levelPtr2, ijkv2, lupd2, ierrs(2))
-      !CALL fteik_setUpdateNodesF(3, nlevels, .FALSE., levelPtr3, ijkv3, lupd3, ierrs(3))
-      !CALL fteik_setUpdateNodesF(4, nlevels, .FALSE., levelPtr4, ijkv4, lupd4, ierrs(4))
-      !CALL fteik_setUpdateNodesF(5, nlevels, .FALSE., levelPtr5, ijkv5, lupd5, ierrs(5))
-      !CALL fteik_setUpdateNodesF(6, nlevels, .FALSE., levelPtr6, ijkv6, lupd6, ierrs(6))
-      !CALL fteik_setUpdateNodesF(7, nlevels, .FALSE., levelPtr7, ijkv7, lupd7, ierrs(7))
-      !CALL fteik_setUpdateNodesF(8, nlevels, .FALSE., levelPtr8, ijkv8, lupd8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
          WRITE(*,*) 'fteik_computeGraphF: Error setting update nodes'
          ierr = 1
       ENDIF
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>
+!>    @brief Gets the travel-times at the receiver locations.
+!>
+!>    @param[int] nrecIn    Length of array trec.  This must be at least nrec. 
+!>
+!>    @param[out] trec      Travel-time from source to receiver (seconds).  This
+!>                          has dimension [nrecIn].  If nrecIn > nrec then the
+!>                          unused elements of trec will be set to FTEIK_HUGE.
+!>
+!>    @param[out] ierr      0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_getTravelTimesAtReceivers64fF(nrecIn, trec, ierr) &
+                 BIND(C, NAME='fteik_getTravelTimesAtReceivers64fF')
+      USE FTEIK_UTILS64F, ONLY : ttimes, xri, yri, zri, xdr, ydr, zdr, &
+                                 nz, nzx, nrec, lhaveTravelTimes
+      USE FTEIK_UTILS64F, ONLY : one, FTEIK_HUGE
+      USE FTEIK_UTILS64F, ONLY : grid2indexF
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+      REAL(C_DOUBLE), INTENT(OUT) :: trec(nrecIn)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) v000, v001, v010, v011, v100, v101, v110, v111
+      REAL(C_DOUBLE) c0, c1, c00, c10, c01, c11
+      INTEGER(C_INT) i
+      ! Some error checks
+      ierr = 0
+      IF (nrec < 1) THEN
+         WRITE(*,*) 'fteik_getTravelTimesAtReceivers64fF: recv indices not yet set'
+         ierr = 1
+      ENDIF
+      IF (nrecIn < nrec) THEN
+         WRITE(*,*) 'fteik_getTravelTimesAtRecievers64fF: nrecIn < nrec!'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nrecIn > nrec) trec(nrec+1:nrecIn) = FTEIK_HUGE
+      IF (.NOT. lhaveTravelTimes) THEN
+         WRITE(*,*) 'fteik_getTravelTimesAtReceivers64fF: ttimes not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Compute travel-times
+      DO 1 i=1,nrec
+         ! Try to make the memory accesses as sequential as possible
+         v000 = ttimes(grid2indexF(zri(i),   xri(i),   yri(i),   nz, nzx))
+         v100 = ttimes(grid2indexF(zri(i)+1, xri(i),   yri(i),   nz, nzx))
+         v010 = ttimes(grid2indexF(zri(i),   xri(i)+1, yri(i),   nz, nzx))
+         v110 = ttimes(grid2indexF(zri(i)+1, xri(i)+1, yri(i),   nz, nzx))
+         v001 = ttimes(grid2indexF(zri(i),   xri(i),   yri(i)+1, nz, nzx))
+         v101 = ttimes(grid2indexF(zri(i)+1, xri(i),   yri(i)+1, nz, nzx))
+         v011 = ttimes(grid2indexF(zri(i),   xri(i)+1, yri(i)+1, nz, nzx))
+         v111 = ttimes(grid2indexF(zri(i)+1, xri(i)+1, yri(i)+1, nz, nzx)) 
+         ! Interpolate in z
+         c00 = V000*(one - zdr(i)) + V100*zdr(i);
+         c10 = V010*(one - zdr(i)) + V110*zdr(i);
+         c01 = V001*(one - zdr(i)) + V101*zdr(i);
+         c11 = V011*(one - zdr(i)) + V111*zdr(i);
+         ! Inteprolate in x
+         c0 = c00*(one - xdr(i)) + c10*xdr(i);
+         c1 = c01*(one - xdr(i)) + c11*xdr(i);
+         ! Interpolate in y
+         trec(i) = c0*(one - ydr(i)) + c1*ydr(i);
+    1 CONTINUE
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the receiver indices in the grid.  This will make for a quick 
+!>           linear interpolation.
+!>           https://github.com/bottero/IMCMCrun/blob/master/src/functions.cpp
+!>
+!>    @param[in] nrecIn   Number of receivers.  If this is -1 then this function will
+!>                        simply deallocate/reset the receiver information.
+!>    @param[in] z        Receiver positions in z (meters).  This has dimension [nrecIn].
+!>    @param[in] x        Receiver positions in x (meters).  This has dimension [nrecIn].
+!>    @param[in] y        Receiver positions in y (meters).  This has dimension [nrecIn].
+!>
+!>    @param[out] ierr    0 indicate success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_setReceivers64fF(nrecIn, z, x, y, ierr) &
+                 BIND(C, NAME='fteik_setReceivers64fF')
+      USE FTEIK_UTILS64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0, lhaveGrid
+      USE FTEIK_UTILS64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+      USE FTEIK_UTILS64F, ONLY : one
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+      REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) xr, yr, zr
+      INTEGER(C_INT) irec, ix, iy, iz
+      ! Initialize 
+      ierr = 0 
+      nrec = 0
+      IF (ALLOCATED(zri)) DEALLOCATE(zri)
+      IF (ALLOCATED(xri)) DEALLOCATE(xri)
+      IF (ALLOCATED(yri)) DEALLOCATE(yri)
+      IF (nrecIn ==-1) RETURN
+      ! Check that the model has been initialized
+      IF (.NOT.lhaveGrid) THEN 
+         WRITE(*,*) 'fteik_setReceivers64fF: Grid not yet set'
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Verify the inputs
+      IF (nrecIn < 1) THEN
+         WRITE(*,*) 'fteik_setReceivers64fF: No receivers'
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Initialize
+      nrec = nrecIn
+      ALLOCATE(zri(nrec))
+      ALLOCATE(xri(nrec))
+      ALLOCATE(yri(nrec))
+      ALLOCATE(zdr(nrec))
+      ALLOCATE(xdr(nrec))
+      ALLOCATE(ydr(nrec))
+      ! Collocate the receivers
+      DO 1 irec=1,nrecIn
+         IF (z(irec) < z0 .OR. z(irec) > z0 + dz*DBLE(nz - 1)) THEN
+            WRITE(*,*) 'fteik_setReceivers: Warning z position is out of model', z(irec)
+            ierr = ierr + 1
+         ENDIF
+         IF (x(irec) < x0 .OR. x(irec) > x0 + dx*DBLE(nx - 1)) THEN
+            WRITE(*,*) 'fteik_setReceivers: Warning x position is out of bounds', x(irec)
+            ierr = ierr + 1
+         ENDIF
+         IF (y(irec) < y0 .OR. y(irec) > y0 + dy*DBLE(ny - 1)) THEN
+            WRITE(*,*) 'fteik_setReceivers: Warning y position is out of bounds', y(irec)
+            ierr = ierr + 1
+         ENDIF
+         ! Get the grid point position
+         zr = (z(irec) - z0)/dz
+         xr = (x(irec) - x0)/dx
+         yr = (y(irec) - y0)/dy
+         iz = INT(zr) + 1
+         ix = INT(xr) + 1
+         iy = INT(yr) + 1
+         ! Interpolation goes from (iz,ix,iy) to (iz+1,ix+1,iy+1).  This is an issue when
+         ! the receiver is at the edge.  In this case; shift it to model bounds - 1. 
+         ! Additionally, being extra generous, I'll force the receiver into the model
+         ! if the receiver is out of bounds.
+         zri(irec) = MAX(1, MIN(nz-1, iz))
+         xri(irec) = MAX(1, MIN(nx-1, ix))
+         yri(irec) = MAX(1, MIN(ny-1, iy))
+         zdr(irec) = (z(irec) - (z0 + dz*DBLE(zri(irec)-1)))/dz
+         xdr(irec) = (x(irec) - (x0 + dx*DBLE(xri(irec)-1)))/dx
+         ydr(irec) = (y(irec) - (y0 + dy*DBLE(yri(irec)-1)))/dy
+    1 CONTINUE
+      RETURN
+      END
+! int kz=iz+1, kx=ix+1, ky=iy+1;
+! double dz1=Z-(double)(iz+1),dx1=X-(double)(ix+1),dy1=Y-(double)(iy+1);
+! double dz2=1.0-dz1,dx2=1.0-dx1,dy2=1.0-dy1;
+! double t = dz2 * dx2 * dy2 * tt3d->get(iz,ix,iy)
+!       +  dz1 * dx2 * dy2 * tt3d->get(kz,ix,iy)
+!       +  dz2 * dx1 * dy2 * tt3d->get(iz,kx,iy)
+!       +  dz2 * dx2 * dy1 * tt3d->get(iz,ix,ky)
+!       +  dz2 * dx1 * dy1 * tt3d->get(iz,kx,ky)
+!       +  dz1 * dx2 * dy1 * tt3d->get(kz,ix,ky)
+!       +  dz1 * dx1 * dy2 * tt3d->get(kz,kx,iy)
+!       +  dz1 * dx1 * dy1 * tt3d->get(kz,kx,ky);
+!     RETURN
+!     END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -331,7 +508,10 @@ print *, maxLevelSize
       USE FTEIK_UTILS64F, ONLY : tt1
       USE FTEIK_UTILS64F, ONLY : lhaveGrid, lhaveSource, lhaveSlownessModel
       USE FTEIK_UTILS64F, ONLY : zero
+      USE FTEIK_UTILS64F, ONLY : fteik_setReceivers64fF
       IMPLICIT NONE
+      REAL(C_DOUBLE) xt(1), yt(1), zt(1)
+      INTEGER(C_INT) ierr
       IF (ALLOCATED(slow))      DEALLOCATE(slow)
       IF (ALLOCATED(ttimes))    DEALLOCATE(ttimes)
       IF (ALLOCATED(lupd1))     DEALLOCATE(lupd1)
@@ -360,6 +540,7 @@ print *, maxLevelSize
       IF (ALLOCATED(ijkv7))     DEALLOCATE(ijkv7)
       IF (ALLOCATED(ijkv8))     DEALLOCATE(ijkv8)
       IF (ALLOCATED(tt1))       DEALLOCATE(tt1)
+      CALL fteik_setReceivers64fF(-1, xt, yt, zt, ierr)
       dz = zero; dx = zero; dy = zero
       zsa = zero; xsa = zero; ysa = zero
       z0 = zero; x0 = zero; y0 = zero
@@ -406,6 +587,138 @@ print *, maxLevelSize
       nsweep = nsweepIn
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Convenience utility to get the internal grid sizes.
+!>
+!>    @param[out] nzOut     Number of z grid points in travel time field
+!>    @param[out] nxOut     Number of x grid points in travel time field.
+!>    @param[out] nyOUt     Number of y grid points in travel time field.
+!>    @param[out] ngrdOut   Number of grid points in travel time field (=nz*nx*ny).
+!>    @param[out] ncellOut  Number of cells in velocity field (=(nz-1)*(nx-1)*(ny-1)).
+!>    @param[out] ierr      0 indicates success.
+!> 
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_getGridSizeF(nzOut, nxOut, nyOut, ngrdOut, ncellOut, ierr) &
+                 BIND(C, NAME='fteik_getGridSizeF')
+      USE FTEIK_UTILS64F, ONLY : nz, nx, ny, ngrd, ncell, lhaveGrid
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: nzOut, nxOut, nyOut, ngrdOut, ncellOut, ierr
+      ierr = 0
+      nzOut = 0
+      nxOut = 0
+      nyOut = 0
+      ngrdOut = 0
+      ncellOut = 0
+      IF (.NOT.lhaveGrid) THEN
+         WRITE(*,*) 'fteik_getGridSize: Grid not yet set'
+         ierr = 1
+         RETURN
+      ENDIF
+      nzOut = nz
+      nxOut = nx
+      nyOut = ny
+      ngrdOut = ngrd
+      ncellOut = ncell
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Returns the number of levels in the level-scheduling method.
+!>
+!>    @param[out] nLevelsOut   On successful exit this is the number of levels. \n
+!>                             Otherwise, it is 0.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_getNumberOfLevelsF(nLevelsOut) &
+                 BIND(C, NAME='fteik_getNumberOfLevelsF')
+      USE FTEIK_UTILS64F, ONLY : nLevels, lhaveGrid
+      USE ISO_C_BINDING
+      INTEGER(C_INT), INTENT(OUT) :: nLevelsOut
+      nLevelsOut = 0
+      IF (.NOT.lhaveGrid) THEN
+         WRITE(*,*) 'fteik_getNumberOfLevelsF: Graph not initialized'
+         RETURN
+      ENDIF
+      nLevelsOut = nLevels
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Returns the graph pointers fo rthe level-scheduling method.
+!>
+!>    @param[in] sweep         Sweep number.  This must be in the range of [1,8].
+!>    @param[in] nLevelsIn     Workspace-1 of levelPtrOut.  This must be at least nLevels.
+!>    @param[in] ngrd4         Workspace of ijkvOut.  This must be at least 4*ngrd.
+!>    @param[out] levelPtrOut  Maps from the level'th level to the start of ijkvOut.
+!>                             This is an array of dimension [nLevelsIn+1].
+!>    @param[out] ijkvOut      Returns the (iz, ix, iy, global node number) of the 
+!>                             node'th point in the level scheduling method.  This is
+!>                             an array of dimension [ngrd4].
+!>    @param[out] ierr         0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_getGraphPointersF(sweep, nLevelsIn, ngrd4,     &
+                                         levelPtrOut, ijkvOut, ierr)  &
+                 BIND(C, NAME='fteik_getGraphPointersF')
+      USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, &
+                                 ijkv5, ijkv6, ijkv7, ijkv8, &
+                                 levelPtr, ngrd, nLevels, lhaveGrid
+      USE ISO_C_BINDING
+      INTEGER(C_INT), INTENT(IN), VALUE :: sweep, nLevelsIn
+      INTEGER(C_INT), INTENT(OUT) :: levelPtrOut(nLevelsIn+1), ijkvOut(ngrd4), ierr
+      ierr = 0
+      IF (.NOT.lhaveGrid) THEN
+         WRITE(*,*) 'fteik_getGraphPointersF: Graph not initialized'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ngrd4 < 4*ngrd) THEN
+         WRITE(*,*) 'fteik_getGraphPointersF: Insufficient space for ijkv' 
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nLevelsIn < nLevels) THEN
+         WRITE(*,*) 'fteik_getGraphPointersF: Insufficient space for levelPtrOut'
+         ierr = 1
+         RETURN
+      ENDIF
+      levelPtrOut(1:nLevels+1) = levelPtr(1:nLevels+1)
+      IF (sweep == 1) THEN
+         ijkvOut(1:4*ngrd) = ijkv1(1:4*ngrd) 
+      ELSEIF (sweep == 2) THEN
+         ijkvOut(1:4*ngrd) = ijkv2(1:4*ngrd)
+      ELSEIF (sweep == 3) THEN
+         ijkvOut(1:4*ngrd) = ijkv3(1:4*ngrd)
+      ELSEIF (sweep == 4) THEN
+         ijkvOut(1:4*ngrd) = ijkv4(1:4*ngrd)
+      ELSEIF (sweep == 5) THEN
+         ijkvOut(1:4*ngrd) = ijkv5(1:4*ngrd)
+      ELSEIF (sweep == 6) THEN
+         ijkvOut(1:4*ngrd) = ijkv6(1:4*ngrd)
+      ELSEIF (sweep == 7) THEN
+         ijkvOut(1:4*ngrd) = ijkv7(1:4*ngrd)
+      ELSEIF (sweep == 8) THEN
+         ijkvOut(1:4*ngrd) = ijkv8(1:4*ngrd)
+      ELSE
+         WRITE(*,*) 'fteik_getGraphPointersF: Invalid sweep', sweep
+         ierr = 1
+      ENDIF
+      RETURN
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -1026,7 +1339,7 @@ print *, minval(ttimes), maxval(ttimes)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : ttimes, ngrd, lhaveTravelTimes, zero
       IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN) :: ng
+      INTEGER(C_INT), INTENT(IN), VALUE :: ng
       REAL(C_DOUBLE), INTENT(OUT) :: tt(ng)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0

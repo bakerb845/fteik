@@ -23,6 +23,10 @@
          ! initialization variables
          LOGICAL(C_BOOL) lhaveGrid, lhaveGridSpacing, lhaveSource, &
                          lhaveSlownessModel, lhaveTravelTimes
+         ! receiver indices
+         REAL(C_DOUBLE), ALLOCATABLE :: zdr(:), xdr(:), ydr(:)
+         INTEGER(C_INT), ALLOCATABLE :: zri(:), xri(:), yri(:)
+         INTEGER(C_INT) nrec
          ! source variables
          REAL(C_DOUBLE) szero
          INTEGER(C_INT) xsi, ysi, zsi
@@ -106,6 +110,7 @@
          SAVE :: nsweep
          SAVE :: lhaveGrid, lhaveGridSpacing, lhaveSource,  &
                  lhaveSlownessModel, lhaveTravelTimes
+         SAVE :: zdr, xdr, ydr, zri, xri, yri, nrec
          INTERFACE 
 
             SUBROUTINE fteik_meshConstants64fF() BIND(C, NAME='fteik_meshConstants64fF')
@@ -304,7 +309,7 @@
                        BIND(C, NAME='fteik_getTravelTimes64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE 
-            INTEGER(C_INT), INTENT(IN) :: ng
+            INTEGER(C_INT), INTENT(IN), VALUE :: ng
             REAL(C_DOUBLE), INTENT(OUT) :: tt(ng)
             INTEGER(C_INT), INTENT(OUT) :: ierr
             END SUBROUTINE
@@ -457,6 +462,25 @@
             REAL(C_DOUBLE), INTENT(INOUT) :: ttimes(ngrd)
             INTEGER(C_INT), INTENT(OUT) :: ierr
             END SUBROUTINE
+
+            SUBROUTINE fteik_getTravelTimesAtReceivers64fF(nrecIn, trec, ierr) &
+                       BIND(C, NAME='fteik_getTravelTimesAtReceivers64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+            REAL(C_DOUBLE), INTENT(OUT) :: trec(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_setReceivers64fF(nrecIn, z, x, y, ierr) &
+                       BIND(C, NAME='fteik_setReceivers64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+            REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr 
+            END SUBROUTINE
+
          END INTERFACE
       END MODULE
 

@@ -14,6 +14,11 @@ void fteik_initializeF(const int *nz, const int *nx, const int *ny,
 void fteik_finalizeF(void);
 void fteik_setSourceLocationF(const double *zs, const double *xs,
                               const double *ys, int *ierr);
+void fteik_setReceivers64fF(const int nrec,
+                            const double *__restrict__ z,
+                            const double *__restrict__ x,
+                            const double *__restrict__ y,
+                            int *ierr);
 void fteik_setVelocityModel32fF(const int *nv, const float *__restrict__ vel4,
                                 int *ierr);
 void fteik_setVelocityModel64fF(const int *nv, const double *__restrict__ vel,
@@ -21,7 +26,15 @@ void fteik_setVelocityModel64fF(const int *nv, const double *__restrict__ vel,
 void fteik_solveEikonalLSMF(int *ierr);
 void fteik_solveEikonalFSMF(int *ierr);
 void fteik_solveEikonalDebugF(int *ierr);
-void fteik_getTravelTimes64fF(const int *ng, double *__restrict__ tt, int *ierr);
+void fteik_getTravelTimes64fF(const int ng, double *__restrict__ tt, int *ierr);
+void fteik_getTravelTimesAtReceivers64fF(const int nrecIn,
+                                         const double *__restrict__ trec, int *ierr); 
+void fteik_getGridSizeF(int *nzOut, int *nxOut, int *nyOut,
+                        int *ngrdOut, int *ncellOut, int *ierr);
+void fteik_getNumberOfLevelsF(int *nLevelsOut);
+void fteik_getGraphPointersF(const int sweep, const int nLevelsIn, const int ngrd4,
+                             int *__restrict__ levelPtrOut, int *__restrict__ ijkvOut,
+                             int *ierr);
 // You can have more fine grained control
 void fteik_setNumberOfSweepsF(const int *nsweepIn, int *ierr);
 void fteik_setGridSpacingF(const double *dzIn, const double *dxIn,
