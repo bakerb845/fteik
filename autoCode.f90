@@ -969,7 +969,8 @@
       SUBROUTINE fteik_evaluateSweep1LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep1LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep1Slowness64fF, & 
                                  fteik_prefetchSweep1TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, slow, &
@@ -1049,15 +1050,21 @@
                      k    = ijkv1(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -1124,15 +1131,24 @@
                      indx = ijkv1(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -1161,7 +1177,8 @@
       SUBROUTINE fteik_evaluateSweep2LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep2LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep2Slowness64fF, & 
                                  fteik_prefetchSweep2TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, slow, &
@@ -1241,15 +1258,21 @@
                      k    = ijkv2(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -1316,15 +1339,24 @@
                      indx = ijkv2(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -1353,7 +1385,8 @@
       SUBROUTINE fteik_evaluateSweep3LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep3LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep3Slowness64fF, & 
                                  fteik_prefetchSweep3TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, slow, &
@@ -1433,15 +1466,21 @@
                      k    = ijkv3(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -1508,15 +1547,24 @@
                      indx = ijkv3(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -1545,7 +1593,8 @@
       SUBROUTINE fteik_evaluateSweep4LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep4LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep4Slowness64fF, & 
                                  fteik_prefetchSweep4TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, slow, &
@@ -1625,15 +1674,21 @@
                      k    = ijkv4(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -1700,15 +1755,24 @@
                      indx = ijkv4(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -1737,7 +1801,8 @@
       SUBROUTINE fteik_evaluateSweep5LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep5LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep5Slowness64fF, & 
                                  fteik_prefetchSweep5TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, slow, &
@@ -1817,15 +1882,21 @@
                      k    = ijkv5(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -1892,15 +1963,24 @@
                      indx = ijkv5(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -1929,7 +2009,8 @@
       SUBROUTINE fteik_evaluateSweep6LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep6LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep6Slowness64fF, & 
                                  fteik_prefetchSweep6TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, slow, &
@@ -2009,15 +2090,21 @@
                      k    = ijkv6(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -2084,15 +2171,24 @@
                      indx = ijkv6(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -2121,7 +2217,8 @@
       SUBROUTINE fteik_evaluateSweep7LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep7LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep7Slowness64fF, & 
                                  fteik_prefetchSweep7TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, slow, &
@@ -2201,15 +2298,21 @@
                      k    = ijkv7(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -2276,15 +2379,24 @@
                      indx = ijkv7(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &
@@ -2313,7 +2425,8 @@
       SUBROUTINE fteik_evaluateSweep8LS64fF(linitk, ttimes, ierr) &
                  BIND(C, NAME='fteik_evaluateSweep8LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF
+      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, & !fteik_localSolverExplicit64fF
+                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep8Slowness64fF, & 
                                  fteik_prefetchSweep8TravelTimes64fF
       USE FTEIK_UTILS64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, slow, &
@@ -2393,15 +2506,21 @@
                      k    = ijkv8(4*(node-1)+3)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverNoInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
-                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .FALSE.,                        &
-                                   i, j, k,                       &
-                                   sgntz, sgntx, sgnty,           &
-                                   sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                                  slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7))
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .FALSE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .FALSE.,                        &
@@ -2468,15 +2587,24 @@
                      indx = ijkv8(4*(node-1)+4)
                      kndx = 8*(loop - 1)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverExplicit64fF( &
+                     tt1(loop) = fteik_localSolverInit64fF( &
                                   ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
                                   slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
-                                  .TRUE.,                        &
                                    i, j, k,                       &
                                    sgntz, sgntx, sgnty,           &
                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+                     !!DIR$ FORCEINLINE
+                     !tt1(loop) = fteik_localSolverExplicit64fF( &
+                     !             ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
+                     !             ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
+                     !             slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
+                     !             slowWork(kndx+5), slowWork(kndx+6), slowWork(kndx+7), &
+                     !             .TRUE.,                        &
+                     !              i, j, k,                       &
+                     !              sgntz, sgntx, sgnty,           &
+                     !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !tt1(loop) = fteik_localSolver64fF(ttWork(8*(loop-1)+1), &
                      !                             slowWork(8*(loop-1)+1),  &
                      !                             .TRUE.,                        &

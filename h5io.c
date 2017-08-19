@@ -118,6 +118,9 @@ int fteik_h5io_writeVelocityModel64f(const hid_t fileID, const char *velName,
     return ierr;
 }
 //============================================================================//
+/*!
+ * @brief Writes the travel times for the given model.
+ */
 int fteik_h5io_writeTravelTimes64f(const hid_t fileID, const char *ttName,
                                    const int nz, const int nx, const int ny, 
                                    const double *__restrict__ tt)

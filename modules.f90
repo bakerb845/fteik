@@ -212,6 +212,40 @@
             LOGICAL(C_BOOL), INTENT(IN), VALUE :: linitk
             END FUNCTION
 
+            PURE REAL(C_DOUBLE)                                         &
+            FUNCTION fteik_localSolverNoInit64fF(tv, te, tn, tev,       &
+                                           ten, tnv, tnve, tt0,         &
+                                           slow1, slow2, slow3, slow4,  &
+                                           slow5, slow6, slow7) &
+            RESULT(tupd) BIND(C, NAME='fteik_localSolverNoInit64fF')
+            !$OMP DECLARE SIMD(fteik_localSolverNoInit64fF)
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0 
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
+                                                 slow5, slow6, slow7
+            END FUNCTION
+
+            PURE REAL(C_DOUBLE)                                             &
+            FUNCTION fteik_localSolverInit64fF(tv, te, tn, tev,             &
+                                           ten, tnv, tnve, tt0,             &
+                                           slow1, slow2, slow3, slow4,      &
+                                           slow5, slow6, slow7,             &
+                                           i, j, k,                         &
+                                           sgntz, sgntx, sgnty,             &
+                                           sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
+            RESULT(tupd) BIND(C, NAME='fteik_localSolverInit64fF')
+            !$OMP DECLARE SIMD(fteik_localSolverInit64fF) &
+            !$OMP UNIFORM(sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
+                                                 slow5, slow6, slow7
+            REAL(C_DOUBLE), INTENT(IN), VALUE :: sgnrz_dzi, sgnrx_dxi, sgnry_dyi
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, sgntx, sgnty, sgntz
+            END FUNCTION
+
             SUBROUTINE fteik_setGridSizeF(nzIn, nxIn, nyIn, ierr) &
                        BIND(C, NAME='fteik_setGridSizeF')
             USE ISO_C_BINDING

@@ -1749,6 +1749,14 @@ print *, minval(ttimes), maxval(ttimes)
       tzc = 0.d0
       txc = 0.d0
       tyc = 0.d0
+      !tauv = FTEIK_HUGE
+      !taue = FTEIK_HUGE
+      !taun = FTEIK_HUGE
+      !taun = FTEIK_HUGE
+      !tauev = FTEIK_HUGE
+      !tauen = FTEIK_HUGE
+      !taunv = FTEIK_HUGE
+      !taunve = FTEIK_HUGE
       IF (tmin <= epsSolver .OR. linitk) THEN
          !t0c = t_anad64f(tzc, txc, tyc, i, j, k)
          CALL fteik_tAnaD64fF(t0c, tzc, txc, tyc, i, j, k,    &
@@ -1770,10 +1778,10 @@ print *, minval(ttimes), maxval(ttimes)
                                         dz, dx, dy, zsa, xsa, ysa, szero)
       ENDIF
       !--------------------1D operators, (refracted times),set times to BIG--------------!
-      t1d = FTEIK_HUGE ! Big
-      t1  = FTEIK_HUGE ! Big
-      t2  = FTEIK_HUGE ! Big
-      t3  = FTEIK_HUGE ! Big
+      !t1d = FTEIK_HUGE ! Big
+      !t1  = FTEIK_HUGE ! Big
+      !t2  = FTEIK_HUGE ! Big
+      !t3  = FTEIK_HUGE ! Big
       ! V plane
       t1 = tv + dz*slow1 !t1 = tv + dz*slowLoc(1)
       ! WE plane
@@ -1890,7 +1898,7 @@ print *, minval(ttimes), maxval(ttimes)
             tc = taun + 0.5d0*(-taue + tauen - tauv + taunv) - tauev + taunve ! Y
             apoly = dx2i + dz2i + dy2i
             bpoly = 6.d0*(sgnrz_dzi*tzc + sgnry_dyi*tyc + sgnrx_dxi*txc) &
-                  - 2.d0*(ta*dx2i + tb*dz2i + tc*dy2i);
+                  - 2.d0*(ta*dx2i + tb*dz2i + tc*dy2i)
             cpoly = ((ta*ta)*dx2i) + ((tb*tb)*dz2i) + ((tc*tc)*dy2i)               &
                   - 6.d0*( sgnrx_dxi*txc*ta + sgnrz_dzi*tzc*tb + sgnry_dyi*tyc*tc) &
                   + 9.d0*(szero2 - sref2)

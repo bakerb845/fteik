@@ -26,6 +26,11 @@ int graph_createLevelStructure(const int n, const int *__restrict__ xadj,
                                const int *__restrict__ adjncy,
                                int *nLevels, int **levelPtrOut,
                                int **ijkvOut, int **n2lOut);
+int fteik_io_readVelocityModel(const char *fileName,
+                               int *ncellz, int *ncellx, int *ncelly,
+                               double *dz, double *dx, double *dy,
+                               double *z0, double *x0, double *y0,
+                               double *__restrict__ vel[]);
 /*!
  */
 int main()
@@ -37,7 +42,7 @@ int main()
     double *tt, *ttRef, *vel, xrms;
     clock_t t0, t1;
     int *xadj, *adjncy, *levelPtr, *ijkv, *n2l, *n2l8;
-    int ierr, ncell, nLevels, ngrd;
+    int ierr, ncell, nLevels, ngrd, nrec;
     const double eps = 2.0;
     const int nsweep = 5;
     int nz = 13, nx = 10, ny = 15;
@@ -50,9 +55,21 @@ nz = 35; nx = 36; ny = 37;
     const double vconst = 6.e3;
     hid_t fileID;
 
+/*
+int ncellx, ncelly, ncellz;
+double dxt, dyt, dzt, x0t, y0t, z0t;
+double *vwork = NULL;
+ fteik_io_readVelocityModel("/home/bakerb25/C/SEG_EAGE_3DOverhrustModel/Disk1/3D-Velocity-Grid/segOverthrust.h5",
+                            &ncellz, &ncellx, &ncelly,
+                            &dxt, &dyt, &dzt, &z0t, &x0t, &y0t,
+                            &vwork);
+free(vwork);
+getchar();
+*/
+
     memset(&xdmf, 0, sizeof(struct xdmf_struct));
     memset(&solver, 0, sizeof(struct fteikSolver_struct));
-omp_set_num_threads(2);
+//omp_set_num_threads(2);
 //graph_testGrd2ijk(34, 10, 21);
     // Compute an analytic solution in a constant velocity model
     ngrd = nx*ny*nz;
@@ -65,12 +82,27 @@ omp_set_num_threads(2);
                                                 dz, dx, dy, 
                                                 zs, xs, ys, 
                                                 vconst, ttRef);
+    // Set some receiver locations at the free surface
+    nrec = MIN3(nx, ny, nz)/4;
+    printf("Number of receivers: %d\n", nrec);
+    double *xrec = (double *) calloc((size_t) nrec, sizeof(double));
+    double *yrec = (double *) calloc((size_t) nrec, sizeof(double));
+    double *zrec = (double *) calloc((size_t) nrec, sizeof(double));
+    double *trec = (double *) calloc((size_t) nrec, sizeof(double));
+    for (int ir=0; ir<nrec; ir++)
+    {
+        xrec[ir] = x0 + 3.0/4.0*ir;
+        yrec[ir] = y0 + 3.0/4.0*ir;
+        zrec[ir] = z0;
+    }
     // Intialize the solver
     printf("Initializing solver...\n");
     fteik_initializeF(&nz, &nx, &ny, 
                       &z0, &x0, &y0,
                       &dz, &dx, &dy,
                       &nsweep, &eps, &ierr); 
+    printf("Setting receiver locations...\n");
+    fteik_setReceivers64fF(nrec, zrec, xrec, yrec, &ierr);
     printf("Setting velocity model...\n");
     fteik_setVelocityModel64fF(&ncell, vel, &ierr);
     printf("Setting source...\n");
@@ -89,8 +121,11 @@ omp_set_num_threads(2);
     fteik_solveEikonalLSMF(&ierr);
     t1 = clock();
     printf("LSM solver time %f (s)\n", ((float)(t1-t0))/CLOCKS_PER_SEC);
-
-    fteik_getTravelTimes64fF(&ngrd, tt, &ierr);
+    
+    printf("Copying travel-times...\n");
+    fteik_getTravelTimes64fF(ngrd, tt, &ierr);
+    printf("Getting traveltimes at stations...\n");
+    fteik_getTravelTimesAtReceivers64fF(nrec, trec, &ierr); 
     printf("Finalizing solver\n");
     fteik_finalizeF();
 float zs4 = zs;
@@ -122,126 +157,11 @@ for (int i=0; i<ngrd; i++)
 printf("xrms: %e\n", sqrt(xrms)/(double) (ngrd));
 free(tori);
 free(tt);
+free(xrec);
+free(yrec);
+free(zrec);
+free(trec);
 return 0;
-getchar();
-    // Create the level set structure for the 8 different sweeps 
-    ierr = graph_createLevelStructs(nz, nx, ny, &levelSets);
-    if (ierr != 0)
-    {
-        printf("Error creating level set structures\n");
-        return EXIT_FAILURE;
-    }
-    // Create the output H5 file
-    fileID = H5Fcreate("levels.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    // Dump the model geometry
-    fteik_h5io_writeGeometry(fileID, 
-                             nz, nx, ny,
-                             dz, dx, dy,
-                             z0, x0, y0);
-    // Initialize the XDMF file for plotting and dump the levels
-    fteik_xdmf_initialize("./\0", "levels.h5", projnm, nz, nx, ny, &xdmf);
-    for (int k=0; k<8; k++)
-    {
-        char name[128];
-        memset(name, 0, 128*sizeof(char));
-        sprintf(name, "levelSet_%d", k+1);
-        fteik_h5io_writeLevelSet32i(fileID, name,
-                                    nz, nx, ny,
-                                    levelSets.levelSet[k].n2l);
-        fteik_xdmf_addLevelSet(xdmf, k+1, name);
-    }
-/*
-    // Compute an analytic solution in a constant velocity model
-    ncell = (nx - 1)*(ny - 1)*(nz - 1);
-    vel = (double *) aligned_alloc(64, (size_t) (ncell)*sizeof(double));
-    ttRef = (double *) aligned_alloc(64, (size_t) (nx*ny*nz)*sizeof(double));
-    analyticSolution_wholeSpace(nz, nx ,ny, dz, dx, dy, vconst, vel);
-    analyticSolution_wholeSpaceAnalyticSolution(nz, nx, ny,
-                                                dz, dx, dy,
-                                                zs, xs, ys,
-                                                vconst, ttRef);
-*/
-    // Write the analytic solutions to the H5 archive
-    fteik_h5io_writeVelocityModel64f(fileID, "HomogeneousModel\0",
-                                     nz, nx, ny, vel);
-    fteik_h5io_writeTravelTimes64f(fileID, "AnalyticSolution\0",
-                                   nz, nx ,ny, ttRef);
-    fteik_xdmf_addVelocityModel(xdmf, "HomogeneousModel\0");
-    fteik_xdmf_addTravelTimes(xdmf, "AnalyticSolution\0");
-
-
-    // Set the constants for fteik
-    fteik_setGridSize(nz, nx, ny, &solver);
-    fteik_setGridSpacing(dz, dx, dy, &solver);
-    fteik_setSphericalToCartesianEpsilon(eps, &solver);
-    fteik_setNumberOfSweeps(nsweep, &solver);
-    // Set the level-set elimination tree
-    fteik_initializeGraph(&solver); 
-    // Set the velocity model
-    fteik_setSlownessModel64f(ncell, vel, &solver);
-    // Set the source
-    fteik_setSourceIndex(zs, xs, ys, &solver);
-    // solve
-printf("fix here\n"); solver.nsweeps = 0;
-/*
-t0=clock();
-fteik_levelSetSolver(&solver);
-t1=clock() - t0;
-*/
-printf("levelset %f (s)\n", ((float)t1/CLOCKS_PER_SEC));
-fteik_h5io_writeTravelTimes64f(fileID, "LevelSetSolution\0",
-                                   nz, nx ,ny, solver.tt);
-double *temp = (double *) calloc((size_t) (nx*ny*nz), sizeof(double));
-memcpy(temp, solver.tt, (size_t) (nx*ny*nz)*sizeof(double));
-fteik_xdmf_addTravelTimes(xdmf, "LevelSetSolution\0");
-//getchar();
-
-printf("solving\n");
-t0=clock();
-ldo = 0;
-if (ldo == 0)
-{
-fteik_(vel, tori, 
-       &nz, &nx, &ny,
-       &zs4, &xs4, &ys4,
-       &dz4, &dx4, &dy4, &nsweep, &eps4);
-//return 0;
-}
-t1=clock() - t0;
-printf("solver time %f (s)\n", ((float)t1)/CLOCKS_PER_SEC);
-    fteik_h5io_writeTravelTimes64f(fileID, "FortranSolution\0",
-                                   nz, nx ,ny, tori);
-    fteik_xdmf_addTravelTimes(xdmf, "FortranSolution\0");
-printf("solver 2\n");
-t0 = clock();
-    //fteik_solveEikonalEquation(&solver);
- fteik_legacySolver(&solver);
-t1 = clock() - t0;
-printf("solver time %f (s)\n", ((float)t1)/CLOCKS_PER_SEC);
-
-fteik_h5io_writeTravelTimes64f(fileID, "cSolution\0",
-                               nz, nx ,ny, solver.tt);
-fteik_xdmf_addTravelTimes(xdmf, "cSolution\0");
-
-xrms = 0.0;
-double xrmsNew = 0.0;
-for (int i=0; i<solver.ngrd; i++)
-{
- xrms = xrms + pow(solver.tt[i] - tori[i], 2);
- xrmsNew = xrmsNew + pow(solver.tt[i] - temp[i], 2);
-}
-printf("%e\n", sqrt(xrms)/(double) solver.ngrd);
-printf("debug rms %e\n", sqrt(xrmsNew)/(double) solver.ngrd);
-
-    // Close the archive file and finalize the XDMF file
-    H5Fclose(fileID);
-    fteik_xdmf_finalize(&xdmf);
-    // Free memory
-    graph_freeLevelsStruct(&levelSets);
-    free(ttRef);
-    free(vel);
-    //fteik_applyEvaluateLevelSetSweeps(3, 5, 5);
-    return 0;
 }
 
 int analyticSolution_wholeSpace(
