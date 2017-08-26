@@ -384,7 +384,7 @@ print *, maxLevelSize
       INTEGER(C_INT), DIMENSION(:), INTENT(IN) :: ijkv, levelPtr
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(OUT) :: lupd
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) i, igrd, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
+      INTEGER(C_INT) i, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
                      x1, x2, y1, y2, z1, z2
       lupd(:) = .FALSE.
       IF (linitk) THEN
@@ -415,15 +415,11 @@ print *, maxLevelSize
             iz   = ijkv(4*(node - 1) + 1)
             ix   = ijkv(4*(node - 1) + 2)
             iy   = ijkv(4*(node - 1) + 3)
-            igrd = ijkv(4*(node - 1) + 4)
-            !CALL index2gridF(igrd, iz, ix, iy, ierr)
-            IF (ierr == 0) THEN
-               IF (iz >= minz .AND. iz <= maxz .AND. &
-                   ix >= minx .AND. ix <= maxx .AND. &
-                   iy >= miny .AND. iy <= maxy) THEN
-                  lupd(node) = .TRUE.
-               ENDIF 
-            ENDIF
+            IF (iz >= minz .AND. iz <= maxz .AND. &
+                ix >= minx .AND. ix <= maxx .AND. &
+                iy >= miny .AND. iy <= maxy) THEN
+               lupd(node) = .TRUE.
+            ENDIF 
     2    CONTINUE
     1 CONTINUE
       RETURN

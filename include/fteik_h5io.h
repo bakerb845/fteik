@@ -23,6 +23,11 @@ extern "C"
 {
 #endif
 
+int fteik_h5io_initializeF(const char *fileName);
+int fteik_h5io_initialize(const char *fileName);
+int fteik_h5io_writeVelocityModelF(const char *dataName);
+
+
 int fteik_h5io_writeTravelTimes64f(const hid_t fileID, const char *ttName,
                                    const int nz, const int nx, const int ny, 
                                    const double *__restrict__ tt);

@@ -97,7 +97,7 @@
          REAL(C_DOUBLE), PARAMETER :: zero = 0.d0
          REAL(C_DOUBLE), PARAMETER :: one = 1.d0
          REAL(C_DOUBLE), PARAMETER :: DBL_EPSILON = EPSILON(1.d0)
-         INTEGER(C_INT), PARAMETER :: chunkSize = 32
+         INTEGER(C_INT), PARAMETER :: chunkSize = 16
          ! variables that must be saved
          SAVE :: ttimes, tt1
          SAVE :: ijkv1, ijkv2, ijkv3, ijvk4, ijkv5, ijvk5, ijkv6, ijkv7, ijkv8,     &
@@ -212,20 +212,52 @@
             LOGICAL(C_BOOL), INTENT(IN), VALUE :: linitk
             END FUNCTION
 
-            PURE REAL(C_DOUBLE)                                         &
-            FUNCTION fteik_localSolverNoInit64fF(tv, te, tn, tev,       &
-                                           ten, tnv, tnve, tt0,         &
-                                           slow1, slow2, slow3, slow4,  &
-                                           slow5, slow6, slow7) &
-            RESULT(tupd) BIND(C, NAME='fteik_localSolverNoInit64fF')
-            !$OMP DECLARE SIMD(fteik_localSolverNoInit64fF)
+            !PURE REAL(C_DOUBLE)                                         &
+            !FUNCTION fteik_localSolverNoInit64fF(tv, te, tn, tev,       &
+            !                               ten, tnv, tnve, tt0,         &
+            !                               slow1, slow2, slow3, slow4,  &
+            !                               slow5, slow6, slow7) &
+            !RESULT(tupd) BIND(C, NAME='fteik_localSolverNoInit64fF')
+            !!$OMP DECLARE SIMD(fteik_localSolverNoInit64fF)
+            !USE ISO_C_BINDING
+            !IMPLICIT NONE
+            !REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0 
+            !REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
+            !                                     slow5, slow6, slow7
+            !END FUNCTION
+
+            PURE SUBROUTINE fteik_localSolverNoInit64fF(n, tv, te, tn, tev,         &
+                                                        ten, tnv, tnve, tt0,        &
+                                                        slow1, slow2, slow3, slow4, &
+                                                        slow5, slow6, slow7,        &
+                                                        tupd)                       &
+            BIND(C, NAME='fteik_localSolverNoInit64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
-            REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0 
-            REAL(C_DOUBLE), INTENT(IN), VALUE :: slow1, slow2, slow3, slow4, &
-                                                 slow5, slow6, slow7
-            END FUNCTION
-
+            INTEGER(C_INT), INTENT(IN), VALUE :: n
+            REAL(C_DOUBLE), INTENT(IN) :: tv(n), te(n), tn(n), tev(n),  &
+                                          ten(n), tnv(n), tnve(n), tt0(n)
+            REAL(C_DOUBLE), INTENT(IN) :: slow1(n), slow2(n), slow3(n), slow4(n), &
+                                          slow5(n), slow6(n), slow7(n)
+            REAL(C_DOUBLE), INTENT(OUT) :: tupd(n)
+            !DIR$ ASSUME_ALIGNED tv: 64
+            !DIR$ ASSUME_ALIGNED te: 64
+            !DIR$ ASSUME_ALIGNED tn: 64
+            !DIR$ ASSUME_ALIGNED tev: 64
+            !DIR$ ASSUME_ALIGNED ten: 64
+            !DIR$ ASSUME_ALIGNED tnv: 64
+            !DIR$ ASSUME_ALIGNED tnve: 64
+            !DIR$ ASSUME_ALIGNED tt0: 64
+            !DIR$ ASSUME_ALIGNED slow1: 64
+            !DIR$ ASSUME_ALIGNED slow2: 64
+            !DIR$ ASSUME_ALIGNED slow3: 64
+            !DIR$ ASSUME_ALIGNED slow4: 64
+            !DIR$ ASSUME_ALIGNED slow5: 64
+            !DIR$ ASSUME_ALIGNED slow6: 64
+            !DIR$ ASSUME_ALIGNED slow7: 64
+            !DIR$ ASSUME_ALIGNED tupd: 64
+            END SUBROUTINE
+ 
             PURE REAL(C_DOUBLE)                                             &
             FUNCTION fteik_localSolverInit64fF(tv, te, tn, tev,             &
                                            ten, tnv, tnve, tt0,             &
@@ -235,8 +267,8 @@
                                            sgntz, sgntx, sgnty,             &
                                            sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
             RESULT(tupd) BIND(C, NAME='fteik_localSolverInit64fF')
-            !$OMP DECLARE SIMD(fteik_localSolverInit64fF) &
-            !$OMP UNIFORM(sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+            !!$OMP DECLARE SIMD(fteik_localSolverInit64fF) &
+            !!$OMP UNIFORM(sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
             USE ISO_C_BINDING
             IMPLICIT NONE
             REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0
@@ -634,90 +666,114 @@
 
             PURE SUBROUTINE fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep1Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep2Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep2Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep3Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep3Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep4Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep4Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep5Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep5Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep6Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep6Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep7Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep7Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             PURE SUBROUTINE fteik_prefetchSweep8Slowness64fF(i, j, k, nz, nx, ny, &
                                                              nzm1, nzm1_nxm1, &
-                                                             slow, slowLoc) &
+                                                             slow, & !slowLoc) &
+                                                             sl1, sl2, sl3, sl4, &
+                                                             sl5, sl6, sl7) &
                        BIND(C, NAME='fteik_prefetchSweep8Slowness64fF')
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN) :: i, j, k, nzm1, nzm1_nxm1, nz, nx, ny
             REAL(C_DOUBLE), INTENT(IN) :: slow((nz-1)*(nx-1)*(ny-1))
-            REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            !REAL(C_DOUBLE), INTENT(OUT) :: slowLoc(7)
+            REAL(C_DOUBLE), INTENT(OUT) :: sl1, sl2, sl3, sl4, sl5, sl6, sl7
             END SUBROUTINE
 
             SUBROUTINE fteik_evaluateSweep1LS64fF(linitk, ttimes, ierr) &
@@ -794,3 +850,101 @@
 
          END INTERFACE
       END MODULE
+
+      MODULE FTEIK_H5IO
+         USE ISO_C_BINDING
+         !INTEGER(C_INT64_T) h5fl
+         CHARACTER(C_CHAR) :: fname(4096)
+         LOGICAL(C_BOOL) linitH5FL
+         SAVE linitH5FL, fname
+
+         INTERFACE
+
+            INTEGER(C_SIZE_T) FUNCTION strlenF(fileName) &
+            BIND(C, NAME='strlen')
+            USE ISO_C_BINDING
+            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION fteik_h5io_initializeF(fileName) &
+            BIND(C, NAME='fteik_h5io_initializeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+            END FUNCTION
+
+            ! internal functions
+
+            INTEGER(C_INT) &
+            FUNCTION fteik_h5io_writeVelocityModel16iF(h5fl, velName, &
+                                                       nz, nx ,ny,    &
+                                                       vel)           &
+            BIND(C, NAME='fteik_h5io_writeVelocityModel16iF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+            CHARACTER(C_CHAR), INTENT(IN) :: velName(*)
+            INTEGER(C_INT), INTENT(IN), VALUE :: nx, ny, nz
+            INTEGER(C_INT16_T), INTENT(IN) :: vel((nx-1)*(ny-1)*(nz-1))
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION fteik_h5io_closeFileF(h5fl) &
+            BIND(C, NAME='h5io_closeFileF')
+            USE ISO_C_BINDING 
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+            END FUNCTION
+
+            INTEGER(C_INT64_T) FUNCTION fteik_h5io_createFileF(fileName) &
+            BIND(C, NAME='h5io_createFileF')
+            USE ISO_C_BINDING 
+            IMPLICIT NONE
+            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+            END FUNCTION
+
+            INTEGER(C_INT64_T) FUNCTION fteik_h5io_openFileReadWriteF(fileName) &
+            BIND(C, NAME='h5io_openFileReadWriteF')
+            USE ISO_C_BINDING 
+            IMPLICIT NONE
+            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION fteik_h5io_initialize(fileName) &
+            BIND(C, NAME='fteik_h5io_initialize')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION h5io_writeArray64fF(fid, dataName, n, x) &
+            BIND(C, NAME='h5io_writeArray64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid
+            INTEGER(C_INT), INTENT(IN), VALUE :: n
+            CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
+            REAL(C_DOUBLE), INTENT(IN) :: x(n)
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION h5io_writeArray32iF(fid, dataName, n, x) &
+            BIND(C, NAME='h5io_writeArray32iF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid 
+            INTEGER(C_INT), INTENT(IN), VALUE :: n
+            CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
+            REAL(C_INT), INTENT(IN) :: x(n)
+            END FUNCTION
+
+            INTEGER(C_INT) FUNCTION h5io_writeArray16iF(fid, dataName, n, x) &
+            BIND(C, NAME='h5io_writeArray16iF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid
+            INTEGER(C_INT16_T), INTENT(IN), VALUE :: n
+            CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
+            REAL(C_INT), INTENT(IN) :: x(n)
+            END FUNCTION
+
+         END INTERFACE
+      END MODULE 

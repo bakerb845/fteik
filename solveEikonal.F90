@@ -92,7 +92,11 @@ call cpu_time(t0)
             DO i = MAX(2,zsi),nz
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7)) 
                CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -125,7 +129,11 @@ call cpu_time(t0)
             DO i = MAX(2,zsi),nz
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep2Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7))
                CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -158,7 +166,11 @@ call cpu_time(t0)
             DO i = MAX(2,zsi),nz
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep3Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7))
                CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -191,7 +203,11 @@ call cpu_time(t0)
             DO i = MAX(2,zsi),nz
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep4Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7)) 
                CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -224,7 +240,11 @@ call cpu_time(t0)
             DO i = zsi+1,1,-1
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep5Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7))
                CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttwork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -257,7 +277,11 @@ call cpu_time(t0)
             DO i = zsi+1,1,-1
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep6Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7)) 
                CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -290,7 +314,11 @@ call cpu_time(t0)
             DO i = zsi+1,1,-1
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep7Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7)) 
                CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -323,7 +351,11 @@ call cpu_time(t0)
             DO i = zsi+1,1,-1
                ! prefetch the slownesses and traveltimes
                CALL fteik_prefetchSweep8Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                     slow, slowWork)
+                                                     slow, & !slowWork)
+                                                     slowWork(1), slowWork(2), &
+                                                     slowWork(3), slowWork(4), &
+                                                     slowWork(5), slowWork(6), &
+                                                     slowWork(7))
                CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -340,6 +372,7 @@ call cpu_time(t0)
             ENDDO
          ENDDO
       ENDDO
+print *, 'start iter', minval(ttimes), maxval(ttimes)
       !----------------------------------------------------------------------------------!
       !                              Begin the iterative method                          !
       !----------------------------------------------------------------------------------!
@@ -361,7 +394,11 @@ call cpu_time(t0)
                DO i = 2,nz
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep1Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -394,7 +431,11 @@ call cpu_time(t0)
                DO i = 2,nz
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep2Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -427,7 +468,11 @@ call cpu_time(t0)
                DO i = 2,nz
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep3Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -460,7 +505,11 @@ call cpu_time(t0)
                DO i = 2,nz
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep4Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -493,7 +542,11 @@ call cpu_time(t0)
                DO i = nz-1,1,-1
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep5Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -526,7 +579,11 @@ call cpu_time(t0)
                DO i = nz-1,1,-1
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep6Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -559,7 +616,11 @@ call cpu_time(t0)
                DO i = nz-1,1,-1
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep7Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -592,7 +653,11 @@ call cpu_time(t0)
                DO i = nz-1,1,-1
                   ! prefetch the slownesses and traveltimes
                   CALL fteik_prefetchSweep8Slowness64fF(i, j, k, nz, nx, ny, nzm1, nzm1_nxm1, &
-                                                        slow, slowWork)
+                                                        slow, & !slowWork)
+                                                        slowWork(1), slowWork(2), &
+                                                        slowWork(3), slowWork(4), &
+                                                        slowWork(5), slowWork(6), &
+                                                        slowWork(7)) 
                   CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                            ttWork(1), ttWork(2), &
                                                            ttWork(3), ttWork(4), &
@@ -642,7 +707,7 @@ print *, minval(ttimes), maxval(ttimes)
                                  fteik_evaluateSweep8LS64fF
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) kiter
+      INTEGER(C_INT) kiter, lsweep
       LOGICAL(C_BOOL) linitk
 real*8 t0, t1
 
@@ -680,23 +745,45 @@ real*8 t0, t1
       linitk = .FALSE.
 
 call cpu_time(t0)
-      CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep3LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep4LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep5LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep6LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep7LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep8LS64fF(.TRUE., ttimes, ierr)
+      DO 101 lsweep=1,8
+         If (lsweep == 1) THEN
+            CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 2) THEN
+            CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 3) THEN
+            CALL fteik_evaluateSweep3LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 4) THEN
+            CALL fteik_evaluateSweep4LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 5) THEN
+            CALL fteik_evaluateSweep5LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 6) THEN
+            CALL fteik_evaluateSweep6LS64fF(.TRUE., ttimes, ierr)
+         ELSEIF (lsweep == 7) THEN
+            CALL fteik_evaluateSweep7LS64fF(.TRUE., ttimes, ierr)
+         ELSE
+            CALL fteik_evaluateSweep8LS64fF(.TRUE., ttimes, ierr)
+         ENDIF
+  101 CONTINUE
       DO kiter=1,nsweep
-         CALL fteik_evaluateSweep1LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep2LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep3LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep4LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep5LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep6LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep7LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep8LS64fF(.FALSE., ttimes, ierr)
+         DO 102 lsweep=1,8
+            If (lsweep == 1) THEN
+               CALL fteik_evaluateSweep1LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 2) THEN
+               CALL fteik_evaluateSweep2LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 3) THEN
+               CALL fteik_evaluateSweep3LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 4) THEN
+               CALL fteik_evaluateSweep4LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 5) THEN
+               CALL fteik_evaluateSweep5LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 6) THEN
+               CALL fteik_evaluateSweep6LS64fF(.FALSE., ttimes, ierr)
+            ELSEIF (lsweep == 7) THEN
+               CALL fteik_evaluateSweep7LS64fF(.FALSE., ttimes, ierr)
+            ELSE
+               CALL fteik_evaluateSweep8LS64fF(.FALSE., ttimes, ierr)
+            ENDIF
+  102    CONTINUE
       ENDDO
 call cpu_time(t1)
 print *, 'execute:', t1 - t0
