@@ -372,7 +372,6 @@ call cpu_time(t0)
             ENDDO
          ENDDO
       ENDDO
-print *, 'start iter', minval(ttimes), maxval(ttimes)
       !----------------------------------------------------------------------------------!
       !                              Begin the iterative method                          !
       !----------------------------------------------------------------------------------!

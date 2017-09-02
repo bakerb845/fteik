@@ -26,6 +26,18 @@ static void unpackDoubleModelToDouble(const bool lzDown,
                                       const double *__restrict__ v8, 
                                       double *__restrict__ vin);
 
+ 
+/*
+int fteik_io_writeVelocityModel(const char *fileName,
+                            const int ncellz, const int ncellx, const int nelly,
+                            const double dz, const double dx, const double dy,
+                            const double z0, const double x0, const double y0,
+                            const double *__restrict__ vel)
+{
+
+}
+*/
+//============================================================================//
 /*!
  * @brief Reads the velocity model from an HDF5 file.  This is a finite
  *        difference model approriate for viewing with XDMF and Paraview.
@@ -44,7 +56,8 @@ static void unpackDoubleModelToDouble(const bool lzDown,
  *                         dimension [ncellz x ncellx x ncelly] where
  *                         the (iz,ix,iy)'th cell is accessed by:
  *                         iy*ncellz*ncellx + ix*ncellz + iz.  It has
- *                         convention +x right, +y away, and +z down.
+ *                         convention +x west-to-east, +y north-to-south,
+ *                         and +z down.
  *
  * @result 0 indicates success.
  *
@@ -60,7 +73,7 @@ int fteik_io_readVelocityModel(const char *fileName,
                                double *__restrict__ vel[])
 {
     hid_t attrID, attrSpace, dataSet, dataSpace, dataType, fileID, memSpace;
-    int zDown, leftHanded;
+    int zDown, rightHanded;
     hsize_t dims[3];
     herr_t status;
     int i, ierr, nCell, nx, ny, nz, rank;
@@ -137,9 +150,9 @@ int fteik_io_readVelocityModel(const char *fileName,
     H5Sclose(attrSpace);
     H5Aclose(attrID);
     // left-handed coordinate system
-    attrID = H5Aopen(dataSet, "leftHandedCoordinateSystem\0", H5P_DEFAULT);
+    attrID = H5Aopen(dataSet, "rightHandedCoordinateSystem\0", H5P_DEFAULT);
     attrSpace = H5Aget_space(attrID);
-    H5Aread(attrID, H5T_NATIVE_INT, &leftHanded);
+    H5Aread(attrID, H5T_NATIVE_INT, &rightHanded);
     H5Sclose(attrSpace);
     H5Aclose(attrID);
     // Get the data sizes
@@ -217,7 +230,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     printf("Cell spacing in (z,x,y)=(%f,%f,%f) meters\n", *dz ,*dx, *dy);
     lzDown = true;
     if (!zDown){lzDown = false;}
-    if ((leftHanded && !lzDown) || !(leftHanded) && lzDown)
+    if ((rightHanded && !lzDown) || !(rightHanded) && lzDown)
     {
         printf("I don't know how to unpack this model\n");
         ierr = 1;
@@ -239,6 +252,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     else
     {
+         printf("Maximum velocity is %f m/s\n", vmax);
          printf("Minimum velocity is %f m/s\n", vmin);
     }
 ERROR:;
@@ -261,7 +275,7 @@ static void unpackInt16ModelToDouble(const bool lzDown,
                                      double *__restrict__ vin)
 {
     int indx, ix, iy, iz, jndx;
-    if (lzDown)
+    if (!lzDown)
     {
         for (iy=0; iy<ny; iy++)
         {

@@ -67,22 +67,6 @@
                                                   8, 11, 14, 15, 18, 19, 10,  4, 12, 16] 
          INTEGER(C_INT), PARAMETER :: v2l8(19) = [1,  5,  3,  6, 13,  9,  2, 11, 15, &
                                                   7, 10, 17,  4,  8, 12, 14, 16, 18, 19]
-!        INTEGER(C_INT), PARAMETER :: l2l1(19) = [1, 15, 11, 19,  2,  8, 16, 18,  3, &
-!                                                12,  9, 14,  4, 17,  5, 13,  6, 10,  7]
-!        INTEGER(C_INT), PARAMETER :: l2l2(19) = [1, 15,  5, 16,  6, 12, 17, 19,  2, &
-!                                                 7,  4, 13,  8, 18,  3,  9, 10, 14, 11]
-!        INTEGER(C_INT), PARAMETER :: l2l3(19) = [1,  6,  5, 16,  2,  4,  7, 13,  8, &
-!                                                17, 14, 19,  3,  9, 10, 18, 11, 15, 12]
-!        INTEGER(C_INT), PARAMETER :: l2l4(19) = [1,  6,  2, 10,  3,  5, 11, 17,  7, &
-!                                                12,  9, 18,  4, 13,  8, 14, 15, 19, 16]
-!        INTEGER(C_INT), PARAMETER :: l2l5(19) = [4, 16, 12, 19,  1,  5, 15, 17,  2, &
-!                                                11,  6, 13,  7, 18,  8, 14,  3,  9, 10]
-!        INTEGER(C_INT), PARAMETER :: l2l6(19) = [2, 15,  8, 17,  5,  9, 16, 18,  1, &
-!                                                 6,  3, 10, 11, 19,  4, 12,  7, 13, 14]
-!        INTEGER(C_INT), PARAMETER :: l2l7(19) = [2,  9,  5, 17,  1,  3,  6, 10,  7, &
-!                                                16, 11, 18,  4, 12, 13, 19,  8, 14, 15]
-!        INTEGER(C_INT), PARAMETER :: l2l8(19) = [1,  7,  3, 13,  2,  4, 10, 14,  6, &
-!                                                11,  8, 15,  5, 16,  9, 17, 12, 18, 19]
          INTEGER(C_INT), PARAMETER :: sgntzv(8) = [1, 1, 1, 1,-1,-1,-1,-1]
          INTEGER(C_INT), PARAMETER :: sgntxv(8) = [1,-1, 1,-1, 1,-1, 1,-1]
          INTEGER(C_INT), PARAMETER :: sgntyv(8) = [1, 1,-1,-1, 1, 1,-1,-1]
@@ -875,9 +859,45 @@
 
             ! internal functions
 
+            SUBROUTINE fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels, &
+                                               levelPtr, ijkv, levels)    &
+            BIND(C, NAME='fteik_h5io_ijkv2levelsF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), INTENT(IN) :: ngrd, nLevels , nz, nx, ny
+            INTEGER(C_INT), INTENT(IN) :: levelPtr(nLevels+1), ijkv(4*ngrd)
+            INTEGER(C_INT16_T), INTENT(OUT) :: levels(ngrd)
+            INTEGER(C_INT) level, indx, ix, iy, iz, jz, node
+            END SUBROUTINE 
+
+            INTEGER(C_INT) &
+            FUNCTION fteik_h5io_writeLevelScheduleF(h5fl, sweep,   &
+                                                    nz, nx, ny,    &
+                                                    levelSchedule) &
+            BIND(C, NAME='fteik_h5io_writeLevelScheduleF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+            INTEGER(C_INT), INTENT(IN), VALUE :: nz, nx, ny, sweep
+            INTEGER(C_INT16_T), INTENT(IN) :: levelSchedule(nz*nx*ny)
+            END FUNCTION
+
+            INTEGER(C_INT) &
+            FUNCTION fteik_h5io_writeTravelTimes32fF(h5fl, ttName, &
+                                                     nz, nx, ny,   &
+                                                     tt)           &
+            BIND(C, NAME='fteik_h5io_writeTravelTimes32fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+            CHARACTER(C_CHAR), INTENT(IN) :: ttName(*)
+            INTEGER(C_INT), INTENT(IN), VALUE :: nx, ny, nz
+            REAL(C_FLOAT), INTENT(IN) :: tt(nx*ny*nz)
+            END FUNCTION
+
             INTEGER(C_INT) &
             FUNCTION fteik_h5io_writeVelocityModel16iF(h5fl, velName, &
-                                                       nz, nx ,ny,    &
+                                                       nz, nx, ny,    &
                                                        vel)           &
             BIND(C, NAME='fteik_h5io_writeVelocityModel16iF')
             USE ISO_C_BINDING

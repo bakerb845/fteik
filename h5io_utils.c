@@ -5,27 +5,27 @@
 #include "h5io.h"
 
 
-int h5io_closeFile_finter(const int64_t *fileID)
+int h5io_closeFileF(const int64_t fileID)
 {
     hid_t fid;
     herr_t status;
     int ierr;
-    fid = (hid_t) *fileID;
+    fid = (hid_t) fileID;
     status = H5Fclose(fid);
     ierr = (int) status;
     return ierr;
 }
 //============================================================================//
-int h5io_openFileReadOnly_finter(const char *fname)
+int64_t h5io_openFileReadOnlyF(const char *fname)
 {
     hid_t fid;
-    int fileID;
+    int64_t fileID;
     fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);    
     fileID = (int) fid; 
     return fid;
 }
 //============================================================================//
-int64_t h5io_openFileReadWrite_finter(const char *fname)
+int64_t h5io_openFileReadWriteF(const char *fname)
 {
     hid_t fid;
     int64_t fileID;
@@ -34,7 +34,7 @@ int64_t h5io_openFileReadWrite_finter(const char *fname)
     return fileID;
 }
 //============================================================================//
-int64_t h5io_createFile_finter(const char *fname)
+int64_t h5io_createFileF(const char *fname)
 {
     hid_t fid;
     int64_t fileID;
@@ -127,23 +127,23 @@ int h5io_writeAttribute64f_finter(const int64_t *dataSetID,
     return ierr;
 }
 //============================================================================//
-int h5io_writeArray32i_finter(const int64_t *fid, const char *dataName,
-                              const int *n, const int *__restrict__ x)
+int h5io_writeArray32iF(const int64_t fid, const char *dataName,
+                        const int n, const int *__restrict__ x)
 {
     hid_t fileID;
     int ierr;
-    fileID = (hid_t) *fid;
-    ierr = h5io_writeArray32i(fileID, dataName, *n, x);
+    fileID = (hid_t) fid;
+    ierr = h5io_writeArray32i(fileID, dataName, n, x);
     return ierr;
 }
 //============================================================================//
-int h5io_writeArray64f_finter(const int64_t *fid, const char *dataName,
-                              const int *n, const double *__restrict__ x)
+int h5io_writeArray64fF(const int64_t fid, const char *dataName,
+                        const int n, const double *__restrict__ x)
 {
     hid_t fileID;
     int ierr;
-    fileID = (hid_t) *fid;
-    ierr = h5io_writeArray64f(fileID, dataName, *n, x);
+    fileID = (hid_t) fid;
+    ierr = h5io_writeArray64f(fileID, dataName, n, x);
     return ierr;
 }
 //============================================================================//
@@ -167,10 +167,67 @@ int h5io_readArray64f_finter(const int64_t *fid, const char *dataName,
     return ierr; 
 }
 //============================================================================//
+int h5io_writeArray16iF(const int64_t fileID, const char *dataName,
+                        const int n, const int16_t *__restrict__ x)
+{
+    hid_t fid = (hid_t) fileID;
+    return h5io_writeArray16iF(fid, dataName, n, x);
+}
+int h5io_writeArray16i(const hid_t fileID, const char *dataName,
+                       const int n, const int16_t *__restrict__ x)
+{
+    char *citem;
+    int ierr;
+    hsize_t dims[1];
+    hid_t dataSet, dataSpace;
+    herr_t status;
+    //------------------------------------------------------------------------//
+    ierr = 0;
+    if (n < 1 || x == NULL)
+    {   
+        if (n < 1){fprintf(stderr, "%s: Error no points to write\n", __func__);}
+        if (x == NULL){fprintf(stderr, "%s: Error x is NULL\n", __func__);}
+        return -1; 
+    }   
+    // Copy the data name
+    citem = (char *) calloc(strlen(dataName)+1, sizeof(char));
+    if (H5Lexists(fileID, dataName, H5P_DEFAULT) > 0)
+    {
+        fprintf(stderr, "%s: item %s already exists\n", __func__, citem);
+        free(citem);
+        return -1;
+    }
+    strcpy(citem, dataName);
+    dims[0] = (hsize_t) n;
+    // Create the dataspace
+    dataSpace = H5Screate_simple(1, dims, NULL);
+    // Create the dataset
+    dataSet = H5Dcreate2(fileID, citem, H5T_NATIVE_SHORT,
+                         dataSpace,
+                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    free(citem);
+    // Write it
+    status = H5Dwrite(dataSet, H5T_NATIVE_SHORT, H5S_ALL,
+                      H5S_ALL, H5P_DEFAULT, x); 
+    if (status != 0)
+    {   
+        fprintf(stderr, "%s: Failed to write data\n", __func__);
+        ierr =-1;
+    }   
+    // Free H5 resources
+    status  = H5Sclose(dataSpace);
+    status += H5Dclose(dataSet);
+    if (status != 0)
+    {   
+        fprintf(stderr, "%s: Failed to close dataset\n", __func__);
+        ierr =-1;
+    }   
+    return ierr;
+}
+//============================================================================//
 int h5io_writeArray32i(const hid_t fileID, const char *dataName,
                        const int n, const int *__restrict__ x)
 {
-    const char *fcnm = "h5io_writeArray32i\0";
     char *citem;
     int ierr;
     hsize_t dims[1];
@@ -180,8 +237,8 @@ int h5io_writeArray32i(const hid_t fileID, const char *dataName,
     ierr = 0;
     if (n < 1 || x == NULL)
     {
-        if (n < 1){printf("%s: Error no points to write\n", fcnm);}
-        if (x == NULL){printf("%s: Error x is NULL\n", fcnm);}
+        if (n < 1){fprintf(stderr, "%s: Error no points to write\n", __func__);}
+        if (x == NULL){fprintf(stderr, "%s: Error x is NULL\n", __func__);}
         return -1;
     }
     // Copy the data name
@@ -200,7 +257,7 @@ int h5io_writeArray32i(const hid_t fileID, const char *dataName,
                       H5S_ALL, H5P_DEFAULT, x);
     if (status != 0)
     {   
-        printf("%s: Failed to write data\n", fcnm);
+        fprintf(stderr, "%s: Failed to write data\n", __func__);
         ierr =-1;
     }
     // Free H5 resources
@@ -208,7 +265,7 @@ int h5io_writeArray32i(const hid_t fileID, const char *dataName,
     status += H5Dclose(dataSet);
     if (status != 0)
     {
-        printf("%s: Failed to close dataset\n", fcnm);
+        fprintf(stderr, "%s: Failed to close dataset\n", __func__);
         ierr =-1;
     }
     return ierr;
