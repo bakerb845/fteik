@@ -532,7 +532,41 @@
             END SUBROUTINE
 
          END INTERFACE
-      END MODULE
+      END MODULE FTEIK_UTILS64F
+
+      MODULE FTEIK_RECEIVER
+         USE ISO_C_BINDING
+         ! receiver indices
+         REAL(C_DOUBLE), ALLOCATABLE :: zdr(:), xdr(:), ydr(:)
+         INTEGER(C_INT), ALLOCATABLE :: zri(:), xri(:), yri(:)
+         INTEGER(C_INT) nrec
+         INTERFACE
+            SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
+            BIND(C, NAME='fteik_receiver_initialize64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+            REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr 
+            END SUBROUTINE
+
+            SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
+            BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), INTENT(IN) :: nrecIn
+            REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_receiver_finalizeF() &
+            BIND(C, NAME='fteik_receiver_finalizeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            END SUBROUTINE
+         END INTERFACE
+         SAVE zdr, xdr, ydr, zri, xri, yri, nrec
+      END MODULE FTEIK_RECEIVER
 
       MODULE FTEIK_AUTOCODE
          INTERFACE

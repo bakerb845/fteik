@@ -66,6 +66,8 @@
       CALL MPI_Bcast(z0, 1, MPI_DOUBLE, root, comm, mpierr)
       CALL MPI_Bcast(x0, 1, MPI_DOUBLE, root, comm, mpierr)
       CALL MPI_Bcast(y0, 1, MPI_DOUBLE, root, comm, mpierr)
+      ! number of Gauss-Seidel iterations
+      CALL fteik_mpi_broadcastNumberOfSweepsF(root, comm, mpierr)
       ! spherical to cartesian parameter
       CALL fteik_mpi_broadcastEpsS2C64fF(root, comm, mpierr)
       ! set space
@@ -172,8 +174,34 @@
 !>    @copyright MIT
 !>
       SUBROUTINE fteik_mpi_broadcastNumberOfSweepsF(root, comm, mpierr)
+      USE FTEIK_UTILS64F, ONLY : nsweep
       USE MPI
       USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: root, comm
+      INTEGER, INTENT(OUT) :: mpierr
+      CALL MPI_Bcast(nsweep, 1, MPI_INT32_T, root, comm, mpierr)
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      SUBROUTINE fteik_mpi_broadcastReceivers(root, comm, mpierr)
+      USE FTEIK_UTILS64F, ONLY : nrec
+      USE MPI
+      USE ISO_C_BINDING
+      !IMPLICIT NONE
+      INTEGER, INTENT(IN) :: root, comm
+      INTEGER, INTENT(OUT) :: mpierr
+      INTEGER myid
+      CALL MPI_Comm_Rank(myid, comm, mpierr)
+      CALL MPI_Bcast(nrec, 1, MPI_INT32_T, root, comm, mpierr)
+      IF (nrec < 1) THEN
+         IF (myid == root) THEN
+            WRITE(*,*) 'fteik_mpi_broadcastReceivers: No receivers to broadcast'
+         ENDIF 
+         RETURN
+      ENDIF
 
       RETURN
       END
