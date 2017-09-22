@@ -1117,11 +1117,11 @@ print *, indx, szero
       ierr = 1
       epsSolver = zero
       IF (.NOT.lhaveSource) THEN 
-         WRITE(*,*) 'fteik_setEpsSolver: Source not yet initialized'
+         WRITE(*,*) 'fteik_setEpsSolverF: Source not yet initialized'
          RETURN
       ENDIF
       IF (.NOT.lhaveSlownessModel) THEN 
-         WRITE(*,*) 'fteik_setSzeroF: Slowness model not yet set'
+         WRITE(*,*) 'fteik_setEpsSolverF: Slowness model not yet set'
          RETURN
       ENDIF
       ierr = 0

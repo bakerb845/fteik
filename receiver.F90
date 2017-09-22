@@ -19,9 +19,9 @@
 !>
       SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
                  BIND(C, NAME='fteik_receiver_initialize64fF')
-      USE FTEIK_UTILS64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0, lhaveGrid
-      USE FTEIK_RECEIVER, ONLY : fteik_receiver_finalizeF
-      USE FTEIK_RECEIVER, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+      USE FTEIK_MODEL64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
@@ -40,7 +40,7 @@
       !IF (ALLOCATED(xdr)) DEALLOCATE(xdr)
       !IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
       ! Check that the model has been initialized
-      IF (.NOT.lhaveGrid) THEN
+      IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
          WRITE(*,*) 'fteik_receiver_initialize64fF: Grid not yet set'
          ierr = 1
          RETURN
@@ -109,7 +109,7 @@
 !>
       INTEGER(C_INT) FUNCTION fteik_receiver_getNumberOfReceiversF( )     &
       RESULT(nrecOut) BIND(C, NAME='fteik_receiver_getNumberOfReceiversF')
-      USE FTEIK_RECEIVER, ONLY : nrec
+      USE FTEIK_RECEIVER64F, ONLY : nrec
       USE ISO_C_BINDING
       nrecOut = nrec
       RETURN
@@ -124,7 +124,8 @@
 !>    @param[in] nrecIn    Workspace of ttr.
 !>
 !>    @param[out] ttr      Travel-times (seconds) at each receiver.  This is a vector of
-!>                         dimension [nrecIn] however only the first nrec values are set.
+!>                         dimension [nrecIn] however only the first nrec values are 
+!>                         interpolated.  Excess values will be set to FTEIK_HUGE.
 !>    @param[out] ierr     0 indicates success.
 !>
 !>    @author Ben Baker
@@ -134,13 +135,13 @@
       SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
       BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
       USE FTEIK_UTILS64F, ONLY : grid2indexF
-      USE FTEIK_UTILS64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE FTEIK_UTILS64F, ONLY : ttimes, lhaveTravelTimes
       USE FTEIK_UTILS64F, ONLY : one, FTEIK_HUGE
-      USE FTEIK_RECEIVER, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
+      USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN) :: nrecIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
       REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) c0, c1, c00, c01, c10, c11, one_m_zd, one_m_xd, &
@@ -211,7 +212,7 @@
 !>
       SUBROUTINE fteik_receiver_finalizeF( ) &
                  BIND(C, NAME='fteik_receiver_finalizeF')
-      USE FTEIK_RECEIVER, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
       USE ISO_C_BINDING
       IMPLICIT NONE
       nrec = 0 

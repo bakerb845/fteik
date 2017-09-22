@@ -1,3 +1,147 @@
+      MODULE FTEIK_CONSTANTS64F
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         REAL(C_DOUBLE), PARAMETER :: FTEIK_HUGE = 99999.d0
+         REAL(C_DOUBLE), PARAMETER :: zero = 0.d0
+         REAL(C_DOUBLE), PARAMETER :: one = 1.d0
+         REAL(C_DOUBLE), PARAMETER :: DBL_EPSILON = EPSILON(1.d0)
+         INTEGER(C_INT), PARAMETER :: chunkSize = 16
+      END MODULE !FTEIK_CONSTANTS64F
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      MODULE FTEIK_MODEL64F
+         USE ISO_C_BINDING
+         USE FTEIK_CONSTANTS64F, ONLY : zero 
+         IMPLICIT NONE
+         REAL(C_DOUBLE), ALLOCATABLE :: slow(:) !> Slowness model (seconds/meters)
+         !DIR$ ATTRIBUTES ALIGN: 64 :: slow
+         REAL(C_DOUBLE) :: dx = zero     !> x origin (meters)
+         REAL(C_DOUBLE) :: dy = zero     !> y origin (meters)
+         REAL(C_DOUBLE) :: dz = zero     !> z origin (meters)
+         REAL(C_DOUBLE) :: x0 = zero     !> x origin (meters)
+         REAL(C_DOUBLE) :: y0 = zero     !> y origin (meters)
+         REAL(C_DOUBLE) :: z0 = zero     !> z origin (meters)
+         INTEGER(C_INT) :: ncell =-1     !> Number of cells in slowness model
+         INTEGER(C_INT) :: ngrd =-1      !> Number of grid points (= nz*nx*ny)
+         INTEGER(C_INT) :: nx =-1        !> Number of x grid points in travel time field
+         INTEGER(C_INT) :: ny =-1        !> Number of y grid points in travel time field
+         INTEGER(C_INT) :: nz =-1        !> Number of z grid points in travel time field
+         INTEGER(C_INT) :: nzx =-1       !> nz*nx
+         INTEGER(C_INT) :: nzm1_nxm1 =-1 !> (nz - 1)*(nx - 1)
+         INTEGER(C_INT) :: nzm1 =-1      !> (nz - 1)
+         LOGICAL(C_BOOL) :: lhaveModel = .FALSE. !> If true slowness model was set
+         SAVE slow
+         SAVE dx, dy, dz, x0, y0, z0
+         SAVE ncell, ngrd, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+         INTERFACE
+
+            SUBROUTINE fteik_model_finalizeF()             &
+                       BIND(C, NAME='fteik_model_finalizeF')
+            USE ISO_C_BINDING
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_getVelocityModel64fF(nwork, nv, vel, ierr) &
+                       BIND(C, NAME='fteik_model_getVelocityModel64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nwork
+            REAL(C_DOUBLE), INTENT(OUT) :: vel(nwork)
+            INTEGER(C_INT), INTENT(OUT) :: nv, ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_intializeGeometryF(nz, nx, ny,    &
+                                                      dz, dx, dy,    &
+                                                      z0, x0, y0,    &
+                                                      ierr)          &
+                       BIND(C, NAME='fteik_model_initializeGeometryF')
+            USE ISO_C_BINDING
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, dy, z0, x0, y0
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_setGridSizeF(nzIn, nxIn, nyIn, ierr) &
+                       BIND(C, NAME='fteik_model_setGridSizeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_setOriginF(z0In, x0In, y0In) &
+                       BIND(C, NAME='fteik_model_setOriginF')
+            USE ISO_C_BINDING
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In 
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_setGridSpacingF(dzIn, dxIn, dyIn, ierr) &
+                       BIND(C, NAME='fteik_model_setGridSpacingF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: dzIn, dxIn, dyIn
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_setVelocityModel64fF(nv, vel, ierr) &
+                       BIND(C, NAME='fteik_model_setVelocityModel64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nv
+            REAL(C_DOUBLE), INTENT(IN) :: vel(nv)
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_model_setVelocityModel32fF(nv, vel4, ierr) &
+                       BIND(C, NAME='fteik_model_setVelocityModel32fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nv
+            REAL(C_FLOAT), INTENT(IN) :: vel4(nv)
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+         END INTERFACE
+      END MODULE !FTEIK_MODEL64F
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      MODULE FTEIK_RECEIVER64F
+         USE ISO_C_BINDING
+         ! receiver indices
+         REAL(C_DOUBLE), ALLOCATABLE :: zdr(:), xdr(:), ydr(:)
+         INTEGER(C_INT), ALLOCATABLE :: zri(:), xri(:), yri(:)
+         INTEGER(C_INT) nrec 
+         INTERFACE
+            SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
+            BIND(C, NAME='fteik_receiver_initialize64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+            REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr 
+            END SUBROUTINE
+
+            SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
+            BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
+            REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrecIn)
+            INTEGER(C_INT), INTENT(OUT) :: ierr 
+            END SUBROUTINE
+
+            SUBROUTINE fteik_receiver_finalizeF() &
+            BIND(C, NAME='fteik_receiver_finalizeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            END SUBROUTINE
+         END INTERFACE
+         SAVE zdr, xdr, ydr, zri, xri, yri, nrec 
+      END MODULE FTEIK_RECEIVER64F
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+
       MODULE FTEIK_UTILS64F
          USE ISO_C_BINDING
          REAL(C_DOUBLE), ALLOCATABLE :: ttimes(:)
@@ -534,40 +678,9 @@
          END INTERFACE
       END MODULE FTEIK_UTILS64F
 
-      MODULE FTEIK_RECEIVER
-         USE ISO_C_BINDING
-         ! receiver indices
-         REAL(C_DOUBLE), ALLOCATABLE :: zdr(:), xdr(:), ydr(:)
-         INTEGER(C_INT), ALLOCATABLE :: zri(:), xri(:), yri(:)
-         INTEGER(C_INT) nrec
-         INTERFACE
-            SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
-            BIND(C, NAME='fteik_receiver_initialize64fF')
-            USE ISO_C_BINDING
-            IMPLICIT NONE 
-            INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
-            REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
-            INTEGER(C_INT), INTENT(OUT) :: ierr 
-            END SUBROUTINE
-
-            SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
-            BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
-            USE ISO_C_BINDING
-            IMPLICIT NONE
-            INTEGER(C_INT), INTENT(IN) :: nrecIn
-            REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrecIn)
-            INTEGER(C_INT), INTENT(OUT) :: ierr
-            END SUBROUTINE
-
-            SUBROUTINE fteik_receiver_finalizeF() &
-            BIND(C, NAME='fteik_receiver_finalizeF')
-            USE ISO_C_BINDING
-            IMPLICIT NONE
-            END SUBROUTINE
-         END INTERFACE
-         SAVE zdr, xdr, ydr, zri, xri, yri, nrec
-      END MODULE FTEIK_RECEIVER
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
       MODULE FTEIK_AUTOCODE
          INTERFACE
             PURE SUBROUTINE fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx,  &
