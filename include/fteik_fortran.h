@@ -6,6 +6,68 @@ extern "C"
 {
 #endif
 
+//----------------------------------------------------------------------------//
+//                              Model Module                                  //
+//----------------------------------------------------------------------------//
+void fteik_model_finalizeF(void);
+void fteik_model_getVelocityModel64fF(const int nwork, int *nv, 
+                                      double *__restrict__ vel, int *ierr);
+void fteik_model_intializeGeometryF(
+    const int nz, const int nx, const int ny,
+    const double dz, const double dx, const double dy,
+    const double z0, const double x0, const double y0,
+    int *ierr);
+void fteik_model_setGridSizeF(const int nz, const int nx, const int ny,
+                              int *ierr);
+void fteik_model_setOriginF(const double z0, const double x0, const double y0);
+void fteik_model_setGridSpacingF( 
+    const double dz, const double dx, const double dy, int *ierr);
+void fteik_model_setVelocityModel64fF(
+    const int nv, const double *__restrict__ vel, int *ierr);
+void fteik_model_setVelocityModel32fF(
+    const int nv, const float *__restrict__ vel4, int *ierr);
+//----------------------------------------------------------------------------//
+//                            Receiver Module                                 //
+//----------------------------------------------------------------------------//
+void fteik_receiver_initialize64fF(const int nrec,
+                                   const double *__restrict__ z,
+                                   const double *__restrict__ x,
+                                   const double *__restrict__ y, int *ierr);
+void fteik_receiver_getTravelTimes64fF(const int nrec,
+                                       double *__restrict__ ttr, int *ierr);
+void fteik_receiver_finalizeF(void);
+//----------------------------------------------------------------------------//
+//                            Source Module                                   //
+//----------------------------------------------------------------------------//
+void fteik_source_finalizeF(void);
+void fteik_source_initialize64fF(const int nsrcIn,
+                                 const double *__restrict__ zsrcIn,
+                                 const double *__restrict__ xsrcIn,
+                                 const double *__restrict__ ysrcIn,
+                                 int *ierr);
+void fteik_source_getSolverInfo64fF(const int isrc, 
+                                    int *zsi, int *xsi, int *ysi,
+                                    double *zsa, double *xsa, double *ysa,
+                                    double *szero, double *szero2,
+                                    int *ierr);
+void fteik_source_getSourceIndices64fF(const int isrc,
+                                       double *zsa, double *xsa, double *ysa,
+                                       int *ierr);
+void fteik_source_getSourceIndices32iF(const int isrc,
+                                       int *zsi, int *xsi, int *ysi, int *ierr);
+void fteik_source_getSzero64fF(const int isrc,
+                               double *szero, double *szero2, int *ierr);
+//----------------------------------------------------------------------------//
+//                             Solver Module                                  //
+//----------------------------------------------------------------------------//
+void fteik_solver_initialize64fF(
+    const int nzIn, const int nxIn, const int nyIn,
+    const double z0In, const double x0In, const double y0In,
+    const double dzIn, const double dxIn, const double dyIn,
+    const int nsweepIn, const double epsIn, int *ierr);
+void fteik_solver_finalizeF(void);
+ 
+
 // These are the functions worth knowing
 void fteik_initializeF(const int *nz, const int *nx, const int *ny,
                        const double *z0, const double *x0, const double *y0,

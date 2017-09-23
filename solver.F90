@@ -190,7 +190,7 @@
 !>    @param[in] sweep      Sweep number.  This must be in the range [1,8].
 !>    @param[in] nLevels    Number of levels in level set method.
 !>    @param[in] linitk     If true then this sets the initialization nodes for the
-!>                          given source.
+!>                          given source. \n
 !>                          Otherwise, this sets the initialization nodes for the
 !>                          general solver.
 !>    @param[in] isrc       Source number.
@@ -218,9 +218,10 @@
       USE FTEIK_SOURCE64F, ONLY : fteik_source_getSourceIndices32iF
       USE FTEIK_SOLVER64F, ONLY : fteik_solver_getSweepLimitsF
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc, sweep, nLevels
+      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nLevels
       LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
-      INTEGER(C_INT), DIMENSION(:), INTENT(IN) :: ijkv, levelPtr
+      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+      INTEGER(C_INT), DIMENSION(:), INTENT(IN) :: levelPtr, ijkv
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(INOUT) :: lupd
       INTEGER(C_INT), INTENT(OUT) :: ierr
       INTEGER(C_INT) i, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
@@ -301,7 +302,8 @@
                  BIND(C, NAME='fteik_solver_getSweepLimitsF')
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nx, ny, nz, xsi, ysi, zsi
+      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nz, nx, ny
+      INTEGER(C_INT), VALUE, INTENT(IN) ::  zsi, xsi, ysi
       LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
       INTEGER(C_INT), INTENT(OUT) :: x1, x2, y1, y2, z1, z2, ierr
       ierr = 0

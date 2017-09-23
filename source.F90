@@ -316,10 +316,10 @@
 !>
       SUBROUTINE fteik_source_getSzero64fF(isrc, szero, szero2, ierr)   &
                  BIND(C, NAME='fteik_source_getSzero64fF')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_velGrid2indexF
       USE FTEIK_MODEL64F, ONLY : slow, nzm1, nzm1_nxm1, lhaveModel
       USE FTEIK_SOURCE64F, ONLY : zsiv, xsiv, ysiv, nsrc, lhaveSource
       USE FTEIK_CONSTANTS64F, ONLY : zero 
-      USE FTEIK_UTILS64F, ONLY : velGrid2indexF
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
@@ -342,7 +342,8 @@
          RETURN
       ENDIF
       ierr = 0
-      indx = velGrid2indexF(zsiv(isrc), xsiv(isrc), ysiv(isrc), nzm1, nzm1_nxm1)
+      indx = fteik_model_velGrid2indexF(zsiv(isrc), xsiv(isrc), ysiv(isrc), &
+                                        nzm1, nzm1_nxm1)
       szero = slow(indx)
       szero2 = szero*szero
       RETURN

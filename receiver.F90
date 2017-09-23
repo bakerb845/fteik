@@ -134,11 +134,11 @@
 !>
       SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
       BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
-      USE FTEIK_UTILS64F, ONLY : grid2indexF
-      USE FTEIK_UTILS64F, ONLY : ttimes, lhaveTravelTimes
-      USE FTEIK_UTILS64F, ONLY : one, FTEIK_HUGE
+      USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
+      USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
       USE FTEIK_RECEIVER64F, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
       USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
+      USE FTEIK_CONSTANTS64F, ONLY : one, FTEIK_HUGE
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
@@ -159,21 +159,21 @@
          RETURN
       ENDIF
       IF (nrecIn > nrec) ttr(nrec+1:nrecIn) = FTEIK_HUGE
-      IF (.NOT.lhaveTravelTimes) THEN
+      IF (.NOT.lhaveTimes) THEN
          WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Travel-times not yet computed'
          ierr = 1
          RETURN
       ENDIF
       DO 1 i=1,nrec
          ! extract travel-times in cache-friendly way
-         i0 = grid2indexF(zri(i),   xri(i),   yri(i),   nz, nzx)
-         i1 = grid2indexF(zri(i)+1, xri(i),   yri(i),   nz, nzx)
-         i2 = grid2indexF(zri(i),   xri(i+1), yri(i),   nz, nzx)
-         i3 = grid2indexF(zri(i)+1, xri(i+1), yri(i),   nz, nzx)
-         i4 = grid2indexF(zri(i),   xri(i),   yri(i)+1, nz, nzx)
-         i5 = grid2indexF(zri(i)+1, xri(i),   yri(i)+1, nz, nzx)
-         i6 = grid2indexF(zri(i),   xri(i+1), yri(i)+1, nz, nzx)
-         i7 = grid2indexF(zri(i)+1, xri(i+1), yri(i)+1, nz, nzx)
+         i0 = fteik_model_grid2indexF(zri(i),   xri(i),   yri(i),   nz, nzx)
+         i1 = fteik_model_grid2indexF(zri(i)+1, xri(i),   yri(i),   nz, nzx)
+         i2 = fteik_model_grid2indexF(zri(i),   xri(i+1), yri(i),   nz, nzx)
+         i3 = fteik_model_grid2indexF(zri(i)+1, xri(i+1), yri(i),   nz, nzx)
+         i4 = fteik_model_grid2indexF(zri(i),   xri(i),   yri(i)+1, nz, nzx)
+         i5 = fteik_model_grid2indexF(zri(i)+1, xri(i),   yri(i)+1, nz, nzx)
+         i6 = fteik_model_grid2indexF(zri(i),   xri(i+1), yri(i)+1, nz, nzx)
+         i7 = fteik_model_grid2indexF(zri(i)+1, xri(i+1), yri(i)+1, nz, nzx)
          tt000 = ttimes(i0)
          tt100 = ttimes(i1)
          tt010 = ttimes(i2)
