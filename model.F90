@@ -387,3 +387,97 @@
       lhaveModel = .TRUE.
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Converts the (i, j, k)'th grid indices to the corresonding grid index
+!>           in the travel time array. 
+!>
+!>    @param[in] i    iz'th grid point.  This is Fortran indexed.
+!>    @param[in] j    ix'th grid point.  This is Fortran indexed.
+!>    @param[in] k    iy'th grid point.  This is Fortran indexed.
+!>    @param[in] nz   Number of z grid points in grid.
+!>    @param[in] nzx  Number of z and x grid points in grid (i.e.z nzx = nz x nx).
+!>
+!>    @result The grid point, g = (k-1)*nx*nz + (j-1)*nz + i, corresponiding to the
+!>            (i, j, k)'th grid indices.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      PURE INTEGER(C_INT) FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx) &
+                          BIND(C, NAME='fteik_model_grid2indexF')            &
+                          RESULT(grid2indexF)
+      !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx
+      grid2indexF = (k - 1)*nzx + (j - 1)*nz + i
+      RETURN
+      END FUNCTION
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Converts from the grid index in the travel time array to the (i, j, k)'th
+!>           grid indices.
+!>    @param[in] igrd   Fortran indxed grid point in travel time mesh to convert.
+!>
+!>    @param[out] i     iz'th grid point.  This is Fortran indexed.
+!>    @param[out] j     ix'th grid point.  This is Fortran indexed.
+!>    @param[out] k     iy'th grid point.  This is Fortran indexed.
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      PURE SUBROUTINE fteik_model_index2gridF(igrd, i, j, k, ierr) &
+                      BIND(C, NAME='fteik_model_index2gridF')
+      !$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
+      USE ISO_C_BINDING
+      USE FTEIK_UTILS64F, ONLY : nx, ny, nz, nz, nzx
+      INTEGER(C_INT), INTENT(IN), VALUE :: igrd
+      INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
+      INTEGER(C_INT) igrd1
+      igrd1 = igrd - 1 ! F to C
+      k = (igrd1)/nzx
+      j = (igrd1 - k*nzx)/nz
+      i =  igrd1 - k*nzx - j*nz
+      k = k + 1 !C to F
+      j = j + 1 !C to F
+      i = i + 1 !C to F
+      ierr = 0
+      IF (i < 1 .OR. i > nz) ierr = ierr + 1
+      IF (j < 1 .OR. j > nx) ierr = ierr + 1
+      IF (k < 1 .OR. k > ny) ierr = ierr + 1
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Converts the (i, j, k)'th model index to the velocity cell.
+!>
+!>    @param[in] i           iz'th grid point.  This is in range [1, nz-1].
+!>    @param[in] j           ix'th grid point.  This is in range [1, nx-1].
+!>    @param[in] k           iy'th grid point.  This is in range [1, ny-1].
+!>    @param[in] nzm1        nz - 1.
+!>    @param[in] nzm1_nxm1   (nz - 1)*(nx - 1)
+!>
+!>    @result The velocity cell corresponding to the (i, j, k)'th model index.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      PURE INTEGER(C_INT) FUNCTION fteik_model_velGrid2indexF(i, j, k,           &
+                                                              nzm1, nzm1_nxm1)   &
+                           BIND(C, NAME='fteik_model_velGrid2indexF')            &
+                           RESULT(velGrid2IndexF)
+      !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+      USE ISO_C_BINDING
+      IMPLICIT NONE 
+      INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1
+      velGrid2indexF = (k - 1)*nzm1_nxm1 + (j - 1)*nzm1 + i
+      RETURN
+      END FUNCTION

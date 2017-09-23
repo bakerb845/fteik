@@ -5,6 +5,7 @@
          REAL(C_DOUBLE), PARAMETER :: zero = 0.d0
          REAL(C_DOUBLE), PARAMETER :: one = 1.d0
          REAL(C_DOUBLE), PARAMETER :: DBL_EPSILON = EPSILON(1.d0)
+         REAL(C_DOUBLE), PARAMETER :: perturbSource = 0.0001d0
          INTEGER(C_INT), PARAMETER :: chunkSize = 16
       END MODULE !FTEIK_CONSTANTS64F
 !                                                                                        !
@@ -34,6 +35,7 @@
          SAVE slow
          SAVE dx, dy, dz, x0, y0, z0
          SAVE ncell, ngrd, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+         SAVE lhaveModel
          INTERFACE
 
             SUBROUTINE fteik_model_finalizeF()             &
@@ -100,6 +102,33 @@
             INTEGER(C_INT), INTENT(OUT) :: ierr
             END SUBROUTINE
 
+            PURE INTEGER(C_INT) FUNCTION fteik_model_velGrid2indexF(i, j, k,        &
+                                                                 nzm1, nzm1_nxm1)   &
+                             BIND(C, NAME='fteik_model_velGrid2indexF')             &
+                             RESULT(velGrid2IndexF)
+            !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1
+            END FUNCTION
+
+            PURE SUBROUTINE fteik_model_index2gridF(igrd, i, j, k, ierr) &
+                            BIND(C, NAME='fteik_model_index2gridF')
+            !$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
+            USE ISO_C_BINDING
+            INTEGER(C_INT), INTENT(IN), VALUE :: igrd
+            INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
+            END SUBROUTINE
+
+            PURE INTEGER(C_INT) FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx) &
+                                BIND(C, NAME='fteik_model_grid2indexF')            &
+                                RESULT(grid2indexF)
+            !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx
+            END FUNCTION
+
          END INTERFACE
       END MODULE !FTEIK_MODEL64F
 !                                                                                        !
@@ -111,6 +140,10 @@
          REAL(C_DOUBLE), ALLOCATABLE :: zdr(:), xdr(:), ydr(:)
          INTEGER(C_INT), ALLOCATABLE :: zri(:), xri(:), yri(:)
          INTEGER(C_INT) nrec 
+         SAVE zdr, xdr, ydr, zri, xri, yri, nrec
+         INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0
+         INTEGER(C_INT), PARAMETER :: INTERP_LINEAR = 1
+         INTEGER(C_INT), PARAMETER :: INTERP_HIGHACCURACY = 2
          INTERFACE
             SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
             BIND(C, NAME='fteik_receiver_initialize64fF')
@@ -136,8 +169,177 @@
             IMPLICIT NONE 
             END SUBROUTINE
          END INTERFACE
-         SAVE zdr, xdr, ydr, zri, xri, yri, nrec 
       END MODULE FTEIK_RECEIVER64F
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      MODULE FTEIK_SOURCE64F
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         REAL(C_DOUBLE), ALLOCATABLE :: zsv(:), xsv(:), ysv(:),    &
+                                        zsav(:), xsav(:), ysav(:), &
+                                        zsrc(:), xsrc(:), ysrc(:)
+         INTEGER(C_INT), ALLOCATABLE :: zsiv(:), xsiv(:), ysiv(:)
+         !DIR$ ATTRIBUTES ALIGN: 64 :: zsv, xsv, ysv, zsav, xsav, ysav
+         !DIR$ ATTRIBUTES ALIGN: 64 :: zsrc, xsrc, ysrc, zsiv, xsiv, ysiv
+         INTEGER(C_INT) :: nsrc = 0
+         LOGICAL(C_BOOL) :: lhaveSource = .FALSE.
+         SAVE zsv, xsv, ysv, zsav, xsav, ysav, zsrc, xsrc, ysrc 
+         SAVE zsiv, xsiv, ysiv, nsrc, lhaveSource
+
+         INTERFACE
+
+            SUBROUTINE fteik_source_finalizeF()             &
+                       BIND(C, NAME='fteik_source_finalizeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            END SUBROUTINE
+
+            SUBROUTINE fteik_source_getSolverInfo64fF(isrc,          &
+                                                      zsi, xsi, ysi, &
+                                                      zsa, xsa, ysa, &
+                                                      szero, szero2, &
+                                                      ierr)          &
+                       BIND(C, NAME='fteik_source_getSolverInfo64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+            REAL(C_DOUBLE), INTENT(OUT) :: zsa, xsa, ysa, szero, szero2
+            INTEGER(C_INT), INTENT(OUT) :: zsi, xsi, ysi, ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_source_getSourceIndices64fF(isrc, zsa, xsa, ysa, ierr) &
+                       BIND(C, NAME='fteik_source_getSourceIndices64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+            REAL(C_DOUBLE), INTENT(OUT) :: zsa, xsa, ysa
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_source_getSourceIndices32iF(isrc, zsi, xsi, ysi, ierr) &
+                       BIND(C, NAME='fteik_source_getSourceIndices32iF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+            INTEGER(C_INT), INTENT(OUT) :: zsi, xsi, ysi, ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_source_getSzero64fF(isrc, szero, szero2, ierr)   &
+                       BIND(C, NAME='fteik_source_getSzero64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+            REAL(C_DOUBLE), INTENT(OUT) :: szero, szero2
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+         END INTERFACE
+      END MODULE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      MODULE FTEIK_SOLVER64F
+         USE FTEIK_CONSTANTS64F, ONLY : zero
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         REAL(C_DOUBLE), ALLOCATABLE :: ttimes(:) !> Holds the travel-times
+         INTEGER(C_INT), ALLOCATABLE :: levelPtr(:) !> Maps from level to start node
+         INTEGER(C_INT), ALLOCATABLE :: ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
+                                        ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
+         !> True if the node'th node is to be updated in the given sweep. 
+         LOGICAL(C_BOOL), ALLOCATABLE :: lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
+                                         lupd5(:), lupd6(:), lupd7(:), lupd8(:)
+         !DIR$ ATTRIBUTES ALIGN: 64 :: ttimes 
+         REAL(C_DOUBLE) :: epsS2C = zero !> Defines transition from spherical to
+                                         !> Cartesian solver during initialization.
+         INTEGER(C_INT) :: nsweep = 0 !> Number of Gauss-Seidel iterations
+         LOGICAL(C_BOOL) :: lhaveTimes = .FALSE. !> Flag indicating whether or not
+                                                 !> the traveltimes were coputed.
+ 
+         INTEGER(C_INT) :: nLevels = 0 !> Number of levels in level scheduler method.
+         INTEGER(C_INT) :: maxLevelSize = 0 !> Size of largest level.
+         SAVE ttimes
+         SAVE lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
+         SAVE ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
+         SAVE levelPtr
+         SAVE epsS2C
+         SAVE nsweep, nLevels, maxLevelSize
+         SAVE lhaveTimes
+         INTERFACE
+
+            SUBROUTINE fteik_solver_finalizeF()             &
+                       BIND(C, NAME='fteik_solver_finalizeF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_initialize64fF(nzIn, nxIn, nyIn,      &
+                                                   z0In, x0In, y0In,      &
+                                                   dzIn, dxIn, dyIn,      &
+                                                   nsweepIn, epsIn, ierr) &
+                       BIND(C, NAME='fteik_solver_initialize64fF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nyIn, nzIn
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_setSphereToCartEpsilonF(epsIn, ierr)  &
+                       BIND(C, NAME='fteik_solver_setSphereToCartEpsilonF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_setNumberOfSweepsF(nsweepIn, ierr) &
+                       BIND(C, NAME='fteik_solver_setNumberOfSweepsF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_setUpdateNodesF(sweep, nLevels, linitk, isrc, &
+                                                    levelPtr, ijkv, lupd, ierr)   &
+                       BIND(C, NAME='fteik_solver_setUpdateNodesF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc, sweep, nLevels
+            LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
+            INTEGER(C_INT), DIMENSION(:), INTENT(IN) :: ijkv, levelPtr
+            LOGICAL(C_BOOL), DIMENSION(:), INTENT(INOUT) :: lupd
+            INTEGER(C_INT), INTENT(OUT) :: ierr
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_computeGraphF(ierr)           &
+                       BIND(C, NAME='fteik_solver_computeGraphF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE 
+            INTEGER(C_INT), INTENT(OUT) :: ierr 
+            END SUBROUTINE
+
+            SUBROUTINE fteik_solver_getSweepLimitsF(sweep, linitk,          &
+                                                    nz, nx, ny,             &
+                                                    zsi, xsi, ysi,          &
+                                                    z1, z2, x1, x2, y1, y2, &
+                                                    ierr)                   &
+                      BIND(C, NAME='fteik_solver_getSweepLimitsF')
+            USE ISO_C_BINDING
+            IMPLICIT NONE
+            INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nx, ny, nz, xsi, ysi, zsi
+            LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
+            INTEGER(C_INT), INTENT(OUT) :: x1, x2, y1, y2, z1, z2, ierr
+            END SUBROUTINE
+
+
+         END INTERFACE 
+      END MODULE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
