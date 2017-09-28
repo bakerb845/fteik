@@ -20,7 +20,7 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 SET(ORIGINAL_SRC fteik.f90)
 SET(UTILS_SRC h5io.F90 h5io.c io.c os.c xdmf.c)
-SET(NEW_SRC graph.c sort.c modules.F90 graph.f90 fteikGraph.cpp
+SET(NEW_SRC graph.c sort.c constants.F90 modules.F90 graph.f90 fteikGraph.cpp
             autoCode.f90 localSolver.F90 fteik_utils.F90 solveEikonal.F90
             model.F90 receiver.F90 source.F90 solver.F90)
 IF (FTEIK_USE_H5)

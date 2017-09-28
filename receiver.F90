@@ -1,6 +1,17 @@
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
+MODULE FTEIK_RECEIVER64F
+   USE ISO_C_BINDING
+   ! receiver indices
+   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zdr(:), xdr(:), ydr(:)
+   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: zri(:), xri(:), yri(:)
+   INTEGER(C_INT), PROTECTED, SAVE :: nrec
+   INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0
+   INTEGER(C_INT), PARAMETER :: INTERP_LINEAR = 1
+   INTEGER(C_INT), PARAMETER :: INTERP_HIGHACCURACY = 2
+   CONTAINS
+!----------------------------------------------------------------------------------------!
+!                                      Begin the Code                                    !
+!----------------------------------------------------------------------------------------!
+!>
 !>    @brief Sets the receiver indices in the grid.  This will make for a quick 
 !>           linear interpolation.
 !>           https://github.com/bottero/IMCMCrun/blob/master/src/functions.cpp
@@ -19,8 +30,8 @@
 !>
       SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
                  BIND(C, NAME='fteik_receiver_initialize64fF')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
-      USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+!     USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
+!     USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
       USE FTEIK_MODEL64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -32,13 +43,6 @@
       ! Initialize 
       ierr = 0
       CALL fteik_receiver_finalizeF() 
-      !nrec = 0
-      !IF (ALLOCATED(zri)) DEALLOCATE(zri)
-      !IF (ALLOCATED(xri)) DEALLOCATE(xri)
-      !IF (ALLOCATED(yri)) DEALLOCATE(yri)
-      !IF (ALLOCATED(zdr)) DEALLOCATE(zdr)
-      !IF (ALLOCATED(xdr)) DEALLOCATE(xdr)
-      !IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
       ! Check that the model has been initialized
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
          WRITE(*,*) 'fteik_receiver_initialize64fF: Grid not yet set'
@@ -109,7 +113,7 @@
 !>
       INTEGER(C_INT) FUNCTION fteik_receiver_getNumberOfReceiversF( )     &
       RESULT(nrecOut) BIND(C, NAME='fteik_receiver_getNumberOfReceiversF')
-      USE FTEIK_RECEIVER64F, ONLY : nrec
+!     USE FTEIK_RECEIVER64F, ONLY : nrec
       USE ISO_C_BINDING
       nrecOut = nrec
       RETURN
@@ -136,7 +140,7 @@
       BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
       USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
-      USE FTEIK_RECEIVER64F, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
+!     USE FTEIK_RECEIVER64F, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
       USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE FTEIK_CONSTANTS64F, ONLY : one, FTEIK_HUGE
       USE ISO_C_BINDING
@@ -212,7 +216,7 @@
 !>
       SUBROUTINE fteik_receiver_finalizeF( ) &
                  BIND(C, NAME='fteik_receiver_finalizeF')
-      USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
+!     USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
       USE ISO_C_BINDING
       IMPLICIT NONE
       nrec = 0 
@@ -224,3 +228,7 @@
       IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
       RETURN
       END
+!----------------------------------------------------------------------------------------!
+!                                     End the Code                                       !
+!----------------------------------------------------------------------------------------!
+END MODULE

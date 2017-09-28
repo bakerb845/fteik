@@ -66,7 +66,12 @@ void fteik_solver_initialize64fF(
     const double dzIn, const double dxIn, const double dyIn,
     const int nsweepIn, const double epsIn, int *ierr);
 void fteik_solver_finalizeF(void);
- 
+void fteik_solver_setSources64fF(const int nsrc,
+                                 const double *__restrict__ zsrc,
+                                 const double *__restrict__ xsrc,
+                                 const double *__restrict__ ysrc,
+                                 int *ierr);
+void fteik_solver_solveSourceF(const int isrc, int *ierr); 
 
 // These are the functions worth knowing
 void fteik_initializeF(const int *nz, const int *nx, const int *ny,
