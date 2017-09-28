@@ -1,3 +1,33 @@
+MODULE FTEIK_MODEL64F
+  USE ISO_C_BINDING
+  USE FTEIK_CONSTANTS64F, ONLY : zero
+  IMPLICIT NONE
+  REAL(C_DOUBLE), ALLOCATABLE, SAVE :: slow(:)  !< Slowness model (seconds/meter).
+                                                !< This has dimension [ncell].
+  !DIR$ ATTRIBUTES ALIGN: 64 :: slow
+  REAL(C_DOUBLE), PROTECTED, SAVE :: dx = zero  !< x origin (meters).
+  REAL(C_DOUBLE), PROTECTED, SAVE :: dy = zero  !< y origin (meters).
+  REAL(C_DOUBLE), PROTECTED, SAVE :: dz = zero  !< z origin (meters).
+  REAL(C_DOUBLE), PROTECTED, SAVE :: x0 = zero  !< x origin (meters).
+  REAL(C_DOUBLE), PROTECTED, SAVE :: y0 = zero  !< y origin (meters).
+  REAL(C_DOUBLE), PROTECTED, SAVE :: z0 = zero  !< z origin (meters).
+  INTEGER(C_INT), PROTECTED, SAVE :: ncell =-1  !< Number of cells in slowness model.
+  INTEGER(C_INT), PROTECTED, SAVE :: ngrd =-1   !< Number of grid points (= nz*nx*ny).
+  INTEGER(C_INT), PROTECTED, SAVE :: nx =-1     !< Number of x grid points in 
+                                                !< travel time field.
+  INTEGER(C_INT), PROTECTED, SAVE :: ny =-1     !< Number of y grid points in 
+                                                !< travel time field.
+  INTEGER(C_INT), PROTECTED, SAVE :: nz =-1     !< Number of z grid points in 
+                                                !< travel time field.
+  INTEGER(C_INT), PROTECTED, SAVE:: nzx =-1     !< =nz*nx
+  INTEGER(C_INT), PROTECTED, SAVE :: nzm1_nxm1 =-1 !< =(nz - 1)*(nx - 1)
+  INTEGER(C_INT), PROTECTED, SAVE :: nzm1 =-1      !< =(nz - 1)
+  LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveModel = .FALSE. !< If true slowness model 
+                                                           !> was set.
+  CONTAINS
+!----------------------------------------------------------------------------------------!
+!                                 Begin the Code                                         !
+!----------------------------------------------------------------------------------------!
 !>    @brief Convenience function to initialize the model geometry.
 !>
 !>    @param[in] nz       Number of z grid points in the travel-time field.
@@ -24,9 +54,6 @@
                                                 z0, x0, y0,    &
                                                 ierr)          &
                  BIND(C, NAME='fteik_model_initializeGeometryF')
-      USE FTEIK_MODEL64F, ONLY : fteik_model_setGridSizeF,    &
-                                 fteik_model_setGridSpacingF, &
-                                 fteik_model_setOriginF
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, dy, z0, x0, y0
@@ -62,8 +89,8 @@
 !>
       SUBROUTINE fteik_model_setGridSpacingF(dzIn, dxIn, dyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSpacingF')
+      USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : dx, dy, dz, zero
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dzIn, dxIn, dyIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -105,7 +132,6 @@
       SUBROUTINE fteik_model_setGridSizeF(nzIn, nxIn, nyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSizeF')
       USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : slow, nz, nx, ny, ncell, ngrd, nzx, nzm1, nzm1_nxm1
       USE FTEIK_CONSTANTS64F, ONLY : zero
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn
@@ -152,7 +178,6 @@
       SUBROUTINE fteik_model_setOriginF(z0In, x0In, y0In) &
                  BIND(C, NAME='fteik_model_setOriginF')
       USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : x0, y0, z0
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In 
       z0 = z0In
       x0 = x0In
@@ -175,9 +200,9 @@
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_getGridSizeF(nzOut, nxOut, nyOut, ngrdOut, ncellOut, ierr) &
+      SUBROUTINE fteik_model_getGridSizeF(nzOut, nxOut, nyOut,     &
+                                          ngrdOut, ncellOut, ierr) &
                  BIND(C, NAME='fteik_model_getGridSizeF')
-      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, ncell
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: nzOut, nxOut, nyOut, ngrdOut, ncellOut, ierr
@@ -218,9 +243,8 @@
 !>
       SUBROUTINE fteik_model_setVelocityModel64fF(nv, vel, ierr) &
                  BIND(C, NAME='fteik_model_setVelocityModel64fF')
-      USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : slow, lhaveModel, ncell
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
+      USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nv
       REAL(C_DOUBLE), INTENT(IN) :: vel(nv)
@@ -262,9 +286,6 @@
 !>
       SUBROUTINE fteik_model_finalizeF() &
                  BIND(C, NAME='fteik_model_finalizeF')
-      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, x0, y0, z0 
-      USE FTEIK_MODEL64F, ONLY : ncell, ngrd, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_MODEL64F, ONLY : lhaveModel
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -305,7 +326,6 @@
 !>
       SUBROUTINE fteik_model_getVelocityModel64fF(nwork, nv, vel, ierr) &
                  BIND(C, NAME='fteik_model_getVelocityModel64fF')
-      USE FTEIK_MODEL64F, ONLY : slow, ncell, lhaveModel
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE 
@@ -355,9 +375,8 @@
 !>
       SUBROUTINE fteik_model_setVelocityModel32fF(nv, vel4, ierr) &
                  BIND(C, NAME='fteik_model_setVelocityModel32fF')
-      USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : slow, ncell, lhaveModel
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
+      USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nv
       REAL(C_FLOAT), INTENT(IN) :: vel4(nv)
@@ -406,9 +425,9 @@
 !>
 !>    @copyright MIT
 !>
-      PURE INTEGER(C_INT) FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx) &
-                          BIND(C, NAME='fteik_model_grid2indexF')            &
-                          RESULT(grid2indexF)
+      PURE INTEGER(C_INT)                                       &
+      FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx)        &
+      BIND(C, NAME='fteik_model_grid2indexF') RESULT(grid2indexF)
       !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -436,7 +455,6 @@
                       BIND(C, NAME='fteik_model_index2gridF')
       !$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : nx, ny, nz, nz, nzx
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
       INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
       INTEGER(C_INT) igrd1
@@ -470,9 +488,9 @@
 !>
 !>    @copyright MIT
 !>
-      PURE INTEGER(C_INT) FUNCTION fteik_model_velGrid2indexF(i, j, k,           &
-                                                              nzm1, nzm1_nxm1)   &
-                           BIND(C, NAME='fteik_model_velGrid2indexF')            &
+      PURE INTEGER(C_INT)                                             &
+      FUNCTION fteik_model_velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
+                           BIND(C, NAME='fteik_model_velGrid2indexF') &
                            RESULT(velGrid2IndexF)
       !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
       USE ISO_C_BINDING
@@ -481,3 +499,7 @@
       velGrid2indexF = (k - 1)*nzm1_nxm1 + (j - 1)*nzm1 + i
       RETURN
       END FUNCTION
+!----------------------------------------------------------------------------------------!
+!                                    End the Code                                        !
+!----------------------------------------------------------------------------------------!
+END MODULE

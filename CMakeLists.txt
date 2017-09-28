@@ -19,10 +19,11 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 SET(ORIGINAL_SRC fteik.f90)
-SET(UTILS_SRC h5io.F90 h5io.c io.c os.c xdmf.c)
-SET(NEW_SRC graph.c sort.c constants.F90 modules.F90 graph.f90 fteikGraph.cpp
-            autoCode.f90 localSolver.F90 fteik_utils.F90 solveEikonal.F90
-            model.F90 receiver.F90 source.F90 solver.F90)
+SET(UTILS_SRC h5io.F90 h5io.c io.c memory.F90 os.c xdmf.c)
+# Order matters here
+SET(F90_SRC constants.F90 model.F90 source.F90 receiver.F90 localSolver.F90 solver.F90 locate.F90)
+SET(NEW_SRC graph.c sort.c ${F90_SRC} modules.F90 graph.f90 fteikGraph.cpp
+            autoCode.f90 localSolverOri.F90 fteik_utils.F90 solveEikonal.F90)
 IF (FTEIK_USE_H5)
   SET(NEW_SRC ${NEW_SRC} h5io_utils.c)
 ENDIF (FTEIK_USE_H5)
@@ -52,7 +53,7 @@ ADD_SUBDIRECTORY(include)
 ADD_EXECUTABLE(xtest test.c)
 
 ADD_LIBRARY(fteik_shared SHARED ${SRCS})
-ADD_LIBRARY(fteik_static STATIC ${SRCS})
+#ADD_LIBRARY(fteik_static STATIC ${SRCS})
 
 SET_TARGET_PROPERTIES(xtest PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 IF (FTEIK_USE_H5)

@@ -89,9 +89,9 @@ subroutine FTeik(vel,tt, &
 ! Number of sweeps to do
 !_______________________
    integer,intent(in)   ::   nsweep
-   real,intent(in)   ::   dzin,dxin,dyin
-   real,intent(in)   ::   zsin,xsin,ysin
-   real,intent(in)   ::   epsin
+   real*8,intent(in)   ::   dzin,dxin,dyin
+   real*8,intent(in)   ::   zsin,xsin,ysin
+   real*8,intent(in)   ::   epsin
 
    real*8,intent(out),dimension(nz,nx,ny)   ::   tt
    real*8,intent(in),dimension(nz-1,nx-1,ny-1)   ::   vel

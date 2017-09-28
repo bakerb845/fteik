@@ -353,59 +353,60 @@
 !        END INTERFACE 
 !     END MODULE
 
-      MODULE FTEIK_LOCALSOLVER64F
-         USE ISO_C_BINDING
-         INTEGER(C_INT), SAVE :: zsi, xsi, ysi
-         REAL(C_DOUBLE), SAVE :: zsa, xsa, ysa 
-         REAL(C_DOUBLE), SAVE :: dz, dx, dy
-         REAL(C_DOUBLE), SAVE :: szero, szero2
-         REAL(C_DOUBLE), SAVE :: dxi, dyi, dzi
-         REAL(C_DOUBLE), SAVE :: dx2, dy2, dz2
-         REAL(C_DOUBLE), SAVE :: dx2i, dy2i, dz2i
-         REAL(C_DOUBLE), SAVE :: dsum, dsumi, epsSolver
-         REAL(C_DOUBLE), SAVE :: dz2dx2, dz2dy2, dx2dy2
-         REAL(C_DOUBLE), SAVE :: dz2i_dx2i, dz2i_dy2i, dx2i_dy2i
-         REAL(C_DOUBLE), SAVE :: dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i
-         REAL(C_DOUBLE), SAVE :: dz2i_p_dy2i_inv, dz2i_p_dx2i_inv, dx2i_p_dy2i_inv
-         INTERFACE
+!     MODULE FTEIK_LOCALSOLVER64F
+!        USE ISO_C_BINDING
+!        INTEGER(C_INT), SAVE :: zsi, xsi, ysi
+!        REAL(C_DOUBLE), SAVE :: zsa, xsa, ysa 
+!        REAL(C_DOUBLE), SAVE :: dz, dx, dy
+!        REAL(C_DOUBLE), SAVE :: szero, szero2
+!        REAL(C_DOUBLE), SAVE :: dxi, dyi, dzi
+!        REAL(C_DOUBLE), SAVE :: dx2, dy2, dz2
+!        REAL(C_DOUBLE), SAVE :: dx2i, dy2i, dz2i
+!        REAL(C_DOUBLE), SAVE :: dsum, dsumi, epsSolver
+!        REAL(C_DOUBLE), SAVE :: dz2dx2, dz2dy2, dx2dy2
+!        REAL(C_DOUBLE), SAVE :: dz2i_dx2i, dz2i_dy2i, dx2i_dy2i
+!        REAL(C_DOUBLE), SAVE :: dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i
+!        REAL(C_DOUBLE), SAVE :: dz2i_p_dy2i_inv, dz2i_p_dx2i_inv, dx2i_p_dy2i_inv
+!        INTERFACE
 
-            SUBROUTINE fteik_localSolver_meshConstants64fF(isrc, ierr)   &
-                       BIND(C, NAME='fteik_localSolver_meshConstants64fF')
-            USE ISO_C_BINDING
-            IMPLICIT NONE
-            INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
-            INTEGER(C_INT), INTENT(OUT) :: ierr
-            END SUBROUTINE
+!           SUBROUTINE fteik_localSolver_initialize64fF(isrc, dest, ts8, ierr)   &
+!           BIND(C, NAME='fteik_localSolver_initialize64fF')
+!           USE ISO_C_BINDING
+!           IMPLICIT NONE
+!           INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+!           REAL(C_DOUBLE), INTENT(OUT) :: ts8(8)
+!           INTEGER(C_INT), INTENT(OUT) :: dest(8), ierr
+!           END SUBROUTINE
 
-            PURE REAL(C_DOUBLE)                                       &
-            FUNCTION fteik_localSolver_tAna64fF(i, j, k, dz, dx, dy,  &
-                                                zsa, xsa, ysa, szero) &
-            BIND(C, NAME='fteik_localSolver_tAna64fF')
-            !$OMP DECLARE SIMD(fteik_localSolver_tAna64fF) &
-            !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
-            USE ISO_C_BINDING
-            IMPLICIT NONE
-            REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, szero, zsa, xsa, ysa 
-            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
-            END FUNCTION
+!           PURE REAL(C_DOUBLE)                                       &
+!           FUNCTION fteik_localSolver_tAna64fF(i, j, k, dz, dx, dy,  &
+!                                               zsa, xsa, ysa, szero) &
+!           BIND(C, NAME='fteik_localSolver_tAna64fF')
+!           !$OMP DECLARE SIMD(fteik_localSolver_tAna64fF) &
+!           !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+!           USE ISO_C_BINDING
+!           IMPLICIT NONE
+!           REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, szero, zsa, xsa, ysa 
+!           INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
+!           END FUNCTION
 
-            PURE SUBROUTINE fteik_localSolver_tAnaD64fF(t_anad, tzc, txc, tyc, &
-                                                        i, j, k,               &
-                                                        dz, dx, dy,            &
-                                                        zsa, xsa, ysa, szero)  &
-                            BIND(C, NAME='fteik_localSolver_tAnaD64fF')
-            !$OMP DECLARE SIMD(fteik_localSolver_tAnaD64fF) &
-            !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
-            USE ISO_C_BINDING
-            IMPLICIT NONE
-            REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero
-            INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
-            REAL(C_DOUBLE), INTENT(OUT) :: t_anad, tzc, txc, tyc
-            END SUBROUTINE
+!           PURE SUBROUTINE fteik_localSolver_tAnaD64fF(t_anad, tzc, txc, tyc, &
+!                                                       i, j, k,               &
+!                                                       dz, dx, dy,            &
+!                                                       zsa, xsa, ysa, szero)  &
+!                           BIND(C, NAME='fteik_localSolver_tAnaD64fF')
+!           !$OMP DECLARE SIMD(fteik_localSolver_tAnaD64fF) &
+!           !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+!           USE ISO_C_BINDING
+!           IMPLICIT NONE
+!           REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero
+!           INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k
+!           REAL(C_DOUBLE), INTENT(OUT) :: t_anad, tzc, txc, tyc
+!           END SUBROUTINE
 
-         END INTERFACE
+!        END INTERFACE
 
-      END MODULE 
+!     END MODULE 
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -571,7 +572,7 @@
             INTEGER(C_INT), INTENT(OUT) :: ierr
             END SUBROUTINE
 
-            PURE REAL(C_DOUBLE) &
+            REAL(C_DOUBLE) &
             FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
                                            i, j, k,                         &
                                            sgntz, sgntx, sgnty,             &
@@ -586,7 +587,7 @@
             LOGICAL(C_BOOL), INTENT(IN) :: linitk
             END FUNCTION
 
-            PURE REAL(C_DOUBLE)                                                 &
+            REAL(C_DOUBLE)                                                 &
             FUNCTION fteik_localSolverExplicit64fF(tv, te, tn, tev,                  &
                                                    ten, tnv, tnve, tt0,              &
                                                    slow1, slow2, slow3, slow4,       &

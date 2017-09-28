@@ -13,6 +13,10 @@
                                  fteik_getSlownessPermF, fteik_getSweepLimitsF, &
                                  fteik_localSolver64fF, &
                                  fteik_meshConstants64fF, grid2indexF
+      USE FTEIK_UTILS64F, ONLY : fteik_getSlownessPermF, &
+                                 fteik_getTravelTimePermF, &
+                                 fteik_prefetchSlowness64fF, &
+                                 fteik_prefetchTravelTimes64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep1TravelTimes64fF, &
                                  fteik_prefetchSweep2TravelTimes64fF, &
                                  fteik_prefetchSweep3TravelTimes64fF, &
@@ -29,6 +33,7 @@
                                  fteik_prefetchSweep6Slowness64fF, &
                                  fteik_prefetchSweep7Slowness64fF, &
                                  fteik_prefetchSweep8Slowness64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF
       USE FTEIK_UTILS64F, ONLY : ttimes, slow, lhaveGrid, lhaveTravelTimes, nsweep, &
                                  nx, ny, nz, nzx, nzm1, nzm1_nxm1, xsi, ysi, zsi
       USE FTEIK_UTILS64F, ONLY : dxi, dyi, dzi
@@ -37,6 +42,10 @@
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) ttWork(8), slowWork(8), sgnrz, sgnrx, sgnry, &
                      sgnrz_dzi, sgnrx_dxi, sgnry_dyi, tupd
+#ifdef DEBUG
+      REAL(C_DOUBLE) slowWork1(8), ttWork1(8), tupd1
+#endif
+      INTEGER(C_INT) slowPerm(20), ttPerm(8)
       INTEGER(C_INT) i, j, k, kndx, &
                      kiter, sgntz, sgntx, sgnty, sgnvz, sgnvx, sgnvy, sweep
       LOGICAL(C_BOOL) linitk
@@ -83,6 +92,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -120,6 +131,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -157,6 +170,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -194,6 +209,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -231,6 +248,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -268,6 +287,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -305,6 +326,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -342,6 +365,8 @@ call cpu_time(t0)
                                    sgntz, sgntx, sgnty, &
                                    sgnvz, sgnvx, sgnvy, &
                                    sgnrz, sgnrx, sgnry)
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       ! Some derivative items
       sgnrz_dzi = sgnrz*dzi
       sgnrx_dxi = sgnrx*dxi
@@ -356,6 +381,7 @@ call cpu_time(t0)
                                                      slowWork(3), slowWork(4), &
                                                      slowWork(5), slowWork(6), &
                                                      slowWork(7))
+
                CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, ttimes, &!ttWork)
                                                         ttWork(1), ttWork(2), &
                                                         ttWork(3), ttWork(4), &
@@ -376,6 +402,8 @@ call cpu_time(t0)
       !                              Begin the iterative method                          !
       !----------------------------------------------------------------------------------!
       linitk = .FALSE.
+      CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+      CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
       DO kiter=1,nsweep
          !-----------------------------------Sweep 1-------------------------------------!
          sweep = 1
@@ -408,6 +436,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                1, 1, 1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error1'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error1t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed1:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -421,6 +472,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -445,6 +498,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                1, -1, 1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error2'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error2t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed8:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -458,6 +534,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -482,6 +560,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                1, 1, -1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error3'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error3t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed3:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -495,6 +596,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -519,6 +622,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                1, -1, -1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error4'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error4t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed4:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -532,6 +658,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -556,6 +684,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                -1, 1, 1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error5'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error5t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed5:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -569,6 +720,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -593,6 +746,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                -1, -1, 1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error6'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error6t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed6:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -606,6 +782,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -630,6 +808,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                -1, 1, -1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error7'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)   
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error7t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), & 
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed7:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -643,6 +844,8 @@ call cpu_time(t0)
                                       sgntz, sgntx, sgnty, &
                                       sgnvz, sgnvx, sgnvy, &
                                       sgnrz, sgnrx, sgnry)
+         CALL fteik_getSlownessPermF(sweep, slowPerm, ierr)
+         CALL fteik_getTravelTimePermF(sweep, ttPerm, ierr)
          ! Some derivative items
          sgnrz_dzi = sgnrz*dzi
          sgnrx_dxi = sgnrx*dxi
@@ -667,6 +870,29 @@ call cpu_time(t0)
                                                i, j, k,                       &
                                                -1, -1, -1, & !sgntz, sgntx, sgnty,           &
                                                sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+#ifdef DEBUG
+                  CALL fteik_prefetchSlowness64fF(i, j, k, nzm1, nzm1_nxm1,    &
+                                                  sgnvz, sgnvx, sgnvy,         &    
+                                                  slowPerm, slow, slowWork1)
+                  IF (MAXVAL(ABS(slowWork(1:7) - slowWork1(1:7))) > 0.d0) print *, 'error8'
+                  CALL fteik_prefetchTravelTimes64fF(i, j, k, nz, nzx,     &
+                                                     sgntz, sgntx, sgnty,  &    
+                                                     ttPerm, ttimes, ttWork1)
+                  IF (MAXVAL(ABS(ttWork(1:8) - ttWork1(1:8))) > 0.d0) print *, 'error8t'
+                  CALl fteik_localSolver_noInit64fF(1, &
+                                                    ttWork1(1), ttWork1(2), &
+                                                    ttWork1(3), ttWork1(4),  &
+                                                    ttWork1(5), ttWork1(6),  &
+                                                    ttwork1(7), &
+                                                    slowWork1(1), slowWork1(2), &
+                                                    slowWork1(3), slowWork1(4), &
+                                                    slowWork1(5), slowWork1(6), &
+                                                    slowWork1(7),  ttWork1(8)) !tupd1)
+                  tupd1 = ttWork1(8)
+                  IF (ABS(tupd - tupd1) > 1.d-15) THEN
+                     WRITE(*,*) 'failed8:', i, j, k, tupd, tupd1
+                  ENDIF
+#endif
                   ! update ttimes
                   kndx = grid2indexF(i, j, k, nz, nzx)
                   ttimes(kndx) = tupd !DMIN1(ttimes(kndx), tupd)
@@ -675,7 +901,7 @@ call cpu_time(t0)
          ENDDO
       ENDDO ! end iterative loop on sweeps 
 call cpu_time(t1)
-print *, 'time:', t1 - t0
+print *, 'FSM time:', t1 - t0
 print *, minval(ttimes), maxval(ttimes)
       lhaveTravelTimes = .TRUE.
       RETURN
@@ -747,6 +973,7 @@ call cpu_time(t0)
       DO 101 lsweep=1,8
          If (lsweep == 1) THEN
             CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
+print*, minval(ttimes), maxval(ttimes)
          ELSEIF (lsweep == 2) THEN
             CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
          ELSEIF (lsweep == 3) THEN

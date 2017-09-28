@@ -963,6 +963,7 @@ print *, maxLevelSize
       IF (zsi > nz - 1 .OR. xsi > nx - 1 .OR. ysi > ny - 1) THEN
          WRITE(*,*) 'fteik_setSourceLocationF: Warning solver may segfault'
       ENDIF
+print *, zsa, xsa, ysa, zsrc, xsrc, ysrc
       ! set the update grid
       lhaveSource = .TRUE.
       CALL fteik_setUpdateNodesF(1, nlevels, .TRUE., levelPtr, ijkv1, lupdInit1, ierrs(1))
@@ -1025,6 +1026,7 @@ print *, maxLevelSize
          ierr = 1
          RETURN
       ENDIF
+!print *,'szero-',szero
       ts8(1) = fteik_tAna64fF(zsi,   xsi,   ysi,              &
                               dz, dx, dy, zsa, xsa, ysa, szero)
       ts8(2) = fteik_tAna64fF(zsi+1, xsi,   ysi,              &
@@ -1126,7 +1128,6 @@ print *, indx, szero
       ENDIF
       ierr = 0
       epsSolver = epsS2C*MIN(dz, dx, dy)*szero
-      !print *, 'epsSolver, szero:', epsSolver, szero
       RETURN
       END
 !                           
@@ -1241,6 +1242,8 @@ print *, indx, szero
                   ENDDO
                ENDDO
             ENDDO
+!if (sweep == 8) print *, kiter, 'upd', minval(ttimes), maxval(ttimes)
+!if (sweep == 3) print *, 'how we doing after 3:', minval(ttimes), maxval(ttimes)
 !return
          ENDDO ! loop on sweep directions 
       ENDDO ! end iterative loop on sweeps 
@@ -1649,7 +1652,7 @@ print *, minval(ttimes), maxval(ttimes)
 !>     - Operate on a local velocity/traveltime stencil to provide user opportunity
 !>       to emphasize cache-coherency; particularly in level set sweeping.
 !>             
-      PURE REAL(C_DOUBLE)  &
+ REAL(C_DOUBLE)  &
       FUNCTION fteik_localSolver64fF(tt, slowLoc, linitk,             &
                                      i, j, k,                         &
                                      sgntz, sgntx, sgnty,             &
@@ -1675,7 +1678,7 @@ print *, minval(ttimes), maxval(ttimes)
 
 
 
-      PURE REAL(C_DOUBLE)                                                     &
+ REAL(C_DOUBLE)                                                     &
       FUNCTION fteik_localSolverExplicit64fF(tv, te, tn, tev,                 &
                                              ten, tnv, tnve, tt0,             &
                                              slow1, slow2, slow3, slow4,      &
@@ -1879,7 +1882,7 @@ print *, minval(ttimes), maxval(ttimes)
             tab = ta - tb
             tbc = tb - tc
             tac = ta - tc
-            t2 = sref2*dsum*9.d0
+            t2 = sref2*(dsum*9.d0)
             tab2 = tab*tab
             tbc2 = tbc*tbc
             tac2 = tac*tac

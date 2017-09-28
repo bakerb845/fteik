@@ -963,6 +963,7 @@ int fteikGraph::generateIJKV(const int sweep)
             gotEmAll = gotEmAll + 1;
         }
     }
+    free(work);
     if (ierr != 0)
     {
         printf("%s: Failed to convert index to grid\n", __func__);

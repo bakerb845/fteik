@@ -782,11 +782,13 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = fteik_utils.F90 \
+                         constants.F90 \
                          model.F90 \
                          receiver.F90 \ 
                          source.F90 \
                          solver.F90 \
                          modules.F90 \
+                         localSolver.F90 \
                          fteikGraph.cpp \
                          ./include/fteik_fortran.h
 

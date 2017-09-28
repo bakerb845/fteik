@@ -168,6 +168,8 @@ int fteik_io_readVelocityModel(const char *fileName,
     *ncellz = (int) dims[0];
     *ncelly = (int) dims[1];
     *ncellx = (int) dims[2];
+    lzDown = false;
+    if (zDown == 1){lzDown = true;}
     nCell = (*ncellx)*(*ncelly)*(*ncellz);
     if (nCell < 1)
     {

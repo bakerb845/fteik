@@ -1,5 +1,6 @@
 #ifndef FTEIK_FORTRAN_H__
 #define FTEIK_FORTRAN_H__ 1
+#include <mpi.h>
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C"
@@ -36,6 +37,15 @@ void fteik_receiver_initialize64fF(const int nrec,
 void fteik_receiver_getTravelTimes64fF(const int nrec,
                                        double *__restrict__ ttr, int *ierr);
 void fteik_receiver_finalizeF(void);
+
+int fteik_receiver_broadcast(const int root, const MPI_Comm comm)
+{
+    void fteik_receiver_broadcastF(const int root, const int comm, int *mpierr);
+    int mpierr;
+    MPI_Fint fComm = MPI_Comm_c2f(comm);
+    fteik_receiver_broadcastF(fComm, comm, &mpierr);
+    return mpierr;
+};
 //----------------------------------------------------------------------------//
 //                            Source Module                                   //
 //----------------------------------------------------------------------------//
@@ -66,12 +76,15 @@ void fteik_solver_initialize64fF(
     const double dzIn, const double dxIn, const double dyIn,
     const int nsweepIn, const double epsIn, int *ierr);
 void fteik_solver_finalizeF(void);
+void fteik_solver_setVelocityModel64fF(const int ncell, 
+                                       const double *__restrict__ vel,
+                                       int *ierr);
 void fteik_solver_setSources64fF(const int nsrc,
                                  const double *__restrict__ zsrc,
                                  const double *__restrict__ xsrc,
                                  const double *__restrict__ ysrc,
                                  int *ierr);
-void fteik_solver_solveSourceF(const int isrc, int *ierr); 
+void fteik_solver_solveSourceLSMF(const int isrc, int *ierr);
 
 // These are the functions worth knowing
 void fteik_initializeF(const int *nz, const int *nx, const int *ny,

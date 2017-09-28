@@ -1,3 +1,37 @@
+MODULE FTEIK_SOLVER64F
+  USE FTEIK_CONSTANTS64F, ONLY : zero
+  USE ISO_C_BINDING
+  IMPLICIT NONE
+  !> Holds the travel-times (seconds).  This has dimension [ngrd].
+  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
+  !DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
+  !> Maps from the level'th level to the first node node in the level.
+  !> This has dimension [nLevels+1].
+  INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: levelPtr(:)
+  INTEGER(C_INT), ALLOCATABLE, SAVE :: ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
+                                       ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
+  LOGICAL(C_BOOL), ALLOCATABLE, SAVE :: lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
+                                        lupd5(:), lupd6(:), lupd7(:), lupd8(:)
+  LOGICAL(C_BOOL), ALLOCATABLE, SAVE :: lupdInit1(:), lupdInit2(:), &
+                                        lupdInit3(:), lupdInit4(:), &
+                                        lupdInit5(:), lupdInit6(:), &
+                                        lupdInit7(:), lupdInit8(:)
+  !> Defines the transition from the spherical to the Cartesian solver solver
+  !> during the initialization phase.  This has units of grid points.
+  REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
+  !> Defines the number of Gauss-Seidel iterations.
+  INTEGER(C_INT), PROTECTED, SAVE :: nsweep = 0 
+  !> Flag indicating whether or not the travel times were computed.
+  LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveTimes = .FALSE. 
+  !> Number of levels in level scheduling method.
+  INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
+  !> The number of nodes in the largest level.
+  INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 
+  CONTAINS
+!----------------------------------------------------------------------------------------!
+!                                     Begin the Code                                     !
+!----------------------------------------------------------------------------------------!
+!
 !>    @brief This program initializes the solver.  It will also perform the graph
 !>           reordering.
 !>
@@ -29,11 +63,7 @@
                                              nsweepIn, epsIn, ierr) &
                  BIND(C, NAME='fteik_solver_initialize64fF')
       USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometryF
-      USE FTEIK_SOLVER64F, ONLY : fteik_solver_setSphereToCartEpsilonF, &
-                                  fteik_solver_setNumberOfSweepsF, &
-                                  fteik_solver_computeGraphF, &
-                                  fteik_solver_finalizeF
+      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometryF, ngrd
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
@@ -66,6 +96,8 @@
          WRITE(*,*) 'fteik_solver_initialize64fF: Failed to compute graph'
          RETURN
       ENDIF
+      ! Set space for the travel-times
+      IF (.NOT.ALLOCATED(ttimes)) ALLOCATE(ttimes(ngrd))
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -83,12 +115,6 @@
                  BIND(C, NAME='fteik_solver_computeGraphF') 
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
-      USE FTEIK_SOLVER64F, ONLY : nLevels, maxLevelSize
-      USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
-      USE FTEIK_SOLVER64F, ONLY : lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
-      USE FTEIK_SOLVER64F, ONLY : levelPtr
-!     USE FTEIK_SOLVER64F, ONLY : tt1 
-      USE FTEIK_SOLVER64F, ONLY : fteik_solver_setUpdateNodesF
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE FTEIK_GRAPH
       IMPLICIT NONE
@@ -185,6 +211,70 @@
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Sets the update nodes for the initialization.  Because during initialization
+!>           it may be possible that all nodes preceding the source location have no
+!>           useful information to propagate forward they can be ignored.
+!>
+!>    @param[in] isrc     Source number.
+!>
+!>    @param[out] ierr    0 indicates.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_solver_setInitialUpdateNodesF(isrc, ierr) &
+      BIND(C, NAME='fteik_solver_setInitialUpdateNodesF')
+      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(IN) :: isrc
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) ierrs(8)
+      ! Set the initial update grid.  This will mask nodes on the boundary and
+      ! points preceding the source location.
+      IF (.NOT.ALLOCATED(lupdInit1)) ALLOCATE(lupdInit1(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit2)) ALLOCATE(lupdInit2(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit3)) ALLOCATE(lupdInit3(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit4)) ALLOCATE(lupdInit4(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit5)) ALLOCATE(lupdInit5(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit6)) ALLOCATE(lupdInit6(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit7)) ALLOCATE(lupdInit7(ngrd))
+      IF (.NOT.ALLOCATED(lupdInit8)) ALLOCATE(lupdInit8(ngrd))
+      lupdInit1(:) = .FALSE.
+      lupdInit2(:) = .FALSE.
+      lupdInit3(:) = .FALSE.
+      lupdInit4(:) = .FALSE.
+      lupdInit5(:) = .FALSE.
+      lupdInit6(:) = .FALSE.
+      lupdInit7(:) = .FALSE.
+      lupdInit8(:) = .FALSE.
+      CALL fteik_solver_setUpdateNodesF(1, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv1, lupdInit1, ierrs(1))
+      CALL fteik_solver_setUpdateNodesF(2, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv2, lupdInit2, ierrs(2))
+      CALL fteik_solver_setUpdateNodesF(3, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv3, lupdInit3, ierrs(3))
+      CALL fteik_solver_setUpdateNodesF(4, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv4, lupdInit4, ierrs(4))
+      CALL fteik_solver_setUpdateNodesF(5, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv5, lupdInit5, ierrs(5))
+      CALL fteik_solver_setUpdateNodesF(6, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv6, lupdInit6, ierrs(6))
+      CALL fteik_solver_setUpdateNodesF(7, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv7, lupdInit7, ierrs(7))
+      CALL fteik_solver_setUpdateNodesF(8, nlevels, .TRUE., isrc, levelPtr, &
+                                        ijkv8, lupdInit8, ierrs(8))
+      IF (MAXVAL(ABS(ierrs)) /= 0) THEN
+         WRITE(*,*) 'fteik_source_setLocationF: Error setting update nodes'
+         ierr = 1 
+         RETURN
+      ENDIF
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Utility routine for setting the nodes to update in the sweep.
 !>
 !>    @param[in] sweep      Sweep number.  This must be in the range [1,8].
@@ -210,13 +300,13 @@
 !>
 !>    @copyright MIT
 !>    
-      SUBROUTINE fteik_solver_setUpdateNodesF(sweep, nLevels, linitk, isrc, &
-                                              levelPtr, ijkv, lupd, ierr)   &
-                 BIND(C, NAME='fteik_solver_setUpdateNodesF')
+      SUBROUTINE fteik_solver_setUpdateNodesF(sweep, nLevels, linitk, &
+                                              isrc, levelPtr, ijkv,   &
+                                              lupd, ierr)             &
+      BIND(C, NAME='fteik_solver_setUpdateNodesF')
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny
       USE FTEIK_SOURCE64F, ONLY : fteik_source_getSourceIndices32iF
-      USE FTEIK_SOLVER64F, ONLY : fteik_solver_getSweepLimitsF
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nLevels
       LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
@@ -226,6 +316,9 @@
       INTEGER(C_INT), INTENT(OUT) :: ierr
       INTEGER(C_INT) i, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
                      x1, x2, xsi, y1, y2, ysi, z1, z2, zsi
+      zsi =-1
+      xsi =-1
+      ysi =-1
       IF (linitk) THEN
          CALL fteik_source_getSourceIndices32iF(isrc, zsi, xsi, ysi, ierr)
          IF (ierr /= 0) THEN
@@ -299,7 +392,7 @@
                                               zsi, xsi, ysi,          &
                                               z1, z2, x1, x2, y1, y2, &
                                               ierr)                   &
-                 BIND(C, NAME='fteik_solver_getSweepLimitsF')
+      BIND(C, NAME='fteik_solver_getSweepLimitsF')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nz, nx, ny
@@ -379,13 +472,7 @@
 !>    @copyright MIT
 !>
       SUBROUTINE fteik_solver_finalizeF()             &
-                 BIND(C, NAME='fteik_solver_finalizeF')
-      USE FTEIK_SOLVER64F, ONLY : ttimes,  &
-                                  ijkv1, ijkv2, ijkv3, ijkv4, &
-                                  ijkv5, ijkv6, ijkv7, ijkv8, &
-                                  lupd1, lupd2, lupd3, lupd4, &
-                                  lupd5, lupd6, lupd7, lupd8, &
-                                  epsS2C, nsweep, lhaveTimes
+      BIND(C, NAME='fteik_solver_finalizeF')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
       USE FTEIK_SOURCE64F, ONLY : fteik_source_finalizeF
       USE FTEIK_CONSTANTS64F, ONLY : zero
@@ -403,6 +490,14 @@
       IF (ALLOCATED(lupd6)) DEALLOCATE(lupd6)
       IF (ALLOCATED(lupd7)) DEALLOCATE(lupd7)
       IF (ALLOCATED(lupd8)) DEALLOCATE(lupd8)
+      IF (ALLOCATED(lupdInit1)) DEALLOCATE(lupdInit1)
+      IF (ALLOCATED(lupdInit2)) DEALLOCATE(lupdInit2)
+      IF (ALLOCATED(lupdInit3)) DEALLOCATE(lupdInit3)
+      IF (ALLOCATED(lupdInit4)) DEALLOCATE(lupdInit4)
+      IF (ALLOCATED(lupdInit5)) DEALLOCATE(lupdInit5)
+      IF (ALLOCATED(lupdInit6)) DEALLOCATE(lupdInit6)
+      IF (ALLOCATED(lupdInit7)) DEALLOCATE(lupdInit7)
+      IF (ALLOCATED(lupdInit8)) DEALLOCATE(lupdInit8)
       IF (ALLOCATED(ijkv1)) DEALLOCATE(ijkv1)
       IF (ALLOCATED(ijkv2)) DEALLOCATE(ijkv2)
       IF (ALLOCATED(ijkv3)) DEALLOCATE(ijkv3)
@@ -436,10 +531,9 @@
 !>    This is now a subroutine and incorporated with the fteik Fortran modules.
 !>
       SUBROUTINE fteik_solver_setSphereToCartEpsilonF(epsIn, ierr) &
-                 BIND(C, NAME='fteik_solver_setSphereToCartEpsilonF')
+      BIND(C, NAME='fteik_solver_setSphereToCartEpsilonF')
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny
-      USE FTEIK_SOLVER64F, ONLY : epsS2C
       USE FTEIK_CONSTANTS64F, ONLY : zero
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
@@ -485,8 +579,7 @@
 !>    @copyright MIT 
 !>
       SUBROUTINE fteik_solver_setNumberOfSweepsF(nsweepIn, ierr) &
-                 BIND(C, NAME='fteik_solver_setNumberOfSweepsF')
-      USE FTEIK_SOLVER64F, ONLY : nsweep
+      BIND(C, NAME='fteik_solver_setNumberOfSweepsF')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn 
@@ -504,4 +597,154 @@
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Initializes the source(s) on the solver.
+!> 
+!>    @param[in] nsrc     Number of sources.
+!>    @param[in] zsrc     z locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>    @param[in] xsrc     x locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>    @param[in] ysrc     y locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>
+!>    @param[out] ierr    0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_solver_setSources64fF(nsrc, zsrc, xsrc, ysrc, &
+                                             ierr)                   &
+      BIND(C, NAME='fteik_solver_setSources64fF')
+      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64fF
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
+      REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      CALL fteik_source_initialize64fF(nsrc, zsrc, xsrc, ysrc, ierr)
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources: Failed to set source'
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the velocity model on the solver.
+!>
+!>    @param[in] ncell    Number of cells in velocity model.  This should be 
+!>                        (nz-1)*(nx-1)*(ny-1).
+!>    @param[in] vel      Velocity model (meters/second) in model cells.  This is
+!>                        a vector of dimension [ncell] whose fastest direction is
+!>                        z and whose slowest direction is y.
+!>
+!>    @param[out] ierr    0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_solver_setVelocityModel64fF(ncell, vel, ierr) &
+      BIND(C, NAME='fteik_solver_setVelocityModel64fF')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64fF 
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ncell
+      REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      CALL fteik_model_setVelocityModel64fF(ncell, vel, ierr)
+      IF (ierr /= 0) &
+      WRITE(*,*) 'fteik_solver_setVelocityModel64fF: Error setting velocity model'
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Solves the eikonal equation for the given source.
+!>
+!>    @param[in] isrc     Source number.  This must be in the range [1,nsrc].
+!>
+!>    @param[out] ierr    0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_solver_solveSourceLSMF(isrc, ierr)   &
+                 BIND(C, NAME='fteik_solver_solveSourceLSMF')
+      USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_MODEL64F, ONLY : lhaveModel
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_initialize64fF
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
+      USE FTEIK_AUTOCODE, ONLY : fteik_evaluateSweep1LS64fF, &
+                                 fteik_evaluateSweep2LS64fF, &
+                                 fteik_evaluateSweep3LS64fF, &
+                                 fteik_evaluateSweep4LS64fF, &
+                                 fteik_evaluateSweep5LS64fF, &
+                                 fteik_evaluateSweep6LS64fF, &
+                                 fteik_evaluateSweep7LS64fF, &
+                                 fteik_evaluateSweep8LS64fF
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) ts8(8), t0, t1
+      INTEGER(C_INT) dest(8), kiter
+      ierr = 0
+      lhaveTimes = .FALSE.
+      IF (.NOT.lhaveModel) THEN
+         WRITE(*,*) 'fteik_solver_solveSourceF: Model not yet set'
+         ierr = 1
+         GOTO 500
+      ENDIF
+      IF (isrc < 1 .OR. isrc > nsrc) THEN
+         WRITE(*,*) 'fteik_solver_solveSourceF: Invalid source number:', isrc, 1, nsrc
+         ierr = 1
+         GOTO 500
+      ENDIF
+      ! Set the update nodes for the first iteration
+      CALL fteik_solver_setInitialUpdateNodesF(isrc, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_solver_solveSourceF: Error setting initial nodes'
+         GOTO 500
+      ENDIF
+      ! Define the mesh constants and get the travel-times near the source
+      CALL fteik_localSolver_initialize64fF(isrc, epsS2C, dest, ts8, ierr) 
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_solver_solveSourceF: Error setting mesh constants'
+         GOTO 500
+      ENDIF
+      CALL CPU_TIME(t0)
+      ttimes(:) = FTEIK_HUGE
+      ttimes(dest(1:8)) = ts8(1:8) !+ t0(isrc) ! Add in initial time
+      ! Solve the Eikonal Equation - first initialize
+      CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep3LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep4LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep5LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep6LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep7LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep8LS64fF(.TRUE., ttimes, ierr)
+      ! Now perform the Gauss-Seidel iterations
+      DO kiter=1,nsweep
+         CALL fteik_evaluateSweep1LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep2LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep3LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep4LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep5LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep6LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep7LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep8LS64fF(.FALSE., ttimes, ierr)
+      ENDDO 
+      CALL CPU_TIME(t1)
+print *, 'solver time:', t1 - t0 
+print *, minval(ttimes), maxval(ttimes)
 
+  500 CONTINUE
+      IF (ierr /= 0) THEN
+         ttimes(:) = FTEIK_HUGE
+         lhaveTimes = .FALSE.
+      ENDIF
+      RETURN
+      END
+!----------------------------------------------------------------------------------------!
+!                                       End the Code                                     !
+!----------------------------------------------------------------------------------------!
+END MODULE

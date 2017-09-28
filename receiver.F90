@@ -1,8 +1,18 @@
 MODULE FTEIK_RECEIVER64F
    USE ISO_C_BINDING
-   ! receiver indices
-   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zdr(:), xdr(:), ydr(:)
-   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: zri(:), xri(:), yri(:)
+   !> Receiver index in z.  This is a vector of dimension [nrec]. 
+   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: zri(:)
+   !> Receiver index in x.  This is a vector of dimension [nrec].
+   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: xri(:)
+   !> Receiver index in y.  This is a vector of dimension [nrec]. 
+   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: yri(:)
+   !> z distance from DBLE(zri).  This is for the linear interpolation.
+   REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: zdr(:)
+   !> x distance from DBLE(xri).  This is for the linear interpolation.
+   REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: xdr(:)
+   !> y distance from DBLE(yri) . This is for the linear interpolation.
+   REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: ydr(:)
+   !> Number of receivers.
    INTEGER(C_INT), PROTECTED, SAVE :: nrec
    INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0
    INTEGER(C_INT), PARAMETER :: INTERP_LINEAR = 1
@@ -30,8 +40,6 @@ MODULE FTEIK_RECEIVER64F
 !>
       SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
                  BIND(C, NAME='fteik_receiver_initialize64fF')
-!     USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
-!     USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
       USE FTEIK_MODEL64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -113,7 +121,6 @@ MODULE FTEIK_RECEIVER64F
 !>
       INTEGER(C_INT) FUNCTION fteik_receiver_getNumberOfReceiversF( )     &
       RESULT(nrecOut) BIND(C, NAME='fteik_receiver_getNumberOfReceiversF')
-!     USE FTEIK_RECEIVER64F, ONLY : nrec
       USE ISO_C_BINDING
       nrecOut = nrec
       RETURN
@@ -126,6 +133,8 @@ MODULE FTEIK_RECEIVER64F
 !>           (e.g., https://en.wikipedia.org/wiki/Trilinear_interpolation)
 !>
 !>    @param[in] nrecIn    Workspace of ttr.
+!>    @param[in] ngrd      Number of grid points in travel-time field.
+!>    @param[in] ttimes    Travel-time field (seconds).  This has dimension [ngrd].
 !>
 !>    @param[out] ttr      Travel-times (seconds) at each receiver.  This is a vector of
 !>                         dimension [nrecIn] however only the first nrec values are 
@@ -136,16 +145,17 @@ MODULE FTEIK_RECEIVER64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ttr, ierr) &
+      SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ngrd,       &
+                                                   ttimes, ttr, ierr)  &
       BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
-      USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
-!     USE FTEIK_RECEIVER64F, ONLY : nrec, xdr, ydr, zdr, xri, yri, zri 
+!     USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
       USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE FTEIK_CONSTANTS64F, ONLY : one, FTEIK_HUGE
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn, ngrd
+      REAL(C_DOUBLE), INTENT(IN) :: ttimes(ngrd)
       REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) c0, c1, c00, c01, c10, c11, one_m_zd, one_m_xd, &
@@ -163,11 +173,6 @@ MODULE FTEIK_RECEIVER64F
          RETURN
       ENDIF
       IF (nrecIn > nrec) ttr(nrec+1:nrecIn) = FTEIK_HUGE
-      IF (.NOT.lhaveTimes) THEN
-         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Travel-times not yet computed'
-         ierr = 1
-         RETURN
-      ENDIF
       DO 1 i=1,nrec
          ! extract travel-times in cache-friendly way
          i0 = fteik_model_grid2indexF(zri(i),   xri(i),   yri(i),   nz, nzx)
@@ -216,7 +221,6 @@ MODULE FTEIK_RECEIVER64F
 !>
       SUBROUTINE fteik_receiver_finalizeF( ) &
                  BIND(C, NAME='fteik_receiver_finalizeF')
-!     USE FTEIK_RECEIVER64F, ONLY : nrec, xri, yri, zri, xdr, ydr, zdr
       USE ISO_C_BINDING
       IMPLICIT NONE
       nrec = 0 
@@ -228,6 +232,37 @@ MODULE FTEIK_RECEIVER64F
       IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
       RETURN
       END
+!----------------------------------------------------------------------------------------!
+!                                    Begin the MPI                                       !
+!----------------------------------------------------------------------------------------!
+ 
+      SUBROUTINE fteik_receiver_broadcastF(root, comm, mpierr) &
+                 BIND(C, NAME='fteik_receiver_broadcastF')
+      USE MPI
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root 
+      INTEGER(C_INT), INTENT(OUT) :: mpierr
+      INTEGER(C_INT) myid
+      CALL MPI_Comm_Rank(comm, myid, mpierr)
+      CALL MPI_Bcast(nrec, 1, MPI_INT, root, comm, mpierr) 
+      IF (nrec < 1) RETURN 
+      IF (myid /= root) THEN 
+         CALL fteik_receiver_finalizeF()
+         ALLOCATE(zri(nrec))
+         ALLOCATE(xri(nrec))
+         ALLOCATE(yri(nrec))
+         ALLOCATE(zdr(nrec))
+         ALLOCATE(xdr(nrec))
+         ALLOCATE(ydr(nrec))
+      ENDIF
+      CALL MPI_Bcast(zri, nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(xri, nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(yri, nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(zdr, nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(xdr, nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(ydr, nrec, MPI_DOUBLE, root, comm, mpierr) 
+      END SUBROUTINE
 !----------------------------------------------------------------------------------------!
 !                                     End the Code                                       !
 !----------------------------------------------------------------------------------------!

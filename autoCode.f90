@@ -390,7 +390,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep1Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep1Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -469,7 +469,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep2Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep2Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -548,7 +548,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep3Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep3Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -627,7 +627,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep4Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep4Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -706,7 +706,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep5Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep5Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -785,7 +785,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep6Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep6Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -864,7 +864,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep7Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep7Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -943,7 +943,7 @@
                                                        nzm1, nzm1_nxm1, slow, & !slowLoc) &
                                                        slowLoc1, slowLoc2, slowLoc3, slowLoc4, &
                                                        slowLoc5, slowLoc6, slowLoc7) &
-                 BIND(C, NAME='fteik_prefetchSweep8Slowness64fF')
+      BIND(C, NAME='fteik_prefetchSweep8Slowness64fF')
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : velgrid2indexF
       IMPLICIT NONE
@@ -999,16 +999,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep1LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep1LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep1LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep1Slowness64fF, & 
                                  fteik_prefetchSweep1TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -1030,7 +1035,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -1038,14 +1043,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv1, levelPtr, linitk, lupd1, lupdInit1) &
+      !$OMP SHARED(dx, dy, dz, ijkv1, levelPtr, linitk, lupd1, lupdInit1) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -1073,6 +1078,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -1081,9 +1087,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -1118,7 +1124,7 @@
                      CALL fteik_prefetchSweep1TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -1126,8 +1132,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -1138,7 +1144,7 @@
                !      !k    = ijkv1(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -1237,7 +1243,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -1302,16 +1308,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep2LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep2LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep2LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep2Slowness64fF, & 
                                  fteik_prefetchSweep2TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -1333,7 +1344,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -1341,14 +1352,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv2, levelPtr, linitk, lupd2, lupdInit2) &
+      !$OMP SHARED(dx, dy, dz, ijkv2, levelPtr, linitk, lupd2, lupdInit2) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -1376,6 +1387,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -1384,9 +1396,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -1421,7 +1433,7 @@
                      CALL fteik_prefetchSweep2TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -1429,8 +1441,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -1441,7 +1453,7 @@
                !      !k    = ijkv2(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -1540,7 +1552,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -1605,16 +1617,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep3LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep3LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep3LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep3Slowness64fF, & 
                                  fteik_prefetchSweep3TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -1636,7 +1653,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -1644,14 +1661,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv3, levelPtr, linitk, lupd3, lupdInit3) &
+      !$OMP SHARED(dx, dy, dz, ijkv3, levelPtr, linitk, lupd3, lupdInit3) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -1679,6 +1696,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -1687,9 +1705,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -1724,7 +1742,7 @@
                      CALL fteik_prefetchSweep3TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -1732,8 +1750,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -1744,7 +1762,7 @@
                !      !k    = ijkv3(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -1843,7 +1861,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -1908,16 +1926,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep4LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep4LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep4LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep4Slowness64fF, & 
                                  fteik_prefetchSweep4TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -1939,7 +1962,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -1947,14 +1970,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv4, levelPtr, linitk, lupd4, lupdInit4) &
+      !$OMP SHARED(dx, dy, dz, ijkv4, levelPtr, linitk, lupd4, lupdInit4) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -1982,6 +2005,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -1990,9 +2014,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -2027,7 +2051,7 @@
                      CALL fteik_prefetchSweep4TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -2035,8 +2059,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -2047,7 +2071,7 @@
                !      !k    = ijkv4(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -2146,7 +2170,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -2211,16 +2235,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep5LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep5LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep5LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep5Slowness64fF, & 
                                  fteik_prefetchSweep5TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -2242,7 +2271,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -2250,14 +2279,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv5, levelPtr, linitk, lupd5, lupdInit5) &
+      !$OMP SHARED(dx, dy, dz, ijkv5, levelPtr, linitk, lupd5, lupdInit5) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -2285,6 +2314,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -2293,9 +2323,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -2330,7 +2360,7 @@
                      CALL fteik_prefetchSweep5TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -2338,8 +2368,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -2350,7 +2380,7 @@
                !      !k    = ijkv5(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -2449,7 +2479,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -2514,16 +2544,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep6LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep6LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep6LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep6Slowness64fF, & 
                                  fteik_prefetchSweep6TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -2545,7 +2580,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -2553,14 +2588,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv6, levelPtr, linitk, lupd6, lupdInit6) &
+      !$OMP SHARED(dx, dy, dz, ijkv6, levelPtr, linitk, lupd6, lupdInit6) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -2588,6 +2623,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -2596,9 +2632,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -2633,7 +2669,7 @@
                      CALL fteik_prefetchSweep6TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -2641,8 +2677,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -2653,7 +2689,7 @@
                !      !k    = ijkv6(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -2752,7 +2788,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -2817,16 +2853,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep7LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep7LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep7LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep7Slowness64fF, & 
                                  fteik_prefetchSweep7TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -2848,7 +2889,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -2856,14 +2897,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv7, levelPtr, linitk, lupd7, lupdInit7) &
+      !$OMP SHARED(dx, dy, dz, ijkv7, levelPtr, linitk, lupd7, lupdInit7) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -2891,6 +2932,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -2899,9 +2941,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -2936,7 +2978,7 @@
                      CALL fteik_prefetchSweep7TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -2944,8 +2986,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -2956,7 +2998,7 @@
                !      !k    = ijkv7(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -3055,7 +3097,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
@@ -3120,16 +3162,21 @@
       RETURN
       END SUBROUTINE
       SUBROUTINE fteik_evaluateSweep8LS64fF(linitk, ttimes, ierr) &
-                 BIND(C, NAME='fteik_evaluateSweep8LS64fF')
+      BIND(C, NAME='fteik_evaluateSweep8LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
-                                 fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
+      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+                                       fteik_localSolver_init64fF
+      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
+      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep8Slowness64fF, & 
                                  fteik_prefetchSweep8TravelTimes64fF
-      USE FTEIK_UTILS64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, slow, &
-                                 dxi, dyi, dzi, &
-                                 nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
-      USE FTEIK_UTILS64F, ONLY : chunkSize, zero
+      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, nLevels
+      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, slow, &
+      !                           nLevels
+      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      !                           dx, dy, dz, &
+      !                           nLevels, nx, ny, nz, nzx, nzm1, nzm1_nxm1
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, chunkSize, zero
       IMPLICIT NONE
       LOGICAL(C_BOOL), INTENT(IN) :: linitk
       REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: ttimes
@@ -3151,7 +3198,7 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: t1
       !DIR$ ATTRIBUTES ALIGN:64 :: t2
       !DIR$ ATTRIBUTES ALIGN:64 :: t3
-       !DIR$ ATTRIBUTES ALIGN:64 :: t4
+      !DIR$ ATTRIBUTES ALIGN:64 :: t4
       !DIR$ ATTRIBUTES ALIGN:64 :: t5
       !DIR$ ATTRIBUTES ALIGN:64 :: t6
       !DIR$ ATTRIBUTES ALIGN:64 :: t7
@@ -3159,14 +3206,14 @@
       !DIR$ ATTRIBUTES ALIGN:64 :: s1
       !DIR$ ATTRIBUTES ALIGN:64 :: s2
       !DIR$ ATTRIBUTES ALIGN:64 :: s3
-       !DIR$ ATTRIBUTES ALIGN:64 :: s4
+      !DIR$ ATTRIBUTES ALIGN:64 :: s4
       !DIR$ ATTRIBUTES ALIGN:64 :: s5
       !DIR$ ATTRIBUTES ALIGN:64 :: s6
       !DIR$ ATTRIBUTES ALIGN:64 :: s7
       !DIR$ ATTRIBUTES ALIGN:64 :: tt1
       ierr = 0
       !$OMP PARALLEL DEFAULT(none) &
-      !$OMP SHARED(dxi, dyi, dzi, ijkv8, levelPtr, linitk, lupd8, lupdInit8) &
+      !$OMP SHARED(dx, dy, dz, ijkv8, levelPtr, linitk, lupd8, lupdInit8) &
       !$OMP SHARED(nLevels, nx, ny, nz, nzm1, nzm1_nxm1, nzx) &
       !$OMP SHARED(slow, ttimes) & 
       !$OMP PRIVATE(sgnrx_dxi, sgnry_dyi, sgnrz_dzi) &
@@ -3194,6 +3241,7 @@
       ALLOCATE(s7(chunkSize))
       slowWork(:) = zero
       ttWork(:) = zero
+      tt1(:) = FTEIK_HUGE
       t1(:) = zero
       t2(:) = zero
       t3(:) = zero
@@ -3202,9 +3250,9 @@
       t6(:) = zero
       t7(:) = zero
       t8(:) = zero
-      sgnrz_dzi = sgnrz*dzi
-      sgnrx_dxi = sgnrx*dxi
-      sgnry_dyi = sgnry*dyi
+      sgnrz_dzi = sgnrz/dz
+      sgnrx_dxi = sgnrx/dx
+      sgnry_dyi = sgnry/dy
       IF (.NOT.linitk) THEN
          DO 1 level=1,nLevels
             l1 = levelPtr(level)
@@ -3239,7 +3287,7 @@
                      CALL fteik_prefetchSweep8TravelTimes64fF(i, j, k, nz, nx, ny, nzx, &
                                              ttimes, &
                                              t1(loop), t2(loop), t3(loop), t4(loop), &
-                                             t5(loop), t6(loop), t7(loop), t8(loop))
+                                             t5(loop), t6(loop), t7(loop), tt1(loop))
                                              !     ttWork(kndx+1), ttWork(kndx+2), &
                                              !     ttWork(kndx+3), ttWork(kndx+4), ttWork(kndx+5), &
                                              !     ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8))
@@ -3247,8 +3295,8 @@
                ENDDO
                loop = node2 - node1 + 1
                !DIR$ FORCEINLINE
-               CALL fteik_localSolverNoInit64fF(loop,                           &
-                                                t1, t2, t3, t4, t5, t6, t7, t8, &
+               CALL fteik_localSolver_noInit64fF(loop,                           &
+                                                t1, t2, t3, t4, t5, t6, t7, & !t8, &
                                                 s1, s2, s3, s4, s5, s6, s7, tt1)
                !!DIR$ IVDEP !$OMP SIMD !DIR$ IVDEP
                !DO node=node1,node2 !loop=1,n2
@@ -3259,7 +3307,7 @@
                !      !k    = ijkv8(4*(node-1)+3)
                !      kndx = 8*(loop - 1)
                !      !DIR$ FORCEINLINE
-               !      tt1(loop) = fteik_localSolverNoInit64fF( &
+               !      tt1(loop) = fteik_localSolver_noInit64fF( &
                !                   t1(loop), t2(loop), t3(loop), t4(loop), &
                !                   t5(loop), t6(loop), t7(loop), t8(loop), &
                !                   s1(loop), s2(loop), s3(loop), s4(loop), &
@@ -3358,7 +3406,7 @@
                      !              sgntz, sgntx, sgnty,           &
                      !              sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
                      !DIR$ FORCEINLINE
-                     tt1(loop) = fteik_localSolverInit64fF( &
+                     tt1(loop) = fteik_localSolver_init64fF( &
                                   !ttWork(kndx+1), ttWork(kndx+2), ttWork(kndx+3), ttWork(kndx+4), &
                                   !ttWork(kndx+5), ttWork(kndx+6), ttWork(kndx+7), ttWork(kndx+8), &
                                   !slowWork(kndx+1), slowWork(kndx+2), slowWork(kndx+3), slowWork(kndx+4), &
