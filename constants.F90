@@ -13,6 +13,8 @@
          REAL(C_DOUBLE), PUBLIC, PARAMETER :: four = 4.d0
          !> Double precision nine.
          REAL(C_DOUBLE), PUBLIC, PARAMETER :: nine = 9.d0
+         !> Double precision \f$ \sqrt{1/2} \f$.
+         REAL(C_DOUBLE), PUBLIC, PARAMETER :: sqrtHalf = SQRT(half)
          !> Smallest double precision number.
          REAL(C_DOUBLE), PUBLIC, PARAMETER :: DBL_EPSILON = EPSILON(1.d0)
          !> Source perturbation to avoid collocating to grid point.
@@ -20,3 +22,27 @@
          !> Chunk size in level scheduling.
          INTEGER(C_INT), PUBLIC, PARAMETER :: chunkSize = 16
       END MODULE !FTEIK_CONSTANTS64
+
+      MODULE FTEIK_CONSTANTS32F
+         USE ISO_C_BINDING
+         IMPLICIT NONE 
+         !> Default large value travel times will be set to.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: FTEIK_HUGE = 99999.0
+         !> single preicision zero.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: zero = 0.0 
+         !> Single precision half
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: half = 0.50
+         !> Single precision one. 
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: one = 1.0 
+         !> Single  precision four.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: four = 4.0
+         !> Single precision nine.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: nine = 9.0
+         !> Single precision \f$ \sqrt{1/2} \f$.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: sqrtHalf = SQRT(half)
+         !> Smallest double precision number.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: DBL_EPSILON = EPSILON(one)
+         !> Source perturbation to avoid collocating to grid point.
+         REAL(C_FLOAT), PUBLIC, PARAMETER :: perturbSource = 0.00010
+
+      END MODULE
