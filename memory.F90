@@ -1,3 +1,5 @@
+#define ERRORMSG(msg) WRITE(0,'("[ERROR] at ",I4," in file ",/,A,/,"Error message: ",A)') __LINE__,__FILE__,msg
+
 MODULE FTEIK_MEMORY
    USE ISO_C_BINDING
    CONTAINS
@@ -81,6 +83,67 @@ MODULE FTEIK_MEMORY
    cptr = C_NULL_PTR
    NULLIFY(x)
    END SUBROUTINE
+
+   !> @brief Computes the requisite padding so that n + padLength will yield a double 
+   !>        matrix that is aligned on the given bit boundary.
+   !>
+   !> @param[in] alignment   Bit alignment.  This must be a power of 2 (e.g., 64).
+   !> @param[in] n           Number of elements for which to compute padding.
+   !>
+   !> @result The padding so that n + padLength is bit aligned row or column.
+   !>
+   !> @author Ben Baker
+   !>
+   !> @copyright MIT
+   !>
+   INTEGER(C_INT) FUNCTION padLength64F(alignment, n) &
+   BIND(C, NAME='padLength64fF')
+   USE ISO_C_BINDING
+   IMPLICIT NONE
+   INTEGER(C_INT), INTENT(IN) :: alignment, n
+   INTEGER(C_INT) xmod
+   INTEGER, PARAMETER :: sizeof_double = 8
+   padLength64F = 0
+   xmod = MOD(n*sizeof_double, alignment)
+   IF (xmod /= 0) padLength64F = (alignment - xmod)/sizeof_double
+   RETURN
+   END FUNCTION
+
+   !> @brief Computes the requisite padding so that n + padLength will yield a float
+   !>        matrix that is aligned on the given bit boundary.
+   !>  
+   !> @param[in] alignment   Bit alignment.  This must be a power of 2 (e.g., 64).
+   !> @param[in] n           Number of elements for which to compute padding.
+   !>  
+   !> @result The padding so that n + padLength is bit aligned row or column.
+   !>  
+   !> @author Ben Baker
+   !>  
+   !> @copyright MIT
+   !>
+   INTEGER(C_INT) FUNCTION padLength32F(alignment, n) &
+   BIND(C, NAME='padLength32fF')
+   USE ISO_C_BINDING
+   IMPLICIT NONE
+   INTEGER(C_INT), INTENT(IN) :: alignment, n
+   INTEGER(C_INT) xmod
+   INTEGER, PARAMETER :: sizeof_float = 4
+   padLength32F = 0 
+   xmod = MOD(n*sizeof_float, alignment)
+   IF (xmod /= 0) padLength32F = (alignment - xmod)/sizeof_float
+   RETURN
+   END FUNCTION
+
+   !veclen = alignment/sizeof(1.d0)
+   !IF (veclen*sizeof(double) /= alignment) THEN
+   !   ERRORMSG("Invalid alignment")
+   !   ierr = 1
+   !   RETURN
+   !ENDIF
+   !padLength64f = ((n + veclen - 1)/veclen)*veclen 
+   !RETURN
+   !END FUNCTION
+    
 
 END MODULE
 
