@@ -27,6 +27,21 @@ void fteik_model_setVelocityModel64fF(
     const int nv, const double *__restrict__ vel, int *ierr);
 void fteik_model_setVelocityModel32fF(
     const int nv, const float *__restrict__ vel4, int *ierr);
+#pragma omp declare simd uniform(nz, nzx)
+int fteik_model_grid2indexF(const int iz, const int ix, const int iy, 
+                            const int nz, const int nzx);
+#pragma omp declare simd uniform(nz, nzx)
+int fteik_model_grid2index(const int iz, const int ix, const int iy,
+                           const int nz, const int nzx)
+{
+    return fteik_model_grid2indexF(iz+1, ix+1, iy+1, nz, nzx) - 1;
+};
+#pragma omp declare simd uniform (ierr)
+void fteik_model_index2gridF(const int igrd, int *iz, int *ix, int *iy,
+                             int *ierr);
+#pragma omp declare simd uniform (nzm1, nzm1_nxm1)
+int fteik_model_velGrid2indexF(const int iz, const int ix, const int iy,
+                               const int nzm1, const int nzm1_nxm1);
 //----------------------------------------------------------------------------//
 //                            Receiver Module                                 //
 //----------------------------------------------------------------------------//
@@ -85,6 +100,18 @@ void fteik_solver_setSources64fF(const int nsrc,
                                  const double *__restrict__ ysrc,
                                  int *ierr);
 void fteik_solver_solveSourceLSMF(const int isrc, int *ierr);
+//----------------------------------------------------------------------------//
+//                             Locator Module                                 //
+//----------------------------------------------------------------------------//
+void locate_initializeF(const int nEventsIn, const int ntfIn, const int ngrdIn,
+                        int *ierr);
+void locate_setTravelTimeField64fF(const int ngrdIn, const int itf,
+                                   const double *__restrict__ ttIn,
+                                   int *ierr);
+void locate_setTravelTimeField32fF(const int ngrdIn, const int itf,
+                                   const double *__restrict__ ttIn,
+                                   int *ierr);
+void locate_finalizeF(void);
 
 // These are the functions worth knowing
 void fteik_initializeF(const int *nz, const int *nx, const int *ny,

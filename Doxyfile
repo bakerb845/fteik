@@ -784,6 +784,7 @@ WARN_LOGFILE           =
 INPUT                  = fteik_utils.F90 \
                          constants.F90 \
                          model.F90 \
+                         locate.F90 \
                          receiver.F90 \ 
                          source.F90 \
                          solver.F90 \
