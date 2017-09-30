@@ -1369,7 +1369,7 @@
             INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid 
             INTEGER(C_INT), INTENT(IN), VALUE :: n
             CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
-            REAL(C_INT), INTENT(IN) :: x(n)
+            INTEGER(C_INT), INTENT(IN) :: x(n)
             END FUNCTION
 
             INTEGER(C_INT) FUNCTION h5io_writeArray16iF(fid, dataName, n, x) &

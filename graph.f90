@@ -21,8 +21,8 @@
             END FUNCTION C_GRAPH_INIT
 
             FUNCTION C_GRAPH_GET_NLEVELS(this) &
-                     BIND(C, NAME='fteik_graph_getNumberOfLevels') &
-                     RESULT(nLevels)
+            BIND(C, NAME='fteik_graph_getNumberOfLevels') &
+            RESULT(nLevels)
             USE ISO_C_BINDING
             IMPORT
             IMPLICIT NONE
@@ -38,11 +38,12 @@
             TYPE(C_PTR), VALUE :: this
             INTEGER(C_INT), INTENT(IN) :: nwork, sweep
             INTEGER(C_INT), INTENT(OUT) :: ijkv(nwork)
+            INTEGER(C_INT) :: ierr
             END FUNCTION C_GRAPH_GETIJKV
 
             FUNCTION C_GRAPH_GETLEVELPTR(this, nwork, sweep, levelPtr) &
-                     BIND(C, NAME='fteik_graph_getLevelPointerF') &
-                     RESULT(ierr)
+            BIND(C, NAME='fteik_graph_getLevelPointerF') &
+            RESULT(ierr)
             USE ISO_C_BINDING
             IMPORT
             TYPE(C_PTR), VALUE :: this
