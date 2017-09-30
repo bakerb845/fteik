@@ -11,9 +11,15 @@ MODULE FTEIK_LOCATE
   !> Observed pick times (seconds).  The largest epochal time has been removed to avoid
   !> numerical overflow.  This is a vector of dimension [nEvents x ldgrd].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: observations(:)
+  !> Static corrections for each observation (that is each receiver and P or S
+  !> velocity pair). This is a vector of dimension [ntf].
+  REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: staticCorrection(:)
   !> Holds the travel time fields (seconds).  This is a vector with 
   !> dimension [ntf x ldgrd].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: ttFields(:) 
+  !> Flag indicating whether or not to skip this event/observation pair.  This is a vector
+  !> of dimension [nEvents x lntf]
+  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE :: lskip(:)
   !> Number of events.
   INTEGER(C_INT), PROTECTED, SAVE :: nEvents = 0
   !> Number of travel time fields.
@@ -83,18 +89,22 @@ MODULE FTEIK_LOCATE
          ierr = 1
          RETURN
       ENDIF
+      ALLOCATE(lskip(nEvents*lntf))
       ldgrd = ngrd + padLength32F(alignment, ngrd)
       IF (MOD(ldgrd, alignment)) THEN
          WRITE(*,"('locate_initializeF: Failed to pad ngrd',A)")
          ierr = 1
          RETURN
       ENDIF
-      CALL allocate32f(weights,      alignment, nEvents*lntf)
-      CALL allocate32f(observations, alignment, nEvents*lntf)
-      CALL allocate32f(ttFields,     alignment, ntf*ldgrd)
+      CALL allocate32f(weights,          alignment, nEvents*lntf)
+      CALL allocate32f(observations,     alignment, nEvents*lntf)
+      CALL allocate32f(ttFields,         alignment, ntf*ldgrd)
+      CALL allocate32f(staticCorrection, alignment, ntf)
       tepoch(:) = 0.d0
-      weights(:) = 1.0 ! In case user doesn't get around to this later 
+      lskip(:) = .TRUE.
+      weights(:) = 0.0
       observations(:) = 0.0
+      staticCorrection(:) = 0.0
       ttFields(:) = 0.0
       linit = .TRUE.
       RETURN
@@ -113,10 +123,12 @@ MODULE FTEIK_LOCATE
       USE FTEIK_MEMORY
       USE ISO_C_BINDING
       IF (ALLOCATED(tepoch)) DEALLOCATE(tepoch)
+      IF (ALLOCATED(lskip))  DEALLOCATE(lskip)
       IF (linit) THEN
          CALL free32f(observations)
          CALL free32f(weights)
          CALL free32f(ttFields)
+         CALL free32f(staticCorrection)
       ENDIF
       lntf = 0
       ldgrd = 0
@@ -125,6 +137,7 @@ MODULE FTEIK_LOCATE
       linit = .FALSE.
       RETURN
       END
+
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -256,6 +269,13 @@ MODULE FTEIK_LOCATE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+      SUBROUTINE locate_setObservations64fF(nEventsIn )
+      INTEGER(C_INT), INTENT(IN) :: nEventsIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Sets the number of events to locate.
 !>
 !>    @param[in] nEventsIn    Number of events to locate.
@@ -369,15 +389,13 @@ MODULE FTEIK_LOCATE
 !>                         + t_i^s + t_0) \right )^2
 !>           \f].
 !>
-!>    @param[in] ngrd     Number of grid points.
+!>    @param[in] evnmbr   Event number.
 !>    @param[in] nobs     Number of observations.
 !>    @param[in] tobs     Observations (seconds).  This is a vector of dimension [nobs].
-!>    @param[in] tstatic  Static corrections (s) for the observations.
+!>    @param[in] tstatic  Static corrections (s) for the observations.  This is a
+!>                        vector of dimension [nobs].
 !>    @param[in] wts      Observation weight (1/second).  This is a vector of
 !>                        dimension [nobs].
-!>    @param[in] tt       Traveltimes from receiver to all grid-points (seconds).
-!>                        This is a vector of dimension [ldg x nobs] where ldg >= ngrd
-!>                        and mod(ldg, 64) must equal 0.
 !>
 !>    @param[out] t0      Origin time (seconds).  
 !>
@@ -385,45 +403,51 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_computeL2OriginTime32fF(ldg, ngrd, nobs, &
-                                                tobs, tstatic,   &
-                                                wts, tt, t0)     &
+      SUBROUTINE locate_computeL2OriginTime32fF(evnmbr, nobs, tstatic, &
+                                                t0)             &
       BIND(C, NAME='locate_computeL2OriginTime32fF')
       USE FTEIK_CONSTANTS32F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: ldg, ngrd, nobs
-      REAL(C_FLOAT), INTENT(IN) :: tobs(nobs), tstatic(nobs), wts(nobs)
-      REAL(C_FLOAT), TARGET, INTENT(IN) :: tt(ngrd)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr, nobs
+      REAL(C_FLOAT), INTENT(IN) :: tstatic(nobs)
       REAL(C_FLOAT), INTENT(OUT) :: t0(ngrd)
       REAL(C_FLOAT) est, res, obs, toff, xnorm, wt
       REAL(C_FLOAT), POINTER :: ttptr(:)
+      REAL(C_FLOAT), POINTER :: wtptr(:)
+      REAL(C_FLOAT), POINTER :: obsptr(:)
       INTEGER(C_INT) i, igrd, k1, k2
-      ! Compute the sum of the weights - this is the normalization in Eqn A5
-      xnorm = one/SUM(wts)
       ! Initialize t0 
       !$OMP SIMD aligned(t0:64)
       DO 1 igrd=1,ngrd
          t0(igrd) = zero 
     1 CONTINUE
+      k1 = (evnmbr - 1)*lntf + 1
+      k2 = evnmbr*lntf
+      obsptr = observations(k1:k2)
+      wtptr = weights(k1:k2)
+      ! Compute the sum of the weights - this is the normalization in Eqn A5
+      xnorm = one/SUM(wtptr)
       ! Loop on the observations and stack in the residual
       !$OMP PARALLEL DO DEFAULT(NONE) &
       !$OMP PRIVATE(est, i, k1, k2, obs, res, toff, ttptr, wt) &
-      !$OMP SHARED(ldg, ngrd, nobs, tobs, tstatic, tt, wts, xnorm) &
+      !$OMP SHARED(ldgrd, lskip, ngrd, nobs, obsptr, tstatic, ttFields, wtptr, xnorm) &
       !$OMP REDUCTION(+:t0)
       DO 2 i=1,nobs
-         wt = wts(i)
+         IF (lskip(i)) CYCLE
+         wt = wtptr(i)
          toff = tstatic(i)
-         obs = tobs(i)
-         k1 = (ldg - 1)*i + 1
-         k2 = ldg*i
-         ttptr => tt(k1:k2)
+         obs = obsptr(i)
+         k1 = (ldgrd - 1)*i + 1
+         k2 = ldgrd*i
+         ttptr => ttFields(k1:k2)
          !$OMP SIMD ALIGNED(t0, ttptr: 64)
          DO 3 igrd=1,ngrd
             est = ttptr(igrd) + toff
             res = xnorm*(obs - est)
             t0(igrd) = t0(igrd) + wt*res 
     3    CONTINUE
+         NULLIFY(ttptr)
     2 CONTINUE 
       !$OMP END PARALLEL DO
       RETURN
