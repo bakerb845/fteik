@@ -26,7 +26,7 @@ int main()
     const int nsrc = 1;
     const int nrec = 10;
     const int ngrd = nz*nx*ny;
-    const double tori[nsrc] = {1.0}; // Origin time
+    const double tori[1] = {1.0}; // Origin time
     int zsi[1] = {nz/2};
     int xsi[1] = {nx/2};
     int ysi[1] = {ny/2};
