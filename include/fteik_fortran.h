@@ -34,10 +34,7 @@ int fteik_model_grid2indexF(const int iz, const int ix, const int iy,
                             const int nz, const int nzx);
 #pragma omp declare simd uniform(nz, nzx)
 int fteik_model_grid2index(const int iz, const int ix, const int iy,
-                           const int nz, const int nzx)
-{
-    return fteik_model_grid2indexF(iz+1, ix+1, iy+1, nz, nzx) - 1;
-};
+                           const int nz, const int nzx);
 #pragma omp declare simd uniform (ierr)
 void fteik_model_index2gridF(const int igrd, int *iz, int *ix, int *iy,
                              int *ierr);
@@ -56,14 +53,7 @@ void fteik_receiver_getTravelTimes64fF(const int nrec,
 void fteik_receiver_finalizeF(void);
 
 #ifdef FTEIK_USE_MPI
-int fteik_receiver_broadcast(const int root, const MPI_Comm comm)
-{
-    void fteik_receiver_broadcastF(const int root, const int comm, int *mpierr);
-    int mpierr;
-    MPI_Fint fComm = MPI_Comm_c2f(comm);
-    fteik_receiver_broadcastF(fComm, comm, &mpierr);
-    return mpierr;
-};
+int fteik_receiver_broadcast(const int root, const MPI_Comm comm);
 #endif
 //----------------------------------------------------------------------------//
 //                            Source Module                                   //
@@ -116,6 +106,21 @@ void locate_setTravelTimeField32fF(const int ngrdIn, const int itf,
                                    const double *__restrict__ ttIn,
                                    int *ierr);
 void locate_finalizeF(void);
+void locate_setObservation64fF(const int evnmbr, const int nttimes,
+                               const bool lhaveOT, const double t0In,
+                               const int *__restrict__ obs2tf,
+                               const double *__restrict__  pickTimes,
+                               const double *__restrict__  wts,
+                               int *ierr);
+void locate_locateEventF(const int evnmbr, int *optindx,
+                         double *t0Opt, double *objOpt);
+void locate_setObservation64f(const int evnmbr, const int nttimes,
+                              const bool lhaveOT, const double t0In,
+                              const int *__restrict__ obs2tf,
+                              const double *__restrict__ pickTimes,
+                              const double *__restrict__ wts, int *ierr);
+
+//----------------------------------------------------------------------------//
 
 // These are the functions worth knowing
 void fteik_initializeF(const int *nz, const int *nx, const int *ny,

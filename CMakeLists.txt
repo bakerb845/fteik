@@ -22,7 +22,7 @@ SET(ORIGINAL_SRC fteik.f90)
 SET(UTILS_SRC h5io.F90 h5io.c io.c memory.F90 os.c xdmf.c)
 # Order matters here
 SET(F90_SRC constants.F90 model.F90 source.F90 receiver.F90 localSolver.F90 solver.F90 locate.F90)
-SET(NEW_SRC graph.c sort.c ${F90_SRC} modules.F90 graph.f90 fteikGraph.cpp
+SET(NEW_SRC fwrapper.c graph.c sort.c ${F90_SRC} modules.F90 graph.f90 fteikGraph.cpp
             autoCode.f90  fteik_utils.F90 solveEikonal.F90)
 IF (FTEIK_USE_H5)
   SET(NEW_SRC ${NEW_SRC} h5io_utils.c)
@@ -75,7 +75,7 @@ ENDIF(FTEIK_USE_INTEL)
 IF (FTEIK_USE_MPI)
   SET(LIB_ALL ${LIB_ALL} ${MPI_Fortran_LIBRARIES} ${MPI_C_LIBRARIES})
 ENDIF()
-SET(LIB_ALL ${LIB_ALL} -ldl)
+SET(LIB_ALL ${LIB_ALL} -ldl -lstdc++)
 
 TARGET_LINK_LIBRARIES(xtest ${LIB_ALL})
 

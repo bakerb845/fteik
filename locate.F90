@@ -1,11 +1,12 @@
-#define ERRORMSG(msg) WRITE(0,'("[ERROR] at ",I4," in file ",/,A,/,"Error message: ",A)') __LINE__,__FILE__,msg
-
 MODULE FTEIK_LOCATE
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Contains the largest epochal time for each gather.  This is a vector with 
   !> dimension [nEvents].
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: tepoch(:)
+  !> Contains the reduced origin times if known a priori.  This a a vector of
+  !> dimension [nEvents].
+  REAL(C_FLOAT), PROTECTED, ALLOCATABLE, SAVE :: originTimes(:)
   !> Observation weights (1/seconds).  This is a vector with dimension [nEvents x lntf].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: weights(:) 
   !> Observed pick times (seconds).  The largest epochal time has been removed to avoid
@@ -17,9 +18,18 @@ MODULE FTEIK_LOCATE
   !> Holds the travel time fields (seconds).  This is a vector with 
   !> dimension [ntf x ldgrd].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: ttFields(:) 
+  !> Workspace array holding the objective function.  This is a vector of
+  !> dimension [nGrd].
+  REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: objWork(:)
+  !> Workspace array holding the origin time.  This is a vector of 
+  !> dimension [MAX(blockSize, nGrd)].
+  REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: t0Work(:)
   !> Flag indicating whether or not to skip this event/observation pair.  This is a vector
   !> of dimension [nEvents x lntf]
-  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE :: lskip(:)
+  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, TARGET, SAVE :: lskip(:)
+  !> Flag indicating whether or not the origin time is known a priori.  This is a
+  !> vector of dimension [nEvents].
+  LOGICAL(C_BOOl), PROTECTED, ALLOCATABLE, SAVE :: lhaveOT(:)
   !> Number of events.
   INTEGER(C_INT), PROTECTED, SAVE :: nEvents = 0
   !> Number of travel time fields.
@@ -32,16 +42,43 @@ MODULE FTEIK_LOCATE
   INTEGER(C_INT), PRIVATE, SAVE :: ldgrd = 0 
   !> Flag indicating whether or not locator has been initialized.
   LOGICAL(C_BOOL), PRIVATE, SAVE :: linit = .FALSE.
+  !> Flag indicating whether or not to solve for the origin time.
+  LOGICAL(C_BOOL), PRIVATE, SAVE :: lsolveOT = .TRUE.
+  !> Flag indicating whether or not to save the origin time field.
+  LOGICAL(C_BOOL), PRIVATE, SAVE :: lwantT0Field = .TRUE. 
   !> Memory alignment.
   INTEGER(C_INT), PRIVATE, PARAMETER :: alignment = 64
+  !> Block size in grid search.
+  INTEGER(C_INT), PRIVATE, PARAMETER :: blockSize = 512
 
   CONTAINS
 
-      SUBROUTINE locate_locateF( ) BIND(C, NAME='locate_locateF')
+!     SUBROUTINE locate_locateF( ) BIND(C, NAME='locate_locateF')
+!     USE ISO_C_BINDING
+!     ! Loop on the events
+!     DO 1 iev=1,nEevents
+!   1 CONTINUE 
+!     RETURN
+!     END SUBROUTINE
+
+      SUBROUTINE locate_locateEventF(evnmbr, optindx, t0Opt, objOpt) &
+      BIND(C, NAME='locate_locateEventF')
       USE ISO_C_BINDING
-     
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr
+      REAL(C_DOUBLE), INTENT(OUT) :: t0Opt, objOpt
+      INTEGER(C_INT), INTENT(OUT) :: optindx
+      optindx = 0
+      ! Compute the objective function and potentially the origin time
+      CALL locate_computeL2ObjectiveFunction32fF(evnmbr)
+      ! Find the optimal index (smallest value in \f$ L_2 \f$ objective function)
+      optindx = MINLOC(objWork, 1)
+      ! Extract the corresponding optimal values
+print *, 'min/max objwork:', optindx,  minval(objWork), maxval(objWorK)
+      t0Opt  = DBLE(t0Work(optindx)) + tepoch(evnmbr)
+      objOpt = DBLE(objWork(optindx))
+print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       RETURN
-      END SUBROUTINE
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -59,6 +96,8 @@ MODULE FTEIK_LOCATE
 !>
       SUBROUTINE locate_initializeF(nEventsIn, ntfIn, ngrdIn, ierr) &
       BIND(C, NAME='locate_initializeF')
+      USE FTEIK_CONSTANTS64F, ONLY : FALSE, TRUE
+      USE FTEIK_CONSTANTS32F, ONLY : zero
       USE FTEIK_MEMORY
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nEventsIn, ntfIn, ngrdIn
@@ -83,6 +122,8 @@ MODULE FTEIK_LOCATE
          RETURN
       ENDIF
       ALLOCATE(tepoch(nEvents))
+      ALLOCATE(originTimes(nEvents))
+      ALLOCATE(lhaveOT(nEvents))
       lntf  = ntf  + padLength32F(alignment, ntf) 
       IF (MOD(4*lntf, alignment) /= 0) THEN
          WRITE(*,"('locate_initializeF: Failed to pad ntf',A)")
@@ -100,13 +141,19 @@ MODULE FTEIK_LOCATE
       CALL allocate32f(observations,     alignment, nEvents*lntf)
       CALL allocate32f(ttFields,         alignment, ntf*ldgrd)
       CALL allocate32f(staticCorrection, alignment, ntf)
+      CALL allocate32f(t0Work,           alignment, MAX(nGrd, blockSize))
+      CALL allocate32f(objWork,          alignment, nGrd)
       tepoch(:) = 0.d0
-      lskip(:) = .TRUE.
-      weights(:) = 0.0
-      observations(:) = 0.0
-      staticCorrection(:) = 0.0
-      ttFields(:) = 0.0
-      linit = .TRUE.
+      originTimes(:) = zero
+      lhaveOT(:) = FALSE
+      lskip(:) = TRUE
+      weights(:) = zero 
+      observations(:) = zero 
+      staticCorrection(:) = zero 
+      ttFields(:) = zero
+      t0Work(:) = zero
+      objWork(:) = zero
+      linit = TRUE
       RETURN
       END
 !                                                                                        !
@@ -122,13 +169,17 @@ MODULE FTEIK_LOCATE
       BIND(C, NAME='locate_finalizeF')
       USE FTEIK_MEMORY
       USE ISO_C_BINDING
-      IF (ALLOCATED(tepoch)) DEALLOCATE(tepoch)
-      IF (ALLOCATED(lskip))  DEALLOCATE(lskip)
+      IF (ALLOCATED(tepoch))      DEALLOCATE(tepoch)
+      IF (ALLOCATED(originTimes)) DEALLOCATE(originTimes)
+      IF (ALLOCATED(lskip))       DEALLOCATE(lskip)
+      IF (ALLOCATED(lhaveOT))     DEALLOCATE(lhaveOT)
       IF (linit) THEN
          CALL free32f(observations)
          CALL free32f(weights)
          CALL free32f(ttFields)
          CALL free32f(staticCorrection)
+         CALL free32f(t0Work)
+         CALL free32f(objWork)
       ENDIF
       lntf = 0
       ldgrd = 0
@@ -159,7 +210,7 @@ MODULE FTEIK_LOCATE
       BIND(C, NAME='locate_setTravelTimeField64fF')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngrdIn, itf
-      REAL(C_DOUBLE), TARGET, INTENT(IN) :: ttIn(ngrdIn)
+      REAL(C_DOUBLE), INTENT(IN) :: ttIn(ngrdIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
 #if defined(FTEIK_FORTRAN_USE_INTEL)
       INTERFACE
@@ -234,7 +285,7 @@ MODULE FTEIK_LOCATE
       BIND(C, NAME='locate_setTravelTimeField32fF')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngrdIn, itf
-      REAL(C_FLOAT), TARGET, INTENT(IN) :: ttIn(ngrdIn)
+      REAL(C_FLOAT), INTENT(IN) :: ttIn(ngrdIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_FLOAT), POINTER :: ttptr(:)
       INTEGER(C_INT) i1, i2, igrd
@@ -256,7 +307,7 @@ MODULE FTEIK_LOCATE
          ierr = 1 
          RETURN
       ENDIF
-      i1 = (itf - 1)*ldgrd + 1 
+      i1 = (itf - 1)*ldgrd + 1
       i2 = itf*ldgrd
       ttptr => ttFields(i1:i2)
       !$OMP SIMD ALIGNED(ttptr: 64)
@@ -269,8 +320,102 @@ MODULE FTEIK_LOCATE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief This is a convenience routine for setting all observations in a catalog.
+!>
+!>
       SUBROUTINE locate_setObservations64fF(nEventsIn )
       INTEGER(C_INT), INTENT(IN) :: nEventsIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the observations corresonding to event evnmbr.
+!>
+!>    @param[in] evnmbr     Event number to set.
+!>    @param[in] nttimes    Number of travel times to set.
+!>    @param[in] lhaveOTin  If true then the origin time is known.
+!>    @param[in] t0In       If lhaveOTin is true then this is the origin time in
+!>                          UTC epochal seconds.
+!>    @param[in] obs2tf     This is a map from the observation number to the travel-time
+!>                          field number.  This is a vector of dimension [nttimes].
+!>    @param[in] pickTimes  Pick times (UTC epochal seconds).  This is a vector of
+!>                          dimension [nttimes].
+!>    @param[in] wts        These are the weights corresponding to the observations.
+!>                          The observation will only be used if the weight is positive.
+!>                          This is a vector of dimension [nttimes]. 
+!> 
+!>    @param[out] ierr      0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE locate_setObservation64fF(evnmbr, nttimes, lhaveOTin, &
+                                           t0In, obs2tf,               &
+                                           pickTimes, wts, ierr)       &
+      BIND(C, NAME='locate_setObservation64fF')
+      USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
+      USE FTEIK_CONSTANTS32F, ONLY : zero 
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr, nttimes
+      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: lhaveOTin
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: t0In
+      INTEGER(C_INT), INTENT(IN) :: obs2tf(nttimes)
+      REAL(C_DOUBLE), INTENT(IN) :: pickTimes(nttimes), wts(nttimes)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) i, indx, k1, k2
+      ierr = 0 
+      IF (.NOT.linit) THEN
+         WRITE(*,"('locate_setObservation64fF: Locator not initialized',A)")
+         ierr = 1 
+         RETURN
+      ENDIF
+      IF (nttimes < 1 .OR. nttimes > ntf) THEN
+         WRITE(*,900) nttimes, ntf
+  900    FORMAT('locate_setObservation64fF: nttimes=',I4,' must be in [1,',I3']')
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (MINVAL(obs2tf) < 1) THEN
+         WRITE(*,"('locate_setObservation64fF: All values in obs2tf must be positive',A)")
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (MAXVAL(obs2tf) > ntf) THEN
+         WRITE(*,905) ntf
+  905    FORMAT('locate_setObservation64fF: All values in obs2tf must be <',I4)
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (evnmbr < 1 .OR. evnmbr > nEvents) THEN
+         WRITE(*,910) evnmbr, nEvents
+  910    FORMAT('locate_setObservation64fF: Event number=',I5,' must be in range [1,',I5)
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Reduce the pick times to avoid overflow
+      tepoch(evnmbr) = MAXVAL(pickTimes)
+      ! Deal with the origin times
+      originTimes(evnmbr) = zero
+      IF (lhaveOTin) THEN
+         lhaveOT(evnmbr) = TRUE
+         originTimes(evnmbr) = t0In - tepoch(evnmbr)
+      ENDIF
+      ! Finally set the data
+      k1 = (evnmbr - 1)*lntf + 1 
+      k2 = evnmbr*lntf
+      observations(k1:k2) = zero
+      weights(k1:k2) = zero
+      lskip(k1:k2) = TRUE
+      DO 1 i=1,nttimes
+         indx = k1 + obs2tf(i) - 1
+         IF (wts(i) > 0.d0) THEN
+            observations(indx)  = REAL(pickTimes(i) - tepoch(evnmbr)) ! Reduce time
+            weights(indx) = REAL(wts(i))
+            lskip(indx) = FALSE
+         ENDIF
+    1 CONTINUE
       RETURN
       END
 !                                                                                        !
@@ -367,110 +512,29 @@ MODULE FTEIK_LOCATE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Computes the origin time for a least-squares inversion at each grid
-!>           point in the model for the given event.  Following Moser and and Van Eck A5
-!>           the least-squares origin time for a diagonal weight matrix is computed
-!>           by (A5):
+!>    @brief Computes the origin time and objective function for a least-squres inversion
+!>           at each grid point for the given event.  The origin time at each grid
+!>           point, \f$ t_0(\textbf{x}_0) \f$, is found by computing
 !>           \f[
 !>               t_0(\textbf{x}_0)
 !>             = \sum_{i}^{n_{obs}}
 !>               \frac{ \sum_i (\tau_i - (T(\textbf{x}_0; \textbf{x}_i) + t_i^s))}
 !>                    { \sum_{i}^{n_{obs}} w_i }
 !>           \f]
-!>           where \f$ t_0(\textbf{x}_0) \f$ is the origin time,
-!>           \f$ \tau_i \f$ is the travel time for the i'th observation, 
+!>           where \f$ \tau_i \f$ is the travel time for the i'th observation, 
 !>           \f$ T(\textbf{x}_0; \textbf{x}_i) \f$ are the traveltimes from the i'th
 !>           observation to all points in the model, and \f$ t_i^2 \f$ is the static
 !>           correction for the i'th observation.
-!>           This minimizes the travel time L2 objective function:
-!>           \f[
-!>              \mathcal{C}(\textbf{x}_0)
-!>             =\frac{1}{2} \sum_i^{n_{obs}}
-!>               w_i \left (\tau_i - (T(\textbf{x}_0, \textbf{x}_i)
-!>                         + t_i^s + t_0) \right )^2
-!>           \f].
 !>
-!>    @param[in] evnmbr   Event number.
-!>    @param[in] nwork    Size of t0.  This should be equal to ngrd.
-!>
-!>    @param[out] t0      Origin time (seconds).  
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
-      SUBROUTINE locate_computeL2OriginTime32fF(evnmbr, nwork, t0) &
-      BIND(C, NAME='locate_computeL2OriginTime32fF')
-      USE FTEIK_CONSTANTS32F, ONLY : one, zero
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr, nwork
-      REAL(C_FLOAT), INTENT(OUT) :: t0(nwork)
-      REAL(C_FLOAT) est, res, obs, toff, xnorm, wt
-      REAL(C_FLOAT), POINTER :: ttptr(:)
-      REAL(C_FLOAT), POINTER :: wtptr(:)
-      REAL(C_FLOAT), POINTER :: obsptr(:)
-      REAL(C_FLOAT), POINTER :: scptr(:)
-      INTEGER(C_INT) i, igrd, k1, k2
-      ! Initialize t0 
-      !$OMP SIMD aligned(t0:64)
-      DO 1 igrd=1,ngrd
-         t0(igrd) = zero 
-    1 CONTINUE
-      ! Set my pointers
-      k1 = (evnmbr - 1)*lntf + 1
-      k2 = evnmbr*lntf
-      obsptr = observations(k1:k2)
-      scptr  = staticCorrection(k1:k2)
-      wtptr  = weights(k1:k2)
-      ! Compute the sum of the weights - this is the normalization in Eqn A5
-      xnorm = one/SUM(wtptr)
-      ! Loop on the observations and stack in the residual
-      !$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(dynamic) &
-      !$OMP PRIVATE(est, i, k1, k2, obs, res, toff, ttptr, wt) &
-      !$OMP SHARED(ldgrd, lskip, ngrd, ntf, obsptr, scptr, ttFields, wtptr, xnorm) &
-      !$OMP REDUCTION(+:t0)
-      DO 2 i=1,ntf
-         IF (lskip(i)) CYCLE
-         wt = wtptr(i)
-         toff = scptr(i)
-         obs = obsptr(i)
-         k1 = (ldgrd - 1)*i + 1
-         k2 = ldgrd*i
-         ttptr => ttFields(k1:k2)
-         !$OMP SIMD ALIGNED(t0, ttptr: 64)
-         DO 3 igrd=1,ngrd
-            est = ttptr(igrd) + toff
-            res = xnorm*(obs - est)
-            t0(igrd) = t0(igrd) + wt*res 
-    3    CONTINUE
-         NULLIFY(ttptr)
-    2 CONTINUE 
-      !$OMP END PARALLEL DO
-      NULLIFY(obsptr)
-      NULLIFY(scptr)
-      NULLIFY(wtptr)
-      RETURN
-      END
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
-!>    @brief Computes the objective function for a least-squres inversion at
-!>           each grid point for the given event.  This minimizes the travel time 
-!>           L2 objective function:
+!>           The origin time minimizes the travel time  L2 objective function:
 !>           \f[
 !>              \mathcal{C}(\textbf{x}_0)
 !>             =\frac{1}{2} \sum_i^{n_{obs}}
 !>               w_i \left (\tau_i - (T(\textbf{x}_0, \textbf{x}_i)
 !>                         + t_i^s + t_0(\textbf{x}_0)) \right )^2
 !>           \f]
-!>           \f$ T(\textbf{x}_0; \textbf{x}_i) \f$ are the traveltimes from the i'th
-!>           observation to all points in the model, \f$ t_0(\textbf{x}_0) \f$
-!>           is the origin time at all points in the model, and \f$ t_i^2 \f$ is the 
-!>           static correction for the i'th observation.
 !>
 !>    @param[in] evnmbr   Event number.
-!>    @param[in] t0       Origin time (seconds).  This is a vector of dimension [ngrd].
 !>
 !>    @param[out] tobj    Objective function at all grid points.  This is a vector of
 !>                        dimension [ngrd].
@@ -479,55 +543,127 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_computeObjectiveFunction32fF(evnmbr, t0, tobj) &
-      BIND(C, NAME='locate_computeObjectiveFunction32fF')
-      USE FTEIK_CONSTANTS32F, ONLY : sqrtHalf, zero
+      SUBROUTINE locate_computeL2ObjectiveFunction32fF(evnmbr) &
+      BIND(C, NAME='locate_computeL2ObjectiveFunction32fF')
+      USE FTEIK_CONSTANTS32F, ONLY : half, one, sqrtHalf, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr 
-      REAL(C_FLOAT), TARGET, INTENT(IN) :: t0(ngrd)
-      REAL(C_FLOAT), INTENT(OUT) :: tobj(ngrd)
-      REAL(C_FLOAT) est, res, obs, toff, wt
-      REAL(C_FLOAT), POINTER :: ttptr(:)
-      REAL(C_FLOAT), POINTER :: wtptr(:)
-      REAL(C_FLOAT), POINTER :: obsptr(:)
-      REAL(C_FLOAT), POINTER :: scptr(:)
-      INTEGER(C_INT) i, igrd, k1, k2
-      !$OMP SIMD aligned(tobj: 64)
+      REAL(C_FLOAT) est, res, res2, obs, objfn, t0, toff, tt, wt, xnorm
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: ttPtr(:)
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: wtPtr(:)
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: obsPtr(:)
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: scPtr(:)
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: objPtr(:)
+      REAL(C_FLOAT), CONTIGUOUS, POINTER :: t0Ptr(:)
+      LOGICAL(C_BOOL), CONTIGUOUS, POINTER :: skipPtr(:)
+      INTEGER(C_INT) grd1, grd2, i, igrd, jgrd, k1, k2, ngrdLoc, obs1, obs2
+      NULLIFY(ttPtr)
+      NULLIFY(wtPtr)
+      NULLIFY(obsPtr)
+      NULLIFY(scPtr)
+      NULLIFY(objPtr)
+      NULLIFY(t0Ptr)
+      NULLIFY(skipPtr)
+      !$OMP SIMD aligned(objWork: 64)
       DO 1 igrd=1,ngrd
-         tobj(igrd) = zero
+         objWork(igrd) = zero
     1 CONTINUE 
       ! Set my pointers
-      k1 = (evnmbr - 1)*lntf + 1 
-      k2 = evnmbr*lntf
-      obsptr = observations(k1:k2)
-      scptr  = staticCorrection(k1:k2)
-      wtptr  = weights(k1:k2)
-      ! Now compute the travel times
-      !$OMP PARALLEL DO DEFAULT(NONE) &
-      !$OMP PRIVATE(i, igrd, est, k1, k2, obs, res, toff, ttptr, wt) &
-      !$OMP SHARED(ldgrd, lskip, ngrd, ntf, obsptr, t0, scptr, ttFields, wtptr) &
-      !$OMP REDUCTION(+:tobj)
-      DO 2 i=1,ntf
-         IF (lskip(i)) CYCLE
-         wt = sqrtHalf*wtptr(i)
-         toff = scptr(i)
-         obs = obsptr(i)
-         k1 = (ldgrd - 1)*i + 1 
-         k2 = ldgrd*i
-         ttptr => ttFields(k1:k2) 
-         !$OMP SIMD ALIGNED(t0, ttptr, tobj: 64)
-         DO 3 igrd=1,ngrd
-            est = ttptr(igrd) + t0(igrd) + toff ! Eqn A1 + static correction
-            res = wt*(obs - est)
-            tobj(igrd) = tobj(igrd) + res*res
-    3    CONTINUE
-         NULLIFY(ttptr)
-    2 CONTINUE 
-      !$OMP END PARALLEL DO
-      NULLIFY(obsptr)
-      NULLIFY(scptr)
-      NULLIFY(wtptr)
+      obs1 = (evnmbr - 1)*lntf + 1 
+      obs2 = evnmbr*lntf
+      scPtr   => staticCorrection(1:ntf)
+      obsPtr  => observations(obs1:obs2)
+      scPtr   => staticCorrection(1:ntf)
+      wtPtr   => weights(obs1:obs2)
+      skipPtr => lskip(obs1:obs2)
+      ! Compute the sum of the weights - this is the normalization in Eqn A5
+      xnorm = one/SUM(wtPtr)
+      ! Compute the origin times and travel times
+      IF (lwantT0Field) THEN
+         ! Loop on grid blocks
+         !$OMP PARALLEL DO DEFAULT(NONE) &
+         !$OMP PRIVATE(objPtr, t0Ptr, ttPtr, est, i, grd1, grd2, igrd, jgrd) &
+         !$OMP PRIVATE(k1, k2, ngrdLoc, obs, res, toff, wt) &
+         !$OMP FIRSTPRIVATE(xnorm) &
+         !$OMP SHARED(ldgrd, lwantT0Field, ngrd, ntf, objWork, obsPtr, scPtr, skipPtr) &
+         !$OMP SHARED(t0Work, ttFields, wtPtr)
+         DO 11 igrd=1,ngrd,blockSize
+            grd1 = igrd
+            grd2 = MIN(igrd+blockSize-1, ngrd)
+            ngrdLoc = grd2 - grd1 + 1
+            IF (lwantT0Field) THEN
+               t0Ptr => t0Work(grd1:grd2)
+            ELSE
+               t0Ptr => t0Work(1:blockSize)
+            ENDIF
+            objPtr => objWork(grd1:grd2)
+            ! Loop on the observations and tabulate the origin time
+            DO 12 i=1,ntf
+               IF (skipPtr(i)) CYCLE
+               wt = wtPtr(i)             ! Weight for this observation
+               toff = scPtr(i)           ! Static correction for this observation
+               obs  = obsPtr(i)          ! Travel-time field for this observation
+               k1 = (i - 1)*ldgrd + grd1 ! Start chunk of observation's travel time field 
+               k2 = (i - 1)*ldgrd + grd2 ! End chunk of observation's travel time field
+               ttPtr  => ttFields(k1:k2) ! Chunk of travel-time field
+               !$OMP SIMD ALIGNED(t0Ptr, ttptr: 64)
+               DO 13 jgrd=1,ngrdLoc
+                  est = ttPtr(jgrd) + toff           ! Estimate + static correction
+                  res = xnorm*(obs - est)            ! Normalized residual
+                  t0Ptr(jgrd) = t0Ptr(jgrd) + wt*res ! Stack the weighted residual
+   13          CONTINUE
+               NULLIFY(ttPtr)
+   12       CONTINUE ! End computation of origin times
+            ! Loop on the observations and tabulate the objective function
+            DO 15 i=1,ntf
+               IF (skipPtr(i)) CYCLE
+               wt = sqrtHalf*wtPtr(i)    ! Weight for this observation
+               toff = scPtr(i)           ! Static correction for this observation
+               obs  = obsPtr(i)          ! Travel-time field for this observation
+               k1 = (i - 1)*ldgrd + grd1 ! Start chunk of observation's travel time field 
+               k2 = (i - 1)*ldgrd + grd2 ! End chunk of observation's travel time field
+               ttPtr  => ttFields(k1:k2) ! Chunk of travel-time field
+               !$OMP SIMD ALIGNED(ttPtr, t0Ptr, objPtr: 64) 
+               DO 16 jgrd=1,ngrdLoc
+                  est = ttPtr(jgrd) + t0Ptr(jgrd) + toff ! Eqn A1 + static correction
+                  res = wt*(obs - est)                   ! Weighted residual
+                  !objWork(igrd+jgrd-1) = objWork(igrd+jgrd-1) + res*res 
+                  objPtr(jgrd) = objPtr(jgrd) + res*res 
+   16          CONTINUE
+               NULLIFY(ttPtr)
+   15       CONTINUE
+            NULLIFY(t0Ptr)
+            NULLIFY(objPtr)
+   11    CONTINUE
+!        !$OMP END PARALLEL DO
+      ENDIF
+do i=1,ngrd
+ if (objWork(i) == zero) then 
+   print *, i, objWork(i), t0Work(i)
+  !pause
+ endif
+enddo
+print *, 'objWork:', objWork(474953), objWork(152125), objWork(474953+1), t0Work(474953)
+ 
+!     DO 21 igrd=1,ngrd
+!        t0 = t0Work(igrd) 
+!        tt = ttptr(igrd)
+!        objfn = 0.0
+!        !$OMP SIMD ALIGNED(lskip, scptr, obsptr, wtptr: 64) REDUCTION(+:objfn)
+!        DO 22 i=1,ntf
+!           est = tt + t0 + scptr(i) ! travel time + origin time + static correction 
+!           res = obsptr(i) - est
+!           res2 = res*res
+!           IF (lskip(i)) res2 = 0.0 
+!           objfn = objfn + wtptr(i)*res2
+!  22    CONTINUE 
+!        objWork(igrd) = half*objfn
+!  21 CONTINUE
+      NULLIFY(obsPtr)
+      NULLIFY(scPtr)
+      NULLIFY(wtPtr)
+      NULLIFY(skipPtr)
       RETURN
       END SUBROUTINE
 !                                                                                        !

@@ -352,7 +352,6 @@ MODULE FTEIK_SOURCE64F
       indx = fteik_model_velGrid2indexF(zsiv(isrc), xsiv(isrc), ysiv(isrc), &
                                         nzm1, nzm1_nxm1)
       szero = slow(indx)
-print *, 'szero=',szero
       szero2 = szero*szero
       RETURN
       END SUBROUTINE

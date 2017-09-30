@@ -123,14 +123,14 @@ MODULE FTEIK_MEMORY
    TYPE(C_PTR), TARGET :: cptr = C_NULL_PTR
    INTERFACE
       ! void free(void *);
-      SUBROUTINE free(ptr) BIND(C, NAME="free")
+      SUBROUTINE freeF(ptr) BIND(C, NAME="free")
       USE ISO_C_BINDING, ONLY : C_PTR
       TYPE(C_PTR), VALUE, INTENT(IN) :: ptr
       END SUBROUTINE
    END INTERFACE
    IF (.NOT.ASSOCIATED(x)) RETURN
    cptr = C_LOC(x(1))
-   CALL free(cptr)
+   CALL freeF(cptr)
    cptr = C_NULL_PTR
    NULLIFY(x)
    END SUBROUTINE
@@ -152,14 +152,14 @@ MODULE FTEIK_MEMORY
    TYPE(C_PTR), TARGET :: cptr = C_NULL_PTR
    INTERFACE
       ! void free(void *);
-      SUBROUTINE free(ptr) BIND(C, NAME="free")
+      SUBROUTINE freeF(ptr) BIND(C, NAME="free")
       USE ISO_C_BINDING, ONLY : C_PTR
       TYPE(C_PTR), VALUE, INTENT(IN) :: ptr
       END SUBROUTINE
    END INTERFACE
    IF (.NOT.ASSOCIATED(x)) RETURN
    cptr = C_LOC(x(1))
-   CALL free(cptr)
+   CALL freeF(cptr)
    cptr = C_NULL_PTR
    NULLIFY(x)
    END SUBROUTINE

@@ -13,11 +13,7 @@ MODULE FTEIK_LOCALSOLVER64F
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_dx2i, dz2i_dy2i, dx2i_dy2i
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_p_dy2i_inv, dz2i_p_dx2i_inv, dx2i_p_dy2i_inv
-  REAL(C_DOUBLE), PRIVATE, SAVE :: t1v(chunkSize)
-  REAL(C_DOUBLE), PRIVATE, SAVE :: t2v(chunkSize)
   REAL(C_DOUBLE), PRIVATE, SAVE :: t12min(chunkSize)
-  !DIR$ ATTRIBUTES ALIGN:64 :: t1v
-  !DIR$ ATTRIBUTES ALIGN:64 :: t2v
   !DIR$ ATTRIBUTES ALIGN:64 :: t12min
   CONTAINS
 !----------------------------------------------------------------------------------------!
@@ -45,21 +41,21 @@ MODULE FTEIK_LOCALSOLVER64F
                      ta, tb, tab, tab2, tac, tac2, tbc, tbc2, tc,            &
                      temtn, temtv, tvmtn, tmax
       INTEGER(C_INT) i
-!     !DIR$ ASSUME_ALIGNED tv: 64
-!     !DIR$ ASSUME_ALIGNED te: 64
-!     !DIR$ ASSUME_ALIGNED tn: 64
-!     !DIR$ ASSUME_ALIGNED tev: 64
-!     !DIR$ ASSUME_ALIGNED ten: 64
-!     !DIR$ ASSUME_ALIGNED tnv: 64
-!     !DIR$ ASSUME_ALIGNED tnve: 64
-!     !DIR$ ASSUME_ALIGNED slow1: 64
-!     !DIR$ ASSUME_ALIGNED slow2: 64
-!     !DIR$ ASSUME_ALIGNED slow3: 64
-!     !DIR$ ASSUME_ALIGNED slow4: 64
-!     !DIR$ ASSUME_ALIGNED slow5: 64
-!     !DIR$ ASSUME_ALIGNED slow6: 64
-!     !DIR$ ASSUME_ALIGNED slow7: 64
-!     !DIR$ ASSUME_ALIGNED tupd: 64
+      !DIR$ ASSUME_ALIGNED tv: 64
+      !DIR$ ASSUME_ALIGNED te: 64
+      !DIR$ ASSUME_ALIGNED tn: 64
+      !DIR$ ASSUME_ALIGNED tev: 64
+      !DIR$ ASSUME_ALIGNED ten: 64
+      !DIR$ ASSUME_ALIGNED tnv: 64
+      !DIR$ ASSUME_ALIGNED tnve: 64
+      !DIR$ ASSUME_ALIGNED slow1: 64
+      !DIR$ ASSUME_ALIGNED slow2: 64
+      !DIR$ ASSUME_ALIGNED slow3: 64
+      !DIR$ ASSUME_ALIGNED slow4: 64
+      !DIR$ ASSUME_ALIGNED slow5: 64
+      !DIR$ ASSUME_ALIGNED slow6: 64
+      !DIR$ ASSUME_ALIGNED slow7: 64
+      !DIR$ ASSUME_ALIGNED tupd: 64
       !!DIR$ ASSUME_ALIGNED tt0: 64
 
       !------------------1D operators, (refracted times),set times to BIG----------------!
@@ -70,17 +66,17 @@ MODULE FTEIK_LOCALSOLVER64F
       DO i=1,n
          !tupd(i) = MIN(tt0(i),  tv(i) + dz*slow1(i)) !t1 = tv + dz*slowLoc(1)
          !tupd(i) = MIN(tupd(i), tv(i) + dz*slow1(i))
-         t1v(i) = tv(i) + dz*slow1(i)
+         t12min(i) = tv(i) + dz*slow1(i)
       ENDDO
       ! WE plane
       DO i=1,n
          !tupd(i) = MIN(tupd(i), te(i) + dx*slow2(i)) !t2 = te + dx*slowLoc(2)
-         t1v(i) = MIN(t1v(i), te(i) + dx*slow2(i))
+         t12min(i) = MIN(t12min(i), te(i) + dx*slow2(i))
       ENDDO
       ! NS plane
       DO i=1,n
          !tupd(i) = MIN(tupd(i), tn(i) + dy*slow3(i)) !t3 = tn + dy*slowLoc(3)
-         t1v(i) = MIN(t1v(i), tn(i) + dy*slow3(i))
+         t12min(i) = MIN(t12min(i), tn(i) + dy*slow3(i))
       ENDDO
       !--------------------------------------2D operators--------------------------------!
       ! ZX (VE) plane
@@ -102,7 +98,7 @@ MODULE FTEIK_LOCALSOLVER64F
                      + SQRT(four_sref2*dz2i_p_dx2i - dz2i_dx2i*tab2) )*dz2i_p_dx2i_inv
          ENDIF
          !tupd(i) = MIN(tupd(i), t1_2d)
-         t2v(i) = t1_2d
+         t12min(i) = MIN(t12min(i), t1_2d)
       ENDDO 
       ! ZY (VN) plane
       DO i=1,n
@@ -122,7 +118,7 @@ MODULE FTEIK_LOCALSOLVER64F
                      + SQRT(four_sref2*dz2i_p_dy2i - dz2i_dy2i*tab2) )*dz2i_p_dy2i_inv
          ENDIF
          !tupd(i) = MIN(tupd(i), t2_2d)
-         t2v(i) = MIN(t2v(i), t2_2d)
+         t12min(i) = MIN(t12min(i), t2_2d)
       ENDDO
       ! XY (EN) Plane
       DO i=1,n
@@ -142,11 +138,11 @@ MODULE FTEIK_LOCALSOLVER64F
                      + SQRT(four_sref2*dx2i_p_dy2i - dx2i_dy2i*tab2) )*dx2i_p_dy2i_inv
          ENDIF
          !tupd(i) = MIN(tupd(i), t3_2d)
-         t2v(i) = MIN(t2v(i), t3_2d)
+         t12min(i) = MIN(t12min(i), t3_2d)
       ENDDO
-      DO i=1,n
-         t12min(i) = MIN(t1v(i), t2v(i))
-      ENDDO
+      !DO i=1,n
+      !   t12min(i) = MIN(t1v(i), t2v(i))
+      !ENDDO
       !-------------------------------------3D operators---------------------------------!
       DO i=1,n
          t3d = FTEIK_HUGE
