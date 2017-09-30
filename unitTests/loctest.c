@@ -27,9 +27,9 @@ int main()
     const int nrec = 10;
     const int ngrd = nz*nx*ny;
     const double tori[nsrc] = {1.0}; // Origin time
-    int zsi[nsrc] = {nz/2};
-    int xsi[nsrc] = {nx/2};
-    int ysi[nsrc] = {ny/2};
+    int zsi[1] = {nz/2};
+    int xsi[1] = {nx/2};
+    int ysi[1] = {ny/2};
     // Create receiver positions and observed times
     double *ttimes = (double *) calloc((size_t) ngrd, sizeof(double));
     double *tobs = (double *) calloc((size_t) (nrec*nsrc), sizeof(double));

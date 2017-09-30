@@ -232,7 +232,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     printf("Cell spacing in (z,x,y)=(%f,%f,%f) meters\n", *dz ,*dx, *dy);
     lzDown = true;
     if (!zDown){lzDown = false;}
-    if ((rightHanded && !lzDown) || !(rightHanded) && lzDown)
+    if ((rightHanded && !lzDown) || (!(rightHanded) && lzDown))
     {
         printf("I don't know how to unpack this model\n");
         ierr = 1;
