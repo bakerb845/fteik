@@ -1377,9 +1377,9 @@
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid
-            INTEGER(C_INT16_T), INTENT(IN), VALUE :: n
+            INTEGER(C_INT), INTENT(IN), VALUE :: n
             CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
-            REAL(C_INT), INTENT(IN) :: x(n)
+            INTEGER(C_INT16_T), INTENT(IN) :: x(n)
             END FUNCTION
 
          END INTERFACE
