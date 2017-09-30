@@ -21,6 +21,10 @@
          REAL(C_DOUBLE), PUBLIC, PARAMETER :: perturbSource = 0.0001d0
          !> Chunk size in level scheduling.
          INTEGER(C_INT), PUBLIC, PARAMETER :: chunkSize = 16
+         !> True
+         LOGICAL(C_BOOL), PUBLIC, PARAMETER :: TRUE = .TRUE.
+         !> False
+         LOGICAL(C_BOOL), PUBLIC, PARAMETER :: FALSE = .FALSE.
       END MODULE !FTEIK_CONSTANTS64
 
       MODULE FTEIK_CONSTANTS32F
@@ -44,5 +48,8 @@
          REAL(C_FLOAT), PUBLIC, PARAMETER :: DBL_EPSILON = EPSILON(one)
          !> Source perturbation to avoid collocating to grid point.
          REAL(C_FLOAT), PUBLIC, PARAMETER :: perturbSource = 0.00010
-
+         !> True
+         LOGICAL(C_BOOL), PUBLIC, PARAMETER :: TRUE = .TRUE.
+         !> False
+         LOGICAL(C_BOOL), PUBLIC, PARAMETER :: FALSE = .FALSE.
       END MODULE

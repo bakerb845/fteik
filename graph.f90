@@ -49,6 +49,7 @@
             TYPE(C_PTR), VALUE :: this
             INTEGER(C_INT), INTENT(IN) :: nwork, sweep
             INTEGER(C_INT), INTENT(OUT) :: levelPtr(nwork)
+            INTEGER(C_INT) :: ierr
             END FUNCTION C_GRAPH_GETLEVELPTR
 
 

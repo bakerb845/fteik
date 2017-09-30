@@ -225,6 +225,7 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver_setInitialUpdateNodesF(isrc, ierr) &
       BIND(C, NAME='fteik_solver_setInitialUpdateNodesF')
+      USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -241,29 +242,29 @@ MODULE FTEIK_SOLVER64F
       IF (.NOT.ALLOCATED(lupdInit6)) ALLOCATE(lupdInit6(ngrd))
       IF (.NOT.ALLOCATED(lupdInit7)) ALLOCATE(lupdInit7(ngrd))
       IF (.NOT.ALLOCATED(lupdInit8)) ALLOCATE(lupdInit8(ngrd))
-      lupdInit1(:) = .FALSE.
-      lupdInit2(:) = .FALSE.
-      lupdInit3(:) = .FALSE.
-      lupdInit4(:) = .FALSE.
-      lupdInit5(:) = .FALSE.
-      lupdInit6(:) = .FALSE.
-      lupdInit7(:) = .FALSE.
-      lupdInit8(:) = .FALSE.
-      CALL fteik_solver_setUpdateNodesF(1, nlevels, .TRUE., isrc, levelPtr, &
+      lupdInit1(:) = FALSE
+      lupdInit2(:) = FALSE
+      lupdInit3(:) = FALSE
+      lupdInit4(:) = FALSE
+      lupdInit5(:) = FALSE
+      lupdInit6(:) = FALSE
+      lupdInit7(:) = FALSE
+      lupdInit8(:) = FALSE
+      CALL fteik_solver_setUpdateNodesF(1, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv1, lupdInit1, ierrs(1))
-      CALL fteik_solver_setUpdateNodesF(2, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(2, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv2, lupdInit2, ierrs(2))
-      CALL fteik_solver_setUpdateNodesF(3, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(3, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv3, lupdInit3, ierrs(3))
-      CALL fteik_solver_setUpdateNodesF(4, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(4, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv4, lupdInit4, ierrs(4))
-      CALL fteik_solver_setUpdateNodesF(5, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(5, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv5, lupdInit5, ierrs(5))
-      CALL fteik_solver_setUpdateNodesF(6, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(6, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv6, lupdInit6, ierrs(6))
-      CALL fteik_solver_setUpdateNodesF(7, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(7, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv7, lupdInit7, ierrs(7))
-      CALL fteik_solver_setUpdateNodesF(8, nlevels, .TRUE., isrc, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(8, nlevels, TRUE, isrc, levelPtr, &
                                         ijkv8, lupdInit8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
          WRITE(*,*) 'fteik_source_setLocationF: Error setting update nodes'
@@ -672,7 +673,7 @@ MODULE FTEIK_SOLVER64F
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel
       USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_initialize64fF
-      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
       USE FTEIK_AUTOCODE, ONLY : fteik_evaluateSweep1LS64fF, &
                                  fteik_evaluateSweep2LS64fF, &
                                  fteik_evaluateSweep3LS64fF, &
@@ -687,7 +688,7 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE) ts8(8), t0, t1
       INTEGER(C_INT) dest(8), kiter
       ierr = 0
-      lhaveTimes = .FALSE.
+      lhaveTimes = FALSE
       IF (.NOT.lhaveModel) THEN
          WRITE(*,*) 'fteik_solver_solveSourceF: Model not yet set'
          ierr = 1
@@ -714,24 +715,24 @@ MODULE FTEIK_SOLVER64F
       ttimes(:) = FTEIK_HUGE
       ttimes(dest(1:8)) = ts8(1:8) !+ t0(isrc) ! Add in initial time
       ! Solve the Eikonal Equation - first initialize
-      CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep3LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep4LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep5LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep6LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep7LS64fF(.TRUE., ttimes, ierr)
-      CALL fteik_evaluateSweep8LS64fF(.TRUE., ttimes, ierr)
+      CALL fteik_evaluateSweep1LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep2LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep3LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep4LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep5LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep6LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep7LS64fF(TRUE, ttimes, ierr)
+      CALL fteik_evaluateSweep8LS64fF(TRUE, ttimes, ierr)
       ! Now perform the Gauss-Seidel iterations
       DO kiter=1,nsweep
-         CALL fteik_evaluateSweep1LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep2LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep3LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep4LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep5LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep6LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep7LS64fF(.FALSE., ttimes, ierr)
-         CALL fteik_evaluateSweep8LS64fF(.FALSE., ttimes, ierr)
+         CALL fteik_evaluateSweep1LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep2LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep3LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep4LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep5LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep6LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep7LS64fF(FALSE, ttimes, ierr)
+         CALL fteik_evaluateSweep8LS64fF(FALSE, ttimes, ierr)
       ENDDO 
       CALL CPU_TIME(t1)
 print *, 'solver time:', t1 - t0 
