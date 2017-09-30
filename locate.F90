@@ -79,19 +79,19 @@ MODULE FTEIK_LOCATE
       ENDIF
       CALL locate_setNumberOfGridPointsF(ngrdIn, ierr)
       IF (ierr /= 0) THEN
- 910     FORMAT('locate_initializeF: Failed to set number of grid points')
+         WRITE(*,"('locate_initializeF: Failed to set number of grid points',A)")
          RETURN
       ENDIF
       ALLOCATE(tepoch(nEvents))
       lntf  = ntf  + padLength32F(alignment, ntf) 
-      IF (MOD(lntf, alignment)) THEN
+      IF (MOD(4*lntf, alignment) /= 0) THEN
          WRITE(*,"('locate_initializeF: Failed to pad ntf',A)")
          ierr = 1
          RETURN
       ENDIF
       ALLOCATE(lskip(nEvents*lntf))
       ldgrd = ngrd + padLength32F(alignment, ngrd)
-      IF (MOD(ldgrd, alignment)) THEN
+      IF (MOD(4*ldgrd, alignment) /= 0) THEN
          WRITE(*,"('locate_initializeF: Failed to pad ngrd',A)")
          ierr = 1
          RETURN
