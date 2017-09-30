@@ -400,7 +400,7 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       originTimes(evnmbr) = zero
       IF (lhaveOTin) THEN
          lhaveOT(evnmbr) = TRUE
-         originTimes(evnmbr) = t0In - tepoch(evnmbr)
+         originTimes(evnmbr) = REAL(t0In - tepoch(evnmbr))
       ENDIF
       ! Finally set the data
       k1 = (evnmbr - 1)*lntf + 1 
@@ -549,7 +549,7 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr 
-      REAL(C_FLOAT) est, res, res2, obs, objfn, t0, toff, tt, wt, xnorm
+      REAL(C_FLOAT) est, res, obs, toff, wt, xnorm
       REAL(C_FLOAT), CONTIGUOUS, POINTER :: ttPtr(:)
       REAL(C_FLOAT), CONTIGUOUS, POINTER :: wtPtr(:)
       REAL(C_FLOAT), CONTIGUOUS, POINTER :: obsPtr(:)
