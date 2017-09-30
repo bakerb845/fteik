@@ -235,7 +235,7 @@ MODULE FTEIK_RECEIVER64F
 !----------------------------------------------------------------------------------------!
 !                                    Begin the MPI                                       !
 !----------------------------------------------------------------------------------------!
- 
+#if defined(FTEIK_FORTRAN_USE_MPI) 
       SUBROUTINE fteik_receiver_broadcastF(root, comm, mpierr) &
                  BIND(C, NAME='fteik_receiver_broadcastF')
       USE MPI
@@ -263,6 +263,7 @@ MODULE FTEIK_RECEIVER64F
       CALL MPI_Bcast(xdr, nrec, MPI_DOUBLE, root, comm, mpierr)
       CALL MPI_Bcast(ydr, nrec, MPI_DOUBLE, root, comm, mpierr) 
       END SUBROUTINE
+#endif
 !----------------------------------------------------------------------------------------!
 !                                     End the Code                                       !
 !----------------------------------------------------------------------------------------!

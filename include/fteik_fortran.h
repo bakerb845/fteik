@@ -1,6 +1,8 @@
 #ifndef FTEIK_FORTRAN_H__
 #define FTEIK_FORTRAN_H__ 1
+#ifdef FTEIK_USE_MPI
 #include <mpi.h>
+#endif
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C"
@@ -53,6 +55,7 @@ void fteik_receiver_getTravelTimes64fF(const int nrec,
                                        double *__restrict__ ttr, int *ierr);
 void fteik_receiver_finalizeF(void);
 
+#ifdef FTEIK_USE_MPI
 int fteik_receiver_broadcast(const int root, const MPI_Comm comm)
 {
     void fteik_receiver_broadcastF(const int root, const int comm, int *mpierr);
@@ -61,6 +64,7 @@ int fteik_receiver_broadcast(const int root, const MPI_Comm comm)
     fteik_receiver_broadcastF(fComm, comm, &mpierr);
     return mpierr;
 };
+#endif
 //----------------------------------------------------------------------------//
 //                            Source Module                                   //
 //----------------------------------------------------------------------------//
