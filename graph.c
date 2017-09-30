@@ -46,7 +46,7 @@ int graph_createLevelStructs(const int nz, const int nx, const int ny,
 {
     const char *fcnm = "graph_createLevelStructs\0";
     int *xadj, *adjncy;
-    int i, ierr, k, n, sweep;
+    int i, ierr, k, level, n, sweep;
     if (nz < 3 || nx < 3 || ny < 3)
     {
         printf("%s: Error (nx,ny,nz) must all be at least 2\n", fcnm);
@@ -121,7 +121,7 @@ printf("%d %d %d %d\n", levelSets->levelSet[k].levelPtr[1],
     {
         levelSets->levelSet[k].n2ijk
              = (int *) aligned_alloc(64, (size_t) (3*n)*sizeof(int)); 
-        for (int level=0; level<levelSets->levelSet[k].nLevels; level++)
+        for (level=0; level<levelSets->levelSet[k].nLevels; level++)
         {
             int nodeStart = levelSets->levelSet[k].levelPtr[level];
             int nodeEnd   = levelSets->levelSet[k].levelPtr[level+1];
