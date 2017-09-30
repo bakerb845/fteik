@@ -912,6 +912,7 @@ print *, minval(ttimes), maxval(ttimes)
       SUBROUTINE fteik_solveEikonalLSMF(ierr) &
                  BIND(C, NAME='fteik_solveEikonalLSMF')
       USE ISO_C_BINDING
+      USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE FTEIK_UTILS64F, ONLY : ttimes, &
                                  nsweep, &
                                  lhaveGrid, lhaveTravelTimes 
@@ -972,42 +973,42 @@ real*8 t0, t1
 call cpu_time(t0)
       DO 101 lsweep=1,8
          If (lsweep == 1) THEN
-            CALL fteik_evaluateSweep1LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep1LS64fF(TRUE, ttimes, ierr)
 print*, minval(ttimes), maxval(ttimes)
          ELSEIF (lsweep == 2) THEN
-            CALL fteik_evaluateSweep2LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep2LS64fF(TRUE, ttimes, ierr)
          ELSEIF (lsweep == 3) THEN
-            CALL fteik_evaluateSweep3LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep3LS64fF(TRUE, ttimes, ierr)
          ELSEIF (lsweep == 4) THEN
-            CALL fteik_evaluateSweep4LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep4LS64fF(TRUE, ttimes, ierr)
          ELSEIF (lsweep == 5) THEN
-            CALL fteik_evaluateSweep5LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep5LS64fF(TRUE, ttimes, ierr)
          ELSEIF (lsweep == 6) THEN
-            CALL fteik_evaluateSweep6LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep6LS64fF(TRUE, ttimes, ierr)
          ELSEIF (lsweep == 7) THEN
-            CALL fteik_evaluateSweep7LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep7LS64fF(TRUE, ttimes, ierr)
          ELSE
-            CALL fteik_evaluateSweep8LS64fF(.TRUE., ttimes, ierr)
+            CALL fteik_evaluateSweep8LS64fF(TRUE, ttimes, ierr)
          ENDIF
   101 CONTINUE
       DO kiter=1,nsweep
          DO 102 lsweep=1,8
             If (lsweep == 1) THEN
-               CALL fteik_evaluateSweep1LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep1LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 2) THEN
-               CALL fteik_evaluateSweep2LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep2LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 3) THEN
-               CALL fteik_evaluateSweep3LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep3LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 4) THEN
-               CALL fteik_evaluateSweep4LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep4LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 5) THEN
-               CALL fteik_evaluateSweep5LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep5LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 6) THEN
-               CALL fteik_evaluateSweep6LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep6LS64fF(FALSE, ttimes, ierr)
             ELSEIF (lsweep == 7) THEN
-               CALL fteik_evaluateSweep7LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep7LS64fF(FALSE, ttimes, ierr)
             ELSE
-               CALL fteik_evaluateSweep8LS64fF(.FALSE., ttimes, ierr)
+               CALL fteik_evaluateSweep8LS64fF(FALSE, ttimes, ierr)
             ENDIF
   102    CONTINUE
       ENDDO
