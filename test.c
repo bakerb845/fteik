@@ -4,7 +4,6 @@
 #include <time.h>
 #include <math.h>
 #include <omp.h>
-#include <mpi.h>
 #include "fteik.h"
 #include "fteik_analytic.h"
 #include "fteik_h5io.h"
