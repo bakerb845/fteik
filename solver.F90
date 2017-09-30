@@ -115,7 +115,7 @@ MODULE FTEIK_SOLVER64F
                  BIND(C, NAME='fteik_solver_computeGraphF') 
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
-      USE FTEIK_CONSTANTS64F, ONLY : zero
+      USE FTEIK_CONSTANTS64F, ONLY : FALSE, zero
       USE FTEIK_GRAPH
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -178,29 +178,29 @@ MODULE FTEIK_SOLVER64F
       IF (.NOT.ALLOCATED(lupd6)) ALLOCATE(lupd6(ngrd))
       IF (.NOT.ALLOCATED(lupd7)) ALLOCATE(lupd7(ngrd))
       IF (.NOT.ALLOCATED(lupd8)) ALLOCATE(lupd8(ngrd))
-      lupd1(:) = .FALSE.
-      lupd2(:) = .FALSE.
-      lupd3(:) = .FALSE.
-      lupd4(:) = .FALSE.
-      lupd5(:) = .FALSE.
-      lupd6(:) = .FALSE.
-      lupd7(:) = .FALSE.
-      lupd8(:) = .FALSE.
-      CALL fteik_solver_setUpdateNodesF(1, nlevels, .FALSE., 0, levelPtr, &
+      lupd1(:) = FALSE
+      lupd2(:) = FALSE
+      lupd3(:) = FALSE
+      lupd4(:) = FALSE
+      lupd5(:) = FALSE
+      lupd6(:) = FALSE
+      lupd7(:) = FALSE
+      lupd8(:) = FALSE
+      CALL fteik_solver_setUpdateNodesF(1, nlevels, FALSE, 0, levelPtr, &
                                         ijkv1, lupd1, ierrs(1))
-      CALL fteik_solver_setUpdateNodesF(2, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(2, nlevels, FALSE, 0, levelPtr, &
                                         ijkv2, lupd2, ierrs(2))
-      CALL fteik_solver_setUpdateNodesF(3, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(3, nlevels, FALSE, 0, levelPtr, &
                                         ijkv3, lupd3, ierrs(3))
-      CALL fteik_solver_setUpdateNodesF(4, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(4, nlevels, FALSE, 0, levelPtr, &
                                         ijkv4, lupd4, ierrs(4))
-      CALL fteik_solver_setUpdateNodesF(5, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(5, nlevels, FALSE, 0, levelPtr, &
                                         ijkv5, lupd5, ierrs(5))
-      CALL fteik_solver_setUpdateNodesF(6, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(6, nlevels, FALSE, 0, levelPtr, &
                                         ijkv6, lupd6, ierrs(6))
-      CALL fteik_solver_setUpdateNodesF(7, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(7, nlevels, FALSE, 0, levelPtr, &
                                         ijkv7, lupd7, ierrs(7))
-      CALL fteik_solver_setUpdateNodesF(8, nlevels, .FALSE., 0, levelPtr, &
+      CALL fteik_solver_setUpdateNodesF(8, nlevels, FALSE, 0, levelPtr, &
                                         ijkv8, lupd8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
          WRITE(*,*) 'fteik_solver_computeGraphF: Error setting update nodes'
