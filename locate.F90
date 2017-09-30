@@ -368,8 +368,9 @@ MODULE FTEIK_LOCATE
 !========================================================================================!
 !                                                                                        !
 !>    @brief Computes the origin time for a least-squares inversion at each grid
-!>           point in the model.  Following Moser and and Van Eck A5 the least-squares
-!>           origin time for a diagonal weight matrix is computed by (A5):
+!>           point in the model for the given event.  Following Moser and and Van Eck A5
+!>           the least-squares origin time for a diagonal weight matrix is computed
+!>           by (A5):
 !>           \f[
 !>               t_0(\textbf{x}_0)
 !>             = \sum_{i}^{n_{obs}}
@@ -390,12 +391,7 @@ MODULE FTEIK_LOCATE
 !>           \f].
 !>
 !>    @param[in] evnmbr   Event number.
-!>    @param[in] nobs     Number of observations.
-!>    @param[in] tobs     Observations (seconds).  This is a vector of dimension [nobs].
-!>    @param[in] tstatic  Static corrections (s) for the observations.  This is a
-!>                        vector of dimension [nobs].
-!>    @param[in] wts      Observation weight (1/second).  This is a vector of
-!>                        dimension [nobs].
+!>    @param[in] nwork    Size of t0.  This should be equal to ngrd.
 !>
 !>    @param[out] t0      Origin time (seconds).  
 !>
@@ -403,40 +399,41 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_computeL2OriginTime32fF(evnmbr, nobs, tstatic, &
-                                                t0)             &
+      SUBROUTINE locate_computeL2OriginTime32fF(evnmbr, nwork, t0) &
       BIND(C, NAME='locate_computeL2OriginTime32fF')
       USE FTEIK_CONSTANTS32F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr, nobs
-      REAL(C_FLOAT), INTENT(IN) :: tstatic(nobs)
-      REAL(C_FLOAT), INTENT(OUT) :: t0(ngrd)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr, nwork
+      REAL(C_FLOAT), INTENT(OUT) :: t0(nwork)
       REAL(C_FLOAT) est, res, obs, toff, xnorm, wt
       REAL(C_FLOAT), POINTER :: ttptr(:)
       REAL(C_FLOAT), POINTER :: wtptr(:)
       REAL(C_FLOAT), POINTER :: obsptr(:)
+      REAL(C_FLOAT), POINTER :: scptr(:)
       INTEGER(C_INT) i, igrd, k1, k2
       ! Initialize t0 
       !$OMP SIMD aligned(t0:64)
       DO 1 igrd=1,ngrd
          t0(igrd) = zero 
     1 CONTINUE
+      ! Set my pointers
       k1 = (evnmbr - 1)*lntf + 1
       k2 = evnmbr*lntf
       obsptr = observations(k1:k2)
-      wtptr = weights(k1:k2)
+      scptr  = staticCorrection(k1:k2)
+      wtptr  = weights(k1:k2)
       ! Compute the sum of the weights - this is the normalization in Eqn A5
       xnorm = one/SUM(wtptr)
       ! Loop on the observations and stack in the residual
-      !$OMP PARALLEL DO DEFAULT(NONE) &
+      !$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(dynamic) &
       !$OMP PRIVATE(est, i, k1, k2, obs, res, toff, ttptr, wt) &
-      !$OMP SHARED(ldgrd, lskip, ngrd, nobs, obsptr, tstatic, ttFields, wtptr, xnorm) &
+      !$OMP SHARED(ldgrd, lskip, ngrd, ntf, obsptr, scptr, ttFields, wtptr, xnorm) &
       !$OMP REDUCTION(+:t0)
-      DO 2 i=1,nobs
+      DO 2 i=1,ntf
          IF (lskip(i)) CYCLE
          wt = wtptr(i)
-         toff = tstatic(i)
+         toff = scptr(i)
          obs = obsptr(i)
          k1 = (ldgrd - 1)*i + 1
          k2 = ldgrd*i
@@ -450,13 +447,17 @@ MODULE FTEIK_LOCATE
          NULLIFY(ttptr)
     2 CONTINUE 
       !$OMP END PARALLEL DO
+      NULLIFY(obsptr)
+      NULLIFY(scptr)
+      NULLIFY(wtptr)
       RETURN
       END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
 !>    @brief Computes the objective function for a least-squres inversion at
-!>           each grid point.  This minimizes the travel time L2 objective function:
+!>           each grid point for the given event.  This minimizes the travel time 
+!>           L2 objective function:
 !>           \f[
 !>              \mathcal{C}(\textbf{x}_0)
 !>             =\frac{1}{2} \sum_i^{n_{obs}}
@@ -468,16 +469,8 @@ MODULE FTEIK_LOCATE
 !>           is the origin time at all points in the model, and \f$ t_i^2 \f$ is the 
 !>           static correction for the i'th observation.
 !>
-!>    @param[in] ngrd     Number of grid points.
-!>    @param[in] nobs     Number of observations.
-!>    @param[in] tobs     Observations (seconds).  This is a vector of dimension [nobs].
-!>    @param[in] tstatic  Static corrections (s) for the observations.
-!>    @param[in] wts      Observation weight (1/second).  This is a vector of
-!>                        dimension [nobs].
-!>    @param[in] tt       Traveltimes from receiver to all grid-points (seconds).
-!>                        This is a vector of dimension [ldg x nobs] where ldg >= ngrd
-!>                        and mod(ldg, 64) must equal 0.
-!>    @param[in] t0       Origin time (seconds).  This is a vector of dimension [nobs].
+!>    @param[in] evnmbr   Event number.
+!>    @param[in] t0       Origin time (seconds).  This is a vector of dimension [ngrd].
 !>
 !>    @param[out] tobj    Objective function at all grid points.  This is a vector of
 !>                        dimension [ngrd].
@@ -486,46 +479,55 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_computeObjectiveFunction32fF(ldg, ngrd, nobs, &
-                                                     tobs, tstatic,   &
-                                                     wts, tt, t0,     &
-                                                     tobj)            &
+      SUBROUTINE locate_computeObjectiveFunction32fF(evnmbr, t0, tobj) &
       BIND(C, NAME='locate_computeObjectiveFunction32fF')
       USE FTEIK_CONSTANTS32F, ONLY : sqrtHalf, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: ldg, ngrd, nobs
-      REAL(C_FLOAT), INTENT(IN) :: tobs(nobs), tstatic(nobs), wts(nobs)
-      REAL(C_FLOAT), INTENT(IN) :: t0(ngrd)
-      REAL(C_FLOAT), TARGET, INTENT(IN) :: tt(ngrd)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr 
+      REAL(C_FLOAT), TARGET, INTENT(IN) :: t0(ngrd)
       REAL(C_FLOAT), INTENT(OUT) :: tobj(ngrd)
       REAL(C_FLOAT) est, res, obs, toff, wt
       REAL(C_FLOAT), POINTER :: ttptr(:)
+      REAL(C_FLOAT), POINTER :: wtptr(:)
+      REAL(C_FLOAT), POINTER :: obsptr(:)
+      REAL(C_FLOAT), POINTER :: scptr(:)
       INTEGER(C_INT) i, igrd, k1, k2
       !$OMP SIMD aligned(tobj: 64)
       DO 1 igrd=1,ngrd
          tobj(igrd) = zero
     1 CONTINUE 
+      ! Set my pointers
+      k1 = (evnmbr - 1)*lntf + 1 
+      k2 = evnmbr*lntf
+      obsptr = observations(k1:k2)
+      scptr  = staticCorrection(k1:k2)
+      wtptr  = weights(k1:k2)
       ! Now compute the travel times
       !$OMP PARALLEL DO DEFAULT(NONE) &
       !$OMP PRIVATE(i, igrd, est, k1, k2, obs, res, toff, ttptr, wt) &
-      !$OMP SHARED(ldg, ngrd, nobs, t0, tobs, tstatic, tt, wts) &
+      !$OMP SHARED(ldgrd, lskip, ngrd, ntf, obsptr, t0, scptr, ttFields, wtptr) &
       !$OMP REDUCTION(+:tobj)
-      DO 2 i=1,nobs
-         wt = sqrtHalf*wts(i)
-         toff = tstatic(i)
-         obs = tobs(i)
-         k1 = (ldg - 1)*i + 1 
-         k2 = ldg*i
-         ttptr => tt(k1:k2) 
+      DO 2 i=1,ntf
+         IF (lskip(i)) CYCLE
+         wt = sqrtHalf*wtptr(i)
+         toff = scptr(i)
+         obs = obsptr(i)
+         k1 = (ldgrd - 1)*i + 1 
+         k2 = ldgrd*i
+         ttptr => ttFields(k1:k2) 
          !$OMP SIMD ALIGNED(t0, ttptr, tobj: 64)
          DO 3 igrd=1,ngrd
             est = ttptr(igrd) + t0(igrd) + toff ! Eqn A1 + static correction
             res = wt*(obs - est)
             tobj(igrd) = tobj(igrd) + res*res
     3    CONTINUE
+         NULLIFY(ttptr)
     2 CONTINUE 
       !$OMP END PARALLEL DO
+      NULLIFY(obsptr)
+      NULLIFY(scptr)
+      NULLIFY(wtptr)
       RETURN
       END SUBROUTINE
 !                                                                                        !
