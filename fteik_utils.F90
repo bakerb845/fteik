@@ -90,6 +90,7 @@
       SUBROUTINE fteik_computeGraphF(ierr)          &
                  BIND(C, NAME='fteik_computeGraphF') 
       USE ISO_C_BINDING
+      USE FTEIK_CONSTANTS64F, ONLY : FALSE
       USE FTEIK_UTILS64F, ONLY : lhaveGrid, nx, ny, nz
       USE FTEIK_UTILS64F, ONLY : nLevels, maxLevelSize
       USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
@@ -155,14 +156,14 @@ print *, maxLevelSize
       ALLOCATE(tt1(maxLevelSize))
       tt1(:) = zero
       ! Set the update grid.  This will mask nodes on the boundary.
-      CALL fteik_setUpdateNodesF(1, nlevels, .FALSE., levelPtr, ijkv1, lupd1, ierrs(1))
-      CALL fteik_setUpdateNodesF(2, nlevels, .FALSE., levelPtr, ijkv2, lupd2, ierrs(2))
-      CALL fteik_setUpdateNodesF(3, nlevels, .FALSE., levelPtr, ijkv3, lupd3, ierrs(3))
-      CALL fteik_setUpdateNodesF(4, nlevels, .FALSE., levelPtr, ijkv4, lupd4, ierrs(4))
-      CALL fteik_setUpdateNodesF(5, nlevels, .FALSE., levelPtr, ijkv5, lupd5, ierrs(5))
-      CALL fteik_setUpdateNodesF(6, nlevels, .FALSE., levelPtr, ijkv6, lupd6, ierrs(6))
-      CALL fteik_setUpdateNodesF(7, nlevels, .FALSE., levelPtr, ijkv7, lupd7, ierrs(7))
-      CALL fteik_setUpdateNodesF(8, nlevels, .FALSE., levelPtr, ijkv8, lupd8, ierrs(8))
+      CALL fteik_setUpdateNodesF(1, nlevels, FALSE, levelPtr, ijkv1, lupd1, ierrs(1))
+      CALL fteik_setUpdateNodesF(2, nlevels, FALSE, levelPtr, ijkv2, lupd2, ierrs(2))
+      CALL fteik_setUpdateNodesF(3, nlevels, FALSE, levelPtr, ijkv3, lupd3, ierrs(3))
+      CALL fteik_setUpdateNodesF(4, nlevels, FALSE, levelPtr, ijkv4, lupd4, ierrs(4))
+      CALL fteik_setUpdateNodesF(5, nlevels, FALSE, levelPtr, ijkv5, lupd5, ierrs(5))
+      CALL fteik_setUpdateNodesF(6, nlevels, FALSE, levelPtr, ijkv6, lupd6, ierrs(6))
+      CALL fteik_setUpdateNodesF(7, nlevels, FALSE, levelPtr, ijkv7, lupd7, ierrs(7))
+      CALL fteik_setUpdateNodesF(8, nlevels, FALSE, levelPtr, ijkv8, lupd8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
          WRITE(*,*) 'fteik_computeGraphF: Error setting update nodes'
          ierr = 1
@@ -892,6 +893,7 @@ print *, maxLevelSize
       SUBROUTINE fteik_setSourceLocationF(zs, xs, ys, ierr) &
                  BIND(C, NAME='fteik_setSourceLocationF')
       USE ISO_C_BINDING
+      USE FTEIK_CONSTANTS64F, ONLY : TRUE
       USE FTEIK_UTILS64F, ONLY : dx, dy, dz, nx, ny, nz, &
                                  xsi, ysi, zsi, xsa, ysa, zsa, &
                                  x0, y0, z0, lhaveSource, & 
@@ -966,14 +968,14 @@ print *, maxLevelSize
 print *, zsa, xsa, ysa, zsrc, xsrc, ysrc
       ! set the update grid
       lhaveSource = .TRUE.
-      CALL fteik_setUpdateNodesF(1, nlevels, .TRUE., levelPtr, ijkv1, lupdInit1, ierrs(1))
-      CALL fteik_setUpdateNodesF(2, nlevels, .TRUE., levelPtr, ijkv2, lupdInit2, ierrs(2))
-      CALL fteik_setUpdateNodesF(3, nlevels, .TRUE., levelPtr, ijkv3, lupdInit3, ierrs(3))
-      CALL fteik_setUpdateNodesF(4, nlevels, .TRUE., levelPtr, ijkv4, lupdInit4, ierrs(4))
-      CALL fteik_setUpdateNodesF(5, nlevels, .TRUE., levelPtr, ijkv5, lupdInit5, ierrs(5))
-      CALL fteik_setUpdateNodesF(6, nlevels, .TRUE., levelPtr, ijkv6, lupdInit6, ierrs(6))
-      CALL fteik_setUpdateNodesF(7, nlevels, .TRUE., levelPtr, ijkv7, lupdInit7, ierrs(7))
-      CALL fteik_setUpdateNodesF(8, nlevels, .TRUE., levelPtr, ijkv8, lupdInit8, ierrs(8))
+      CALL fteik_setUpdateNodesF(1, nlevels, TRUE, levelPtr, ijkv1, lupdInit1, ierrs(1))
+      CALL fteik_setUpdateNodesF(2, nlevels, TRUE, levelPtr, ijkv2, lupdInit2, ierrs(2))
+      CALL fteik_setUpdateNodesF(3, nlevels, TRUE, levelPtr, ijkv3, lupdInit3, ierrs(3))
+      CALL fteik_setUpdateNodesF(4, nlevels, TRUE, levelPtr, ijkv4, lupdInit4, ierrs(4))
+      CALL fteik_setUpdateNodesF(5, nlevels, TRUE, levelPtr, ijkv5, lupdInit5, ierrs(5))
+      CALL fteik_setUpdateNodesF(6, nlevels, TRUE, levelPtr, ijkv6, lupdInit6, ierrs(6))
+      CALL fteik_setUpdateNodesF(7, nlevels, TRUE, levelPtr, ijkv7, lupdInit7, ierrs(7))
+      CALL fteik_setUpdateNodesF(8, nlevels, TRUE, levelPtr, ijkv8, lupdInit8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN 
          WRITE(*,*) 'fteik_setSourceLocationF: Error setting update nodes'
          ierr = 1
