@@ -13,13 +13,13 @@ MODULE FTEIK_LOCALSOLVER64F
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_dx2i, dz2i_dy2i, dx2i_dy2i
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_p_dx2i, dz2i_p_dy2i, dx2i_p_dy2i
   REAL(C_DOUBLE), PRIVATE, SAVE :: dz2i_p_dy2i_inv, dz2i_p_dx2i_inv, dx2i_p_dy2i_inv
-  REAL(C_DOUBLE), PRIVATE, SAVE :: t12min(chunkSize)
-  !DIR$ ATTRIBUTES ALIGN:64 :: t12min
+  !REAL(C_DOUBLE), PRIVATE, SAVE :: t12min(chunkSize)
+  !!DIR$ ATTRIBUTES ALIGN:64 :: t12min
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the Code                                     !
 !----------------------------------------------------------------------------------------!
- SUBROUTINE fteik_localSolver_noInit64fF(n, tv, te, tn, tev,         &
+      PURE SUBROUTINE fteik_localSolver_noInit64fF(n, tv, te, tn, tev,         &
                                                    ten, tnv, tnve,             &
                                                    slow1, slow2, slow3, slow4, &
                                                    slow5, slow6, slow7,        &
@@ -41,6 +41,7 @@ MODULE FTEIK_LOCALSOLVER64F
                      ta, tb, tab, tab2, tac, tac2, tbc, tbc2, tc,            &
                      temtn, temtv, tvmtn, tmax
       INTEGER(C_INT) i
+      REAL(C_DOUBLE) :: t12min(chunkSize)
       !DIR$ ASSUME_ALIGNED tv: 64
       !DIR$ ASSUME_ALIGNED te: 64
       !DIR$ ASSUME_ALIGNED tn: 64
@@ -203,7 +204,8 @@ MODULE FTEIK_LOCALSOLVER64F
                       ldoZY, ldoZYCart, ldoZYSphere, ldoXY, ldoXYCart, ldoXYSphere
          !------------------1D operators, (refracted times),set times to BIG-------------!
          ! V plane
-         t1d = MIN(tt0, tv + dz*slow1) !t1 = tv + dz*slowLoc(1)
+         !t1d = MIN(tt0, tv + dz*slow1) !t1 = tv + dz*slowLoc(1)
+         t1d = tv + dz*slow1 !t1 = tv + dz*slowLoc(1)
          ! WE plane
          t1d = MIN(t1d, te + dx*slow2) !t2 = te + dx*slowLoc(2)
          ! NS plane
@@ -386,6 +388,7 @@ MODULE FTEIK_LOCALSOLVER64F
             IF (t3d < te .OR. t3d < tn .OR. t3d < tv) t3d = FTEIK_HUGE
          ENDIF
          tupd = MIN(t1d_t2d_min, t3d)
+         tupd = MIN(tt0, tupd)
       RETURN
       END
 !                                                                                        !
