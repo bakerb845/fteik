@@ -8,10 +8,19 @@
 /*!
  * @brief Tests the locator. 
  */
-int main()
+int main(int argc, char *argv[])
 {
+    const int master = 0;
+    int myid = 0;
+#ifdef FTEIK_USE_MPI
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
     clock_t t0, t1;
-    const double slowConst = 1.0/5.e3;
+    const double velConst = 5.e3;
+    const double slowConst = 1.0/velConst;
+    const double slowConstS = 1.0/(velConst/sqrt(3.0));
 /*
     const double z0 = 0.0;
     const double y0 = 0.0;
@@ -39,18 +48,26 @@ int main()
     int *zri = (int *) calloc((size_t) nrec, sizeof(int));
     int *xri = (int *) calloc((size_t) nrec, sizeof(int));
     int *yri = (int *) calloc((size_t) nrec, sizeof(int));
-    double diffz, diffx, diffy, t;
+    double diffz, diffx, diffy, t, slowUse;
     int i, ierr, indx, ix, iy, iz;
-    for (i=0; i<nrec; i++)
+    for (i=0; i<nrec-1; i++)
     {
         zri[i] = 0;
         xri[i] = nrec/4 + i;
         yri[i] = nrec/4 + i;
     }
+    // Set the final receiver location twice
+    zri[nrec-1] = 0;
+    zri[nrec-1] = nrec/4 + nrec - 2;
+    zri[nrec-1] = nrec/4 + nrec - 2;
     int isrc;
     // Initialize the locator
-    printf("Initializing locator...\n");
+    if (myid == master){printf("Initializing locator...\n");}
+#ifdef FTEIK_USE_MPI
+    locate_initializeMPI(master, MPI_COMM_WORLD, nsrc, nrec, ngrd, &ierr); 
+#else
     locate_initializeF(nsrc, nrec, ngrd, &ierr);
+#endif
     if (ierr != 0)
     {
         printf("Error initializing locator\n");
@@ -66,18 +83,25 @@ int main()
             diffz = (double) (zri[i] - zsi[isrc])*dz;
             diffx = (double) (xri[i] - xsi[isrc])*dx;
             diffy = (double) (yri[i] - ysi[isrc])*dy;
-            t = sqrt(diffz*diffz + diffx*diffx + diffy*diffy)*slowConst;
+            slowUse = slowConst;
+            if (i == nrec - 1){slowUse = slowConstS;}
+            t = sqrt(diffz*diffz + diffx*diffx + diffy*diffy)*slowUse;
             tobs[isrc*nrec+i] = t + tori[isrc];
             obs2tf[isrc*nrec+i] = i;
             wts[isrc*nrec+i] = 1.0;
         }
     }
     // Loop on receivers and tabulate reciprocal travel times
-    printf("Tabulating travel times from receivers to all points...\n");
+    if (myid == master)
+    {
+        printf("Tabulating travel times from receivers to all points...\n");
+    }
     int irec;
     t0 = clock();
     for (irec=0; irec<nrec; irec++)
     {
+        slowUse = slowConst;
+        if (irec == nrec - 1){slowUse = slowConstS;}
         // Compute travel-times in homogeneous velocity model
         for (iy=0; iy<ny; iy++)
         {
@@ -89,7 +113,7 @@ int main()
                     diffz = (double) (iz - zri[irec])*dz;
                     diffx = (double) (ix - xri[irec])*dx;
                     diffy = (double) (iy - yri[irec])*dy;
-                    t = sqrt(diffz*diffz + diffx*diffx + diffy*diffy)*slowConst;
+                    t = sqrt(diffz*diffz + diffx*diffx + diffy*diffy)*slowUse;
                     ttimes[indx] = t; //ttimes[irec*ngrd+indx] = t;
                 }
             }
@@ -104,7 +128,11 @@ int main()
     } // Loop on sources
     free(ttimes);
     t1 = clock();
-    printf("Travel-time computation time %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);
+    if (myid == master)
+    {
+        printf("Travel-time computation time %lf (s)\n",
+               ((double)(t1-t0))/CLOCKS_PER_SEC);
+    }
     // Set the observed travel times
     printf("Setting observed travel times...\n");
     t0 = clock();
@@ -116,7 +144,10 @@ int main()
         return EXIT_FAILURE;
     }
     t1 = clock();
-    printf("Time to set observations %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);
+    if (myid == master)
+    {
+        printf("Time to set observations %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);
+    }
     // Locate events
 double t0Opt, objOpt;
 int optIndx; 
@@ -125,16 +156,22 @@ locate_locateEventF(1, &optIndx, &t0Opt, &objOpt);
     t1 = clock();
 printf("optindex, t0, obj: %d %e %e\n", optIndx, t0Opt, objOpt);
 printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz*nx) + 1);
-    printf("Time to locate event %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);
+    if (myid == master)
+    {
+        printf("Time to locate event %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);
+    }
     // Free memory
-    printf("Finalizing solver...\n");
+    if (myid == master){printf("Finalizing solver...\n");}
     locate_finalizeF();
-    printf("Freeing memory...\n");
+    if (myid == master){printf("Freeing memory...\n");}
     free(obs2tf);
     free(wts);
     free(tobs);
     free(zri);
     free(xri);
     free(yri);
+#ifdef FTEIK_USE_MPI
+    MPI_Finalize();
+#endif
     return EXIT_SUCCESS;
 }

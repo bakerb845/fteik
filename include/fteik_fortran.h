@@ -1,5 +1,6 @@
 #ifndef FTEIK_FORTRAN_H__
 #define FTEIK_FORTRAN_H__ 1
+#include "fteik_config.h"
 #ifdef FTEIK_USE_MPI
 #include <mpi.h>
 #endif
@@ -119,6 +120,14 @@ void locate_setObservation64f(const int evnmbr, const int nttimes,
                               const int *__restrict__ obs2tf,
                               const double *__restrict__ pickTimes,
                               const double *__restrict__ wts, int *ierr);
+#ifdef FTEIK_USE_MPI
+void locate_initializeMPI(const int root, const MPI_Comm comm,
+                          const int nEventsIn, const int ntfIn,
+                          const int ngrdIn, int *ierr);
+void locate_initializeMPIF(const int root, const int comm,
+                           const int nEventsIn, const int ntfIn,
+                           const int ngrdIn, int *ierr);
+#endif
 
 //----------------------------------------------------------------------------//
 

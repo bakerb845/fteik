@@ -244,7 +244,7 @@ MODULE FTEIK_RECEIVER64F
       INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root 
       INTEGER(C_INT), INTENT(OUT) :: mpierr
       INTEGER(C_INT) myid
-      CALL MPI_Comm_Rank(comm, myid, mpierr)
+      CALL MPI_Comm_rank(comm, myid, mpierr)
       CALL MPI_Bcast(nrec, 1, MPI_INT, root, comm, mpierr) 
       IF (nrec < 1) RETURN 
       IF (myid /= root) THEN 

@@ -29,6 +29,16 @@ int fteik_receiver_broadcast(const int root, const MPI_Comm comm)
 //----------------------------------------------------------------------------//
 //                                Locate                                      //
 //----------------------------------------------------------------------------//
+#ifdef FTEIK_USE_MPI
+void locate_initializeMPI(const int root, const MPI_Comm comm,
+                          const int nEventsIn, const int ntfIn,
+                          const int ngrdIn, int *ierr)
+{
+    MPI_Fint intComm = MPI_Comm_f2c(comm);
+    locate_initializeMPIF(root, intComm, nEventsIn, ntfIn, ngrdIn, ierr); 
+    return;
+}
+#endif
 void locate_setObservation64f(const int evnmbr, const int nttimes,
                               const bool lhaveOT, const double t0In,
                               const int *__restrict__ obs2tf,

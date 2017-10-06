@@ -42,6 +42,7 @@ MODULE FTEIK_LOCALSOLVER64F
                      temtn, temtv, tvmtn, tmax
       INTEGER(C_INT) i
       REAL(C_DOUBLE) :: t12min(chunkSize)
+      !DIR$ ATTRIBUTES ALIGN:64 :: t12min
       !DIR$ ASSUME_ALIGNED tv: 64
       !DIR$ ASSUME_ALIGNED te: 64
       !DIR$ ASSUME_ALIGNED tn: 64

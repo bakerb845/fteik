@@ -51,6 +51,24 @@ MODULE FTEIK_LOCATE
   !> Block size in grid search.
   INTEGER(C_INT), PRIVATE, PARAMETER :: blockSize = 512
 
+  !> Number of processes.
+  INTEGER, PRIVATE, SAVE :: nprocs = 1
+  !> Maps from the the start indices of the global grid.  This is a vector of 
+  !> dimension [nprocs + 1].
+  INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: grdPtr(:)
+  !> Handle to the MPI communicator
+  INTEGER, PRIVATE, SAVE :: locatorComm =-1
+  !> If true then the process is included in the locator. 
+  LOGICAL(C_BOOL), PRIVATE, SAVE :: linLocator = .FALSE.
+  !> If true then use the MPI locator.
+  LOGICAL(C_BOOL), PRIVATE, SAVE :: luseMPI = .FALSE.
+  !> Myid on solver.
+  INTEGER, PRIVATE, SAVE :: mylocatorID = 0
+
+#if defined(FTEIK_FORTRAN_USE_MPI)
+  INTEGER, PRIVATE :: mpierr
+#endif
+
   CONTAINS
 
 !     SUBROUTINE locate_locateF( ) BIND(C, NAME='locate_locateF')
@@ -154,6 +172,11 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       t0Work(:) = zero
       objWork(:) = zero
       linit = TRUE
+      IF (.NOT.luseMPI) THEN
+         ALLOCATE(grdPtr(nprocs+1))
+         grdPtr(1) = 1
+         grdPtr(2) = ngrd + 1 
+      ENDIF 
       RETURN
       END
 !                                                                                        !
@@ -173,6 +196,7 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       IF (ALLOCATED(originTimes)) DEALLOCATE(originTimes)
       IF (ALLOCATED(lskip))       DEALLOCATE(lskip)
       IF (ALLOCATED(lhaveOT))     DEALLOCATE(lhaveOT)
+      IF (ALLOCATED(grdPtr))      DEALLOCATE(grdPtr)
       IF (linit) THEN
          CALL free32f(observations)
          CALL free32f(weights)
@@ -186,6 +210,11 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       nGrd = 0
       nEvents = 0
       linit = .FALSE.
+#if defined(FTEIK_FORTRAN_USE_MPI)
+      IF (linLocator) CALL MPI_Comm_free(locatorComm, mpierr) 
+#endif
+      luseMPI = .FALSE.
+      linLocator = .FALSE.
       RETURN
       END
 
@@ -229,6 +258,7 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
 #endif 
       INTEGER(C_INT) i1, i2
       ierr = 0
+      IF (.NOT.linit .AND. luseMPI) RETURN ! Quiet return
       IF (.NOT.linit) THEN
          WRITE(*,"('locate_setTravelTimeField64fF: Locator not initialized',A)")
          ierr = 1
@@ -242,7 +272,7 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       ENDIF
       IF (ngrdIn /= ngrd) THEN
          WRITE(*,905) ngrdIn, ngrd
- 905     FORMAT('locate_setTravelTimeField64fF: ngrdIn=',I8,'not equal ngrd=', I8)
+ 905     FORMAT('locate_setTravelTimeField64fF: ngrdIn=',I8,' not equal ngrd=', I8)
          ierr = 1
          RETURN
       ENDIF
@@ -636,15 +666,15 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
             NULLIFY(t0Ptr)
             NULLIFY(objPtr)
    11    CONTINUE
-!        !$OMP END PARALLEL DO
+         !$OMP END PARALLEL DO
       ENDIF
 do i=1,ngrd
- if (objWork(i) == zero) then 
+ if (objWork(i) <= objWork(474953)) then != zero) then 
    print *, i, objWork(i), t0Work(i)
   !pause
  endif
 enddo
-print *, 'objWork:', objWork(474953), objWork(152125), objWork(474953+1), t0Work(474953)
+print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work(474953)
  
 !     DO 21 igrd=1,ngrd
 !        t0 = t0Work(igrd) 
@@ -704,4 +734,79 @@ print *, 'objWork:', objWork(474953), objWork(152125), objWork(474953+1), t0Work
       ENDDO
       RETURN
       END
+!========================================================================================!
+!                                 Begin the MPI modules                                  !
+!========================================================================================!
+#if defined(FTEIK_FORTRAN_USE_MPI)
+      SUBROUTINE locate_initializeMPIF(root, comm,                     &
+                                       nEventsIn, ntfIn, ngrdIn, ierr) &
+      BIND(C, NAME='locate_initializeMPIF')
+      USE MPI
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root, nEventsIn, ntfIn, ngrdIn
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT), ALLOCATABLE :: lkeep(:)
+      INTEGER(C_INT) dGrid, i, ierrLoc, group, keepGroup, myid, nEventsTemp, &
+                     ntfTemp, ngrdLoc, ngrdTemp
+      ierr = 0
+      CALL MPI_Comm_rank(comm, myid,   mpierr)
+      CALL MPI_Comm_size(comm, nprocs, mpierr)
+      ! Broadcast anticipated sizes
+      IF (myid == root) THEN
+         nEventsTemp = nEventsIn
+         ntfTemp     = ntfIn
+         ngrdTemp    = ngrdIn
+      ENDIF
+      CALL MPI_Bcast(nEventsTemp, 1, MPI_INTEGER, root, comm, mpierr)
+      CALL MPI_Bcast(ntfTemp,     1, MPI_INTEGER, root, comm, mpierr)
+      CALL MPI_Bcast(ngrdTemp,    1, MPI_INTEGER, root, comm, mpierr)
+      ! Create the group which will do the location s.t. the group size doesn't exceed
+      ! the number of grid points. 
+      ALLOCATE(lkeep(nprocs))
+      lkeep(:) = 0
+      DO i=1,MIN(nprocs, ngrdTemp)
+         lkeep(i) = i - 1
+      ENDDO
+      CALL MPI_Comm_group(comm, group, mpierr)
+      CALL MPI_Group_incl(group, MIN(ngrdTemp, nprocs), lkeep, keepGroup, mpierr)
+      CALL MPI_Comm_create_group(comm, keepGroup, 99, locatorComm, mpierr)
+      DEALLOCATE(lkeep)
+      CALL MPI_Group_free(keepGroup, mpierr)
+      CALL MPI_Group_free(group, mpierr)
+      ! Initialize the group and set the grid points the process is response for
+      linLocator = .FALSE.
+      IF (myid < MIN(ngrdTemp, nprocs)) THEN
+         CALL MPI_Comm_size(locatorComm, nprocs,      mpierr)
+         CALL MPI_Comm_rank(locatorComm, mylocatorID, mpierr)
+         ALLOCATE(grdPtr(nprocs+1))
+         IF (nprocs == 1) THEN
+            grdPtr(1) = 1
+            grdPtr(2) = ngrdTemp + 1
+         ELSE
+            dGrid = MAX(1, INT(REAL(ngrdTemp)/REAL(nprocs) + 0.5))
+            grdPtr(1) = 1
+            DO i=1,nprocs
+               grdPtr(i+1) = MIN(ngrdTemp+1, grdPtr(i) + dGrid)
+            ENDDO
+            grdPtr(nprocs+1) = ngrdTemp + 1
+         ENDIF
+         ngrdLoc = grdPtr(mylocatorID+2) - grdPtr(mylocatorID+1)
+         CALL locate_initializeF(nEventsTemp, ntfTemp, ngrdLoc, ierrLoc)
+         IF (ierrLoc /= 0) THEN
+            WRITE(*,900) myid 
+  900       FORMAT('locate_initializeMPIF: Error initializing on process ', I4)
+            ierrLoc = 1
+         ENDIF
+         CALL MPI_Allreduce(ierrLoc, ierr, 1, MPI_INTEGER, MPI_MAX, locatorComm, mpierr)
+         IF (ierr /= 0) linLocator = .TRUE.
+      ! This process isn't allowed to play
+      ELSE
+         linit = .TRUE.
+         nprocs = 0
+      ENDIF 
+      CALL MPI_Bcast(ierr, 1, MPI_INTEGER, root, comm, mpierr) 
+      IF (ierr /= 0) luseMPI = .TRUE.
+      END SUBROUTINE
+
+#endif
 END MODULE
