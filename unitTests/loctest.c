@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     const int nsrc = 1;
     const int nrec = 10;
     const int ngrd = nz*nx*ny;
-    const double tori[1] = {1.0}; // Origin time
+    const double tori[1] = {+1.5}; // Origin time
     int zsi[1] = {nz/2};
     int xsi[1] = {nx/2};
     int ysi[1] = {ny/2};
@@ -119,7 +119,11 @@ int main(int argc, char *argv[])
             }
         }
         // Set the travel-times
+#ifdef FTEIK_USE_MPI
+        locate_setTravelTimeField64fMPIF(master, ngrd, irec+1, ttimes, &ierr);
+#else 
         locate_setTravelTimeField64fF(ngrd, irec+1, ttimes, &ierr);
+#endif
         if (ierr != 0)
         {
             printf("Failed to set travel time field\n");
@@ -152,7 +156,11 @@ int main(int argc, char *argv[])
 double t0Opt, objOpt;
 int optIndx; 
     t0 = clock();
-locate_locateEventF(1, &optIndx, &t0Opt, &objOpt);
+#ifdef FTEIK_USE_MPI
+    locate_locateEventMPIF(1, &optIndx, &t0Opt, &objOpt);
+#else
+    locate_locateEventF(1, &optIndx, &t0Opt, &objOpt);
+#endif
     t1 = clock();
 printf("optindex, t0, obj: %d %e %e\n", optIndx, t0Opt, objOpt);
 printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz*nx) + 1);
@@ -163,6 +171,7 @@ printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz
     // Free memory
     if (myid == master){printf("Finalizing solver...\n");}
     locate_finalizeF();
+printf("back\n");
     if (myid == master){printf("Freeing memory...\n");}
     free(obs2tf);
     free(wts);

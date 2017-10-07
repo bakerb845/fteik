@@ -127,6 +127,12 @@ void locate_initializeMPI(const int root, const MPI_Comm comm,
 void locate_initializeMPIF(const int root, const int comm,
                            const int nEventsIn, const int ntfIn,
                            const int ngrdIn, int *ierr);
+void locate_setTravelTimeField64fMPIF(const int root, const int ngrd,
+                                      const int itf,
+                                      const double *__restrict__ tt,
+                                      int *ierr);
+void locate_locateEventF(const int evnmbr, int *optindx,
+                         double *t0Opt, double *objOpt);
 #endif
 
 //----------------------------------------------------------------------------//

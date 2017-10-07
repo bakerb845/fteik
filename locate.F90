@@ -51,11 +51,15 @@ MODULE FTEIK_LOCATE
   !> Block size in grid search.
   INTEGER(C_INT), PRIVATE, PARAMETER :: blockSize = 512
 
+
+  !> Total number of grid poitns in mesh
+  INTEGER(C_INT), PRIVATE, SAVE :: ngrdAll
   !> Number of processes.
   INTEGER, PRIVATE, SAVE :: nprocs = 1
-  !> Maps from the the start indices of the global grid.  This is a vector of 
-  !> dimension [nprocs + 1].
-  INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: grdPtr(:)
+  !> Send counts in MPI scatterv.  This is a vector of dimension [nprocs].
+  INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: sendCounts(:)
+  !> The displacements in MPI scatterv.  This is a vector of dimension [nprocs].
+  INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: displs(:)
   !> Handle to the MPI communicator
   INTEGER, PRIVATE, SAVE :: locatorComm =-1
   !> If true then the process is included in the locator. 
@@ -78,23 +82,34 @@ MODULE FTEIK_LOCATE
 !   1 CONTINUE 
 !     RETURN
 !     END SUBROUTINE
-
-      SUBROUTINE locate_locateEventF(evnmbr, optindx, t0Opt, objOpt) &
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Locates an event.
+!>
+!>    @param[in] evnmbr    Event number.
+!>    @param[out] optIndx  Index in grid corresponding to the optimum.
+!>    @param[out] t0Opt    The origin time (epochal seconds; UTC) at the optimal
+!>                         grid point.
+!>    @param[out] objOpt   Value of objective function at optimal grid point.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE locate_locateEventF(evnmbr, optIndx, t0Opt, objOpt) &
       BIND(C, NAME='locate_locateEventF')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr
       REAL(C_DOUBLE), INTENT(OUT) :: t0Opt, objOpt
-      INTEGER(C_INT), INTENT(OUT) :: optindx
+      INTEGER(C_INT), INTENT(OUT) :: optIndx
       optindx = 0
       ! Compute the objective function and potentially the origin time
       CALL locate_computeL2ObjectiveFunction32fF(evnmbr)
       ! Find the optimal index (smallest value in \f$ L_2 \f$ objective function)
       optindx = MINLOC(objWork, 1)
-      ! Extract the corresponding optimal values
-print *, 'min/max objwork:', optindx,  minval(objWork), maxval(objWorK)
       t0Opt  = DBLE(t0Work(optindx)) + tepoch(evnmbr)
       objOpt = DBLE(objWork(optindx))
-print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       RETURN
       END
 !                                                                                        !
@@ -130,7 +145,6 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       ENDIF
       CALL locate_setNumberOfTravelTimeFieldsF(ntfIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,905)
  905     FORMAT('locate_initializeF: Failed to set number of travel time fields')
          RETURN
       ENDIF
@@ -173,9 +187,11 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       objWork(:) = zero
       linit = TRUE
       IF (.NOT.luseMPI) THEN
-         ALLOCATE(grdPtr(nprocs+1))
-         grdPtr(1) = 1
-         grdPtr(2) = ngrd + 1 
+         ALLOCATE(sendCounts(1))
+         ALLOCATE(displs(1))
+         sendCounts(1) = ngrd 
+         displs(1) = 0
+         ngrdAll = ngrd
       ENDIF 
       RETURN
       END
@@ -196,7 +212,8 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       IF (ALLOCATED(originTimes)) DEALLOCATE(originTimes)
       IF (ALLOCATED(lskip))       DEALLOCATE(lskip)
       IF (ALLOCATED(lhaveOT))     DEALLOCATE(lhaveOT)
-      IF (ALLOCATED(grdPtr))      DEALLOCATE(grdPtr)
+      IF (ALLOCATED(sendCounts))  DEALLOCATE(sendCounts)
+      IF (ALLOCATED(displs))      DEALLOCATE(displs)
       IF (linit) THEN
          CALL free32f(observations)
          CALL free32f(weights)
@@ -208,10 +225,16 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
       lntf = 0
       ldgrd = 0
       nGrd = 0
+      ngrdAll = 0
       nEvents = 0
       linit = .FALSE.
 #if defined(FTEIK_FORTRAN_USE_MPI)
-      IF (linLocator) CALL MPI_Comm_free(locatorComm, mpierr) 
+      IF (linLocator) THEN
+         CALL MPI_Comm_free(locatorComm, mpierr) 
+         locatorComm =-1
+         mylocatorID = 0
+         nprocs = 0
+      ENDIF
 #endif
       luseMPI = .FALSE.
       linLocator = .FALSE.
@@ -237,21 +260,15 @@ print *, 'amost out', tepoch(evnmbr), t0Work(optindx), t0Opt
 !>
       SUBROUTINE locate_setTravelTimeField64fF(ngrdIn, itf, ttIn, ierr) &
       BIND(C, NAME='locate_setTravelTimeField64fF')
+#if defined(FTEIK_FORTRAN_USE_INTEL)
+      USE IPPS_MODULE, ONLY : ippsConvert_64f32f
+#endif
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngrdIn, itf
       REAL(C_DOUBLE), INTENT(IN) :: ttIn(ngrdIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
 #if defined(FTEIK_FORTRAN_USE_INTEL)
-      INTERFACE
-         INTEGER(C_INT) FUNCTION ippsConvert_64f32f(pSrc, pDst, len) &
-         BIND(C, NAME='ippsConvert_64f32f')
-         USE ISO_C_BINDING
-         IMPLICIT NONE
-         INTEGER(C_INT), VALUE, INTENT(IN) :: len
-         REAL(C_DOUBLE), INTENT(IN) :: pSrc(len)
-         REAL(C_FLOAT), INTENT(OUT) :: pDst(len)
-         END FUNCTION
-      END INTERFACE
+
 #else
       REAL(C_FLOAT), POINTER :: ttptr(:)
       INTEGER(C_INT) igrd
@@ -674,7 +691,7 @@ do i=1,ngrd
   !pause
  endif
 enddo
-print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work(474953)
+!print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work(474953)
  
 !     DO 21 igrd=1,ngrd
 !        t0 = t0Work(igrd) 
@@ -738,6 +755,23 @@ print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work
 !                                 Begin the MPI modules                                  !
 !========================================================================================!
 #if defined(FTEIK_FORTRAN_USE_MPI)
+!>    @brief Initializes the MPI based locator.
+!>
+!>    @param[in] root       Root process on communicator.
+!>    @param[in] comm       MPI communicator handle.
+!>    @param[in] nEventsIn  Number of input events.  This must be defined on the
+!>                          root process.
+!>    @param[in] ntfIn      Number of travel time fields.  This must be defined on
+!>                          the root process.
+!>    @param[in] ngrdIn     Total number of grid points in travel time field.
+!>                          This must be defined on the root process.
+!>
+!>    @param[out] ierr      0 indicates success.
+!>
+!> @author Ben Baker
+!>
+!> @copyright MIT
+!> 
       SUBROUTINE locate_initializeMPIF(root, comm,                     &
                                        nEventsIn, ntfIn, ngrdIn, ierr) &
       BIND(C, NAME='locate_initializeMPIF')
@@ -745,7 +779,7 @@ print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root, nEventsIn, ntfIn, ngrdIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT), ALLOCATABLE :: lkeep(:)
+      INTEGER(C_INT), ALLOCATABLE :: grdPtr(:), lkeep(:)
       INTEGER(C_INT) dGrid, i, ierrLoc, group, keepGroup, myid, nEventsTemp, &
                      ntfTemp, ngrdLoc, ngrdTemp
       ierr = 0
@@ -776,8 +810,6 @@ print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work
       ! Initialize the group and set the grid points the process is response for
       linLocator = .FALSE.
       IF (myid < MIN(ngrdTemp, nprocs)) THEN
-         CALL MPI_Comm_size(locatorComm, nprocs,      mpierr)
-         CALL MPI_Comm_rank(locatorComm, mylocatorID, mpierr)
          ALLOCATE(grdPtr(nprocs+1))
          IF (nprocs == 1) THEN
             grdPtr(1) = 1
@@ -798,8 +830,21 @@ print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work
             ierrLoc = 1
          ENDIF
          CALL MPI_Allreduce(ierrLoc, ierr, 1, MPI_INTEGER, MPI_MAX, locatorComm, mpierr)
-         IF (ierr /= 0) linLocator = .TRUE.
-      ! This process isn't allowed to play
+         IF (ierr == 0) THEN
+            CALL MPI_Comm_size(locatorComm, nprocs,      mpierr)
+            CALL MPI_Comm_rank(locatorComm, mylocatorID, mpierr)
+            linLocator = .TRUE.
+            IF (ALLOCATED(sendCounts)) DEALLOCATE(sendCounts)
+            IF (ALLOCATED(displs))     DEALLOCATE(displs)
+            ALLOCATE(sendCounts(nprocs))
+            ALLOCATE(displs(nprocs))
+            DO i=1,nprocs
+               sendCounts(i) = grdPtr(i+1) - grdPtr(i)
+               displs(i) = grdPtr(i) - 1
+            ENDDO
+         ENDIF
+         DEALLOCATE(grdPtr)
+      ! This process process isn't in the group
       ELSE
          linit = .TRUE.
          nprocs = 0
@@ -807,6 +852,142 @@ print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work
       CALL MPI_Bcast(ierr, 1, MPI_INTEGER, root, comm, mpierr) 
       IF (ierr /= 0) luseMPI = .TRUE.
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Gets the ranks of the process in the locator.
+!>
+!>    @param[out] rank    MPI rank of process in locator.  If negative then the process
+!>                        is not in the locator.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE locate_getRank(rank) BIND(C, NAME='locate_getRank')
+      USE MPI
+      USE ISO_C_BINDING
+      INTEGER(C_INT), INTENT(OUT) :: rank
+      INTEGER(C_INT) mpierr
+      rank = 0
+      IF (.NOT. luseMPI) RETURN
+      IF (.NOT. linLocator) THEN
+         rank =-1
+         RETURN
+      ENDIF
+      CALL MPI_Comm_rank(locatorComm, rank, mpierr)
+      RETURN
+      END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the travel time fields on all processes.
+!>
+!>    @param[in] root       Root process ID on the locator communicator containing 
+!>                          all inputs.
+!>    @param[in] ngrdIn     Total number of grid points in model.  This must be defined
+!>                          on the root process.
+!>    @param[in] itfIn      Travel-time field number.  This must be defined on the root
+!>                          process.
+!>    @param[in] ttIn       The travel time field to distribute to all processes.  This
+!>                          is a vector of dimension [ngrdIn] and must be defined on
+!>                          the root process.
+!>
+!>    @param[out] ierr      0 indicates success. 
+!>
+!>    @result 0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE locate_setTravelTimeField64fMPIF(root, ngrdIn, itfIn, &
+                                                  ttIn, ierr)          &
+      BIND(C, NAME='locate_setTravelTimeField64fMPIF')
+      USE MPI
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: root, ngrdIn, itfIn
+      REAL(C_DOUBLE), INTENT(IN) :: ttIn(ngrdIn)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE), ALLOCATABLE :: work(:)
+      INTEGER(C_INT) itf, mpierr
+      ierr = 0
+      ! Have the root send appropriate protions of travel time field to each process
+      ALLOCATE(work(MAX(1, ngrd)))
+      IF (mylocatorID == root) itf = itfIn
+      CALL MPI_Bcast(itf, 1, MPI_INTEGER, root, locatorComm, mpierr)
+      CALL MPI_Scatterv(ttIn, sendCounts, displs, MPI_DOUBLE_PRECISION, work,   &
+                        ngrd, MPI_DOUBLE_PRECISION, root, locatorComm, mpierr)
+      IF (mpierr /= MPI_SUCCESS) THEN
+         WRITE(*,'("locate_setTravelTimeField64fMPIF: Error scattering travel times",A)')
+         ierr = 1
+         RETURN
+      ENDIF
+      ! And set it
+      CALL locate_setTravelTimeField64fF(ngrd, itf, work, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,905) mylocatorID
+  905    FORMAT('locate_setTravelTimeField64fMPIF: Error on rank', I4)
+      ENDIF
+      DEALLOCATE(work)      
+      RETURN
+      END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Locates an event with MPI.
+!>
+!>    @param[in] evnmbr    Event number.
+!>    @param[out] optIndx  Index in grid corresponding to the optimum.
+!>    @param[out] t0Opt    The origin time (epochal seconds; UTC) at the optimal
+!>                         grid point.
+!>    @param[out] objOpt   Value of objective function at optimal grid point.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE locate_locateEventMPIF(evnmbr, optIndx, t0Opt, objOpt) &
+      BIND(C, NAME='locate_locateEventMPIF')
+      USE MPI 
+      USE FTEIK_CONSTANTS32F, ONLY : zero
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr
+      REAL(C_DOUBLE), INTENT(OUT) :: t0Opt, objOpt
+      INTEGER(C_INT), INTENT(OUT) :: optIndx
+      REAL(C_DOUBLE)  objWork1(nprocs), objWork2(nprocs), &
+                      t0Work1(nprocs), t0Work2(nprocs)
+      INTEGER(C_INT) optIndx1(nprocs), optIndx2(nprocs)
+      INTEGER(C_INT), PARAMETER :: master = 0
+      ! Initialize
+      optindx = 0 
+      objWork1(:) = zero
+      t0Work1(:) = zero
+      optIndx1(:) = 0
+      ! Locate the event on each processes's grid
+      CALL locate_locateEventF(evnmbr, optIndx1(mylocatorID+1), &
+                               t0Work1(mylocatorID+1), objWork1(mylocatorID+1))
+      ! Reduce the results onto the master 
+      CALL MPI_Reduce(objWork1, objWork2, nprocs, MPI_DOUBLE, MPI_SUM,  &
+                      master, locatorComm, mpierr)
+      CALL MPI_Reduce(t0Work1,  t0Work2,  nprocs, MPI_DOUBLE, MPI_SUM,  &
+                      master, locatorComm, mpierr)
+      CALL MPI_Reduce(optIndx1, optIndx2, nprocs, MPI_INTEGER, MPI_SUM,  &
+                      master, locatorComm, mpierr) 
+      ! Let the master compute the optimum
+      IF (mylocatorID == master) THEN
+print *, objWork2
+         optIndx = MINLOC(objWork2, 1) ! Get the smallest objective function
+         objOpt = objWork2(optIndx)    ! This is the optimum's value
+         t0Opt  = t0Work2(optIndx)     ! This is the corresponding origin time
+         optIndx = displs(optIndx) + optIndx2(optIndx) ! This is the optimum global index
+      ENDIF
+      CALL MPI_Bcast(objOpt,  1, MPI_DOUBLE,  master, locatorComm, mpierr)
+      CALL MPI_Bcast(t0Opt,   1, MPI_DOUBLE,  master, locatorComm, mpierr)
+      CALL MPI_Bcast(optIndx, 1, MPI_INTEGER, master, locatorComm, mpierr)
+      print *, 'opt info:', optIndx, t0Opt, objOpt
+      RETURN
+      END
 
 #endif
 END MODULE
