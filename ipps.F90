@@ -1,5 +1,5 @@
-#if defined(FTEIK_FORTRAN_USE_INTEL)
 MODULE IPPS_MODULE
+#if defined(FTEIK_FORTRAN_USE_INTEL)
       INTERFACE
          !> @brief Converts a 64 bit float to a 32 bit float.
          !> 
@@ -18,7 +18,5 @@ MODULE IPPS_MODULE
          REAL(C_FLOAT), INTENT(OUT) :: pDst(len)
          END FUNCTION
       END INTERFACE
-
-
-END MODULE
 #endif
+END MODULE
