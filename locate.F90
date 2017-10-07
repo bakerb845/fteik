@@ -145,6 +145,7 @@ MODULE FTEIK_LOCATE
       ENDIF
       CALL locate_setNumberOfTravelTimeFieldsF(ntfIn, ierr)
       IF (ierr /= 0) THEN
+         WRITE(*,905)
  905     FORMAT('locate_initializeF: Failed to set number of travel time fields')
          RETURN
       ENDIF
