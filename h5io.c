@@ -3,6 +3,7 @@
 #include <string.h>
 #include <limits.h>
 #include "fteik_h5io.h"
+#include "fteik_xdmf.h"
 #include "h5io.h"
 #include "fteik_os.h"
 
@@ -10,21 +11,97 @@
 #define LEVEL_SCHEDULER_GROUP "/LevelSchedules\0"
 #define TRAVELTIMES_GROUP "/TravelTimeFields\0"
 
-int fteik_h5io_initialize(const char *fileName)
+struct fteikH5Grid_struct
 {
+    struct fteikXDMFGrid_struct xdmf;
+    char h5File[PATH_MAX];
+    int nx;
+    int ny;
+    int nz;
+    double dx;
+    double dy;
+    double dz;
+    double x0;
+    double y0;
+    double z0;
+    bool linit;
+};
+ 
+static struct fteikH5Grid_struct grid;
+
+int fteik_h5io_finalize(void) //const hid_t fileID)
+{
+    fteik_xdmfGrid_write(grid.xdmf);
+    fteik_xdmfGrid_free(&grid.xdmf);
+    //H5Fclose(fileID);
+    return 0;
+}
+//============================================================================//
+/*!
+ * @brief Initializes the HDF5 archive.
+ * @param[in] fileName   Name of the HDF5 archive.
+ * @param[in] nz         Number of z grid points in travel time field.
+ * @param[in] nx         Number of x grid points in travel time field.
+ * @param[in] ny         Number of y grid points in travel time field.
+ * @param[in] dz         Grid spacing (meters) in z.
+ * @param[in] dx         Grid spacing (meters) in x.
+ * @param[in] dy         Grid spacing (meters) in y.
+ * @param[in] z0         Grid origin (meters) in z.
+ * @param[in] x0         Grid origin (meters) in x.
+ * @param[in] y0         Grid origin (meters) in y.
+ *
+ * @result 0 indicates success.
+ *
+ * @copyright Ben Baker distributed under the MIT license.
+ *
+ */
+int fteik_h5io_initialize(const char *fileName,
+                          const int nz, const int nx, const int ny,
+                          const double dz, const double dx, const double dy,
+                          const double z0, const double x0, const double y0)
+{
+    char xdmfFile[PATH_MAX], h5flBaseName[PATH_MAX];
     hid_t h5fl, groupID;
     char dirName[PATH_MAX];
+    size_t i, lenos;
+    int ierr;
+    bool lfound;
+    memset(xdmfFile, 0, PATH_MAX*sizeof(char));
+    memset(&grid,    0, sizeof(struct fteikH5Grid_struct));
     // Check the file name makes sense
     if (fileName == NULL)
     {
         fprintf(stderr, "%s: Error file name is NULL\n", __func__);
         return -1;
     }
-    if (strlen(fileName) == 0)
+    lenos = strlen(fileName);
+    if (lenos == 0)
     {
         fprintf(stderr, "%s: Error file name is blank\n", __func__);
         return -1;
     }
+    lfound = false;
+    for (i=0; i<lenos; i++)
+    {
+        if (strcasecmp(&fileName[i], ".hdf5\0") == 0)
+        {
+            strncpy(xdmfFile, fileName, i); 
+            strcat(xdmfFile, ".xdmf\0");
+            lfound = true;
+        }
+        if (strcasecmp(&fileName[i], ".h5\0") == 0)
+        {
+            strncpy(xdmfFile, fileName, i);
+            strcat(xdmfFile, ".xdmf\0");
+            lfound = true;
+        }
+    }
+    if (!lfound)
+    {
+        fprintf(stderr, "%s: Couldn't create xdmf file name\n", __func__);
+        return -1;
+    }
+    fteik_os_basename_work(fileName, h5flBaseName);
     // Does the output directory exist?
     fteik_os_dirname_work(fileName, dirName);
     if (!fteik_os_path_isdir(dirName))
@@ -54,18 +131,38 @@ int fteik_h5io_initialize(const char *fileName)
     // Directory for the travel times
     groupID = H5Gcreate2(h5fl, TRAVELTIMES_GROUP,
                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
- 
     H5Fclose(h5fl);
+    // Initialize the xdmf file 
+    strcpy(grid.h5File, h5flBaseName); 
+    ierr = fteik_xdmfGrid_initialize(xdmfFile,
+                                     nx, ny, nz,
+                                     dx, dy, dz,
+                                     x0, y0, z0,
+                                     &grid.xdmf);
+    if (ierr != 0)
+    {
+         fprintf(stderr, "%s: Error initializing xdmf file\n", __func__);
+         return -1;
+    }
+    grid.nx = nx; 
+    grid.ny = ny; 
+    grid.nz = nz; 
+    grid.x0 = x0; 
+    grid.y0 = y0; 
+    grid.z0 = z0; 
+    grid.dx = dx; 
+    grid.dy = dy; 
+    grid.dz = dz; 
+    grid.linit = true;
     return 0;    
-
 }
-
+//============================================================================//
+/*
 int fteik_h5io_writeGeometry(const hid_t fileID,
                              const int nz, const int nx, const int ny,
                              const double dz, const double dx, const double dy,
                              const double z0, const double x0, const double y0)
 {
-    const char *fcnm = "fteik_h5io_writeGeometry\0";
     double *xlocs, *ylocs, *zlocs;
     hid_t groupID;
     int *connect, i, ielem, ierr, ix, iy, iz, nelem, nnodes;
@@ -117,25 +214,25 @@ int fteik_h5io_writeGeometry(const hid_t fileID,
     ierr += h5io_writeArray64f(groupID, "xLocations", nnodes, xlocs);
     if (ierr != 0)
     {
-        printf("%s: Failed to write xLocations\n", fcnm);
+        printf("%s: Failed to write xLocations\n", __func__);
         goto ERROR;
     }
     ierr += h5io_writeArray64f(groupID, "yLocations", nnodes, ylocs);
     if (ierr != 0)
     {
-        printf("%s: Failed to write yLocations\n", fcnm);
+        printf("%s: Failed to write yLocations\n", __func__);
         goto ERROR;
     }
     ierr += h5io_writeArray64f(groupID, "zLocations", nnodes, zlocs);
     if (ierr != 0)
     {
-        printf("%s: Failed to write zLocations\n", fcnm);
+        printf("%s: Failed to write zLocations\n", __func__);
         goto ERROR;
     }
     ierr += h5io_writeArray32i(groupID, "Connectivity", 8*nelem, connect);
     if (ierr != 0)
     {
-        printf("%s: Failed to write Connectivity\n", fcnm);
+        printf("%s: Failed to write Connectivity\n", __func__);
         goto ERROR;
     }
 ERROR:; 
@@ -147,12 +244,13 @@ ERROR:;
     H5Gclose(groupID);
     return ierr;
 }
+*/
 //============================================================================//
 int fteik_h5io_writeLevelScheduleF(const int64_t h5fl, const int sweep,
                                    const int nz, const int nx, const int ny,
                                    const int16_t *__restrict__ levelSchedule)
 {
-    char dataName[64];
+    char dataName[64], dataNameOut[PATH_MAX];
     hid_t fileID, groupID;
     herr_t status;
     int ierr, ngrd;
@@ -181,6 +279,14 @@ int fteik_h5io_writeLevelScheduleF(const int64_t h5fl, const int sweep,
         fprintf(stderr, "%s: Error closing group\n", __func__);
         ierr = 1;
     }
+    memset(dataNameOut, 0, PATH_MAX*sizeof(char));
+    sprintf(dataNameOut, "%s/%s", LEVEL_SCHEDULER_GROUP, dataName);
+    ierr = fteik_xdmfGrid_add(grid.h5File, dataNameOut, 
+                              false, FTEIK_INT32_T, &grid.xdmf); 
+    if (ierr != 0)
+    {
+        fprintf(stderr, "%s: Error adding %s\n", __func__, dataNameOut);
+    }
     return ierr;
 }
 //============================================================================//
@@ -188,6 +294,7 @@ int fteik_h5io_writeTravelTimes32fF(const int64_t h5fl, const char *ttName,
                                     const int nz, const int nx, const int ny,
                                     const float *__restrict__ tt)
 {
+    char ttNameOut[PATH_MAX];
     hid_t fileID, groupID;
     herr_t status;
     int ngrd;
@@ -223,6 +330,14 @@ int fteik_h5io_writeTravelTimes32fF(const int64_t h5fl, const char *ttName,
         fprintf(stderr, "%s: Error closing group\n", __func__);
         ierr = 1;
     }
+    memset(ttNameOut, 0, PATH_MAX*sizeof(char));
+    sprintf(ttNameOut, "%s/%s", TRAVELTIMES_GROUP, ttName);
+    ierr = fteik_xdmfGrid_add(grid.h5File, ttNameOut,
+                              false, FTEIK_FLOAT32_T, &grid.xdmf); 
+    if (ierr != 0)
+    {   
+        fprintf(stderr, "%s: Error adding %s\n", __func__, ttNameOut);
+    }
     return ierr;
 }
 //============================================================================//
@@ -232,6 +347,7 @@ int fteik_h5io_writeVelocityModel16iF(const int64_t h5fl, const char *velName,
 {
     hid_t fileID, groupID;
     herr_t status;
+    char velNameOut[PATH_MAX];
     int nelem;
     int ierr;
     // Require the group exists and if not make it 
@@ -265,14 +381,22 @@ int fteik_h5io_writeVelocityModel16iF(const int64_t h5fl, const char *velName,
         fprintf(stderr, "%s: Error closing group\n", __func__);
         ierr = 1;
     }
+    memset(velNameOut, 0, PATH_MAX*sizeof(char));
+    sprintf(velNameOut, "%s/%s", VELMODEL_GROUP, velName); 
+    ierr = fteik_xdmfGrid_add(grid.h5File, velNameOut,
+                              true, FTEIK_INT16_T, &grid.xdmf); 
+    if (ierr != 0)
+    {   
+        fprintf(stderr, "%s: Error adding %s\n", __func__, velNameOut);
+    }
     return ierr;
 }
 //============================================================================//
-int fteik_h5io_writeVelocityModel64f(const hid_t fileID, const char *velName,
-                                     const int nz, const int nx, const int ny,
-                                     const double *__restrict__ vel)
+/*
+int fteik_h5io_writeVelocityModel64fF(const hid_t fileID, const char *velName,
+                                      const int nz, const int nx, const int ny,
+                                      const double *__restrict__ vel)
 {
-    const char *fcnm = "fteik_h5io_writeVelocityModel64f\0";
     int ierr, nelem;
     hid_t groupID;
     if (H5Lexists(fileID, "/VelocityModel", H5P_DEFAULT) > 0)
@@ -288,20 +412,21 @@ int fteik_h5io_writeVelocityModel64f(const hid_t fileID, const char *velName,
     ierr = h5io_writeArray64f(groupID, velName, nelem, vel); 
     if (ierr != 0)
     {
-        printf("%s: Failed to write velocity model %s\n", fcnm, velName);
+        printf("%s: Failed to write velocity model %s\n", __func__, velName);
     }
     H5Gclose(groupID);
     return ierr;
 }
+*/
 //============================================================================//
 /*!
  * @brief Writes the travel times for the given model.
  */
+/*
 int fteik_h5io_writeTravelTimes64f(const hid_t fileID, const char *ttName,
                                    const int nz, const int nx, const int ny, 
                                    const double *__restrict__ tt)
 {
-    const char *fcnm = "fteik_h5io_writeTravelTimes64f\0";
     int ierr, nnodes;
     hid_t groupID;
     if (H5Lexists(fileID, "/TravelTimes", H5P_DEFAULT) > 0)
@@ -317,17 +442,18 @@ int fteik_h5io_writeTravelTimes64f(const hid_t fileID, const char *ttName,
     ierr = h5io_writeArray64f(groupID, ttName, nnodes, tt); 
     if (ierr != 0)
     {   
-        printf("%s: Failed to write travel time model %s\n", fcnm, ttName);
+        printf("%s: Failed to write travel time model %s\n", __func__, ttName);
     }   
     H5Gclose(groupID);
     return ierr;
 }
+*/
 //============================================================================//
+/*
 int fteik_h5io_writeLevelSet32i(const hid_t fileID, const char *levelSetName,
                                 const int nz, const int nx, const int ny,
                                 const int *__restrict__ level)
 {
-    const char *fcnm = "fteik_h5io_writeLevelSet32i\0";
     int ierr, nnodes;
     hid_t groupID;
     if (H5Lexists(fileID, "/LevelSet", H5P_DEFAULT) > 0)
@@ -343,10 +469,16 @@ int fteik_h5io_writeLevelSet32i(const hid_t fileID, const char *levelSetName,
     ierr = h5io_writeArray32i(groupID, levelSetName, nnodes, level);
     if (ierr != 0)
     {
-        printf("%s: Failed to write levelset %s\n", fcnm, levelSetName);
+        printf("%s: Failed to write levelset %s\n", __func__, levelSetName);
+    }
+    ierr = fteik_xdmfGrid_add(grid.h5File, levelSetName,
+                              false, FTEIK_INT32_T, &grid.xdmf);
+    if (ierr != 0)
+    {
+        fprintf(stderr, "%s: Error adding %s\n", __func__, levelSetName);
     }
     H5Gclose(groupID);
     return ierr;
 }
 //============================================================================//
-
+*/

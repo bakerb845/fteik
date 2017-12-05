@@ -6,6 +6,7 @@
 #include <omp.h>
 #include "fteik.h"
 #include "fteik_analytic.h"
+#include "fteik_io.h"
 #include "fteik_h5io.h"
 #include "fteik_graph.h"
 #include "fteik_fortran.h"
@@ -26,11 +27,13 @@ int graph_createLevelStructure(const int n, const int *__restrict__ xadj,
                                const int *__restrict__ adjncy,
                                int *nLevels, int **levelPtrOut,
                                int **ijkvOut, int **n2lOut);
+/*
 int fteik_io_readVelocityModel(const char *fileName,
                                int *ncellz, int *ncellx, int *ncelly,
                                double *dz, double *dx, double *dy,
                                double *z0, double *x0, double *y0,
                                double *__restrict__ vel[]);
+*/
 int fteik_xdmf_writeVelocityModel(const int job, 
                                   const char *h5flName,
                                   const char *velModel,

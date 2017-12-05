@@ -24,7 +24,11 @@ extern "C"
 #endif
 
 int fteik_h5io_initializeF(const char *fileName);
-int fteik_h5io_initialize(const char *fileName);
+int fteik_h5io_finalizeF(void);
+int fteik_h5io_initialize(const char *fileName,
+                          const int nz, const int nx, const int ny,
+                          const double dz, const double dx, const double dy,
+                          const double z0, const double x0, const double y0);
 int fteik_h5io_writeVelocityModelF(const char *dataName);
 int fteik_h5io_writeTravelTimesF(const char *dataName);
 int fteik_h5io_writeLevelSchedulesF(void);

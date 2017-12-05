@@ -473,6 +473,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @param[in] nEventsIn    Number of events to locate.
 !>
+!>    @param[out] ierr        0 indicates success. 
+!>
 !>    @author Ben Baker
 !>
 !>    @copyright MIT
@@ -584,12 +586,7 @@ MODULE FTEIK_LOCATE
 !>
 !>    @param[in] evnmbr   Event number.
 !>
-!>    @param[out] tobj    Objective function at all grid points.  This is a vector of
-!>                        dimension [ngrd].
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
+!>    @copyright Ben Baker distributed under the MIT license.
 !>
       SUBROUTINE locate_computeL2ObjectiveFunction32fF(evnmbr) &
       BIND(C, NAME='locate_computeL2ObjectiveFunction32fF')

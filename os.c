@@ -142,6 +142,48 @@ int fteik_os_dirname_work(const char *path, char dirName[PATH_MAX])
     return 0;
 }
 //============================================================================//
+/*!
+ * @brief Breaks a null-terminated pathname string into the file.
+ *        For example, /usr/include/lapacke.h will return lapacke.h
+ *
+ * @param[in] path       Name of file path to be parsed.
+ *
+ * @param[out] baseName  Name of the file in the path.
+ * 
+ * @result 0 indicates success.
+ *
+ * @author Ben Baker
+ *
+ * @copyright ISTI distributed under Apache 2.
+ *
+ */
+int fteik_os_basename_work(const char *path, char baseName[PATH_MAX])
+{
+    char *bname, *temp;
+    size_t lenos;
+    // Initialize output
+    memset(baseName, 0, PATH_MAX*sizeof(char));
+    // Input string is NULL - this may yield some weirdness
+    if (path == NULL)
+    {
+        strcpy(baseName, ".\0");
+        return -1;
+    }
+    // Save copy of string - glibc can destroy it
+    bname = NULL;
+    lenos = strlen(path);
+    temp = (char *) calloc(lenos+1, sizeof(char));
+    strcpy(temp, path);
+    bname = basename(temp);
+    if (bname != NULL)
+    {
+        lenos = strlen(bname);
+        strncpy(baseName, bname, MIN(lenos, PATH_MAX));
+    }
+    free(temp);
+    return 0;
+}
+//============================================================================//
 /*! 
  * Makes a directory named dirnm with full permissions.
  *

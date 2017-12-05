@@ -6,17 +6,29 @@ MODULE FTEIK_H5IO64F
 
 
     INTERFACE
+
          INTEGER(C_SIZE_T) FUNCTION strlenF(fileName) &
          BIND(C, NAME='strlen')
          USE ISO_C_BINDING
          CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
          END FUNCTION
 
-         INTEGER(C_INT) FUNCTION fteik_h5io_initialize(fileName) &
+         INTEGER(C_INT) FUNCTION fteik_h5io_finalize() &
+         BIND(C, NAME='fteik_h5io_finalize')
+         USE ISO_C_BINDING
+         END FUNCTION
+
+         INTEGER(C_INT) &
+         FUNCTION fteik_h5io_initialize(fileName,   &
+                                        nz, nx, ny, &
+                                        dz, dx, dy, &
+                                        z0, x0, y0) &
          BIND(C, NAME='fteik_h5io_initialize')
          USE ISO_C_BINDING
          IMPLICIT NONE 
          CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+         REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, dy, z0, x0, y0
+         INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
          END FUNCTION
 
          INTEGER(C_INT64_T) FUNCTION fteik_h5io_openFileReadWriteF(fileName) &
@@ -87,10 +99,20 @@ MODULE FTEIK_H5IO64F
 !----------------------------------------------------------------------------------------!
 !                                 Begin the Code                                         !
 !----------------------------------------------------------------------------------------!
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Initializes the HDF5 archive.
+!>
+!>    @param[in] fileName   Name of HDF5 archive.
+!>
+!>    @result 0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       INTEGER(C_INT) FUNCTION fteik_h5io_initializeF(fileName) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_initializeF')
-      USE FTEIK_MODEL64F, ONLY : lhaveModel
+      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, z0, x0, y0, dx, dy, dz, lhaveModel
       USE ISO_C_BINDING
       IMPLICIT NONE
       CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
@@ -102,15 +124,52 @@ MODULE FTEIK_H5IO64F
       ENDIF
       fname(:) = C_NULL_CHAR
       linitH5FL = .FALSE.
-      ierr = fteik_h5io_initialize(fileName)
+      ierr = fteik_h5io_initialize(fileName,   &
+                                   nz, nx, ny, &
+                                   dz, dx, dy, &
+                                   z0, x0, y0)
       IF (ierr /= 0) WRITE(*,*) 'Error initializing file'
       lenos = strlenF(fileName)
       fname(1:lenos) = fileName(1:lenos)
       linitH5FL = .TRUE.
       RETURN
       END
-
-      PURE SUBROUTINE fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Finalizes the HDF5 archive and writes the XDMF file.
+!>
+!>    @result 0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      INTEGER(C_INT) FUNCTION fteik_h5io_finalizeF() &
+      RESULT(ierr) BIND(C, NAME='fteik_h5io_finalizeF')
+      ierr = fteik_h5io_finalize();
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Writes the level of each node in the grid.
+!>
+!>    @param[in] nx        Number of x grid points in travel time field.
+!>    @param[in] ny        Number of y grid points in travel time field.
+!>    @param[in] ngrd      Number of grid points in travel time field.
+!>    @param[in] nLevels   Number of levels in level scheduling method.
+!>    @param[in] levelPtr  Maps to the first node of the level'th level.  This is
+!>                         a vector of dimension [nLevels+1]. 
+!>    @param[in] ijkv      Contains the (i, j, k, level) of each node in the solver.
+!>                         This is a vector of dimension [4 x ngrd] with leading
+!>                         dimension 4.
+!>
+!>    @param[out] levels   The level of each grid point in the mesh.  This is a 
+!>                         vector of dimension [nz x ny x nx = ngrd] with leading
+!>                         dimension nz.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      PURE SUBROUTINE fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels, &
                                              levelPtr, ijkv, levels) &
       BIND(C, NAME='fteik_h5io_ijkv2levelsF')
       USE ISO_C_BINDING
@@ -131,7 +190,16 @@ MODULE FTEIK_H5IO64F
     1 CONTINUE
       RETURN
       END
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Convenience function to write all the levels schedules in the solver
+!>           for all 8 sweeps to the archive.
+!>
+!>    @result 0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       INTEGER(C_INT) FUNCTION fteik_h5io_writeLevelSchedulesF( ) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeLevelSchedulesF')
       USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
@@ -193,7 +261,17 @@ MODULE FTEIK_H5IO64F
       ierr2 = fteik_h5io_closeFileF(h5fl)
       RETURN
       END
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Writes the travel time field in the solver to the archive.
+!>
+!>    @param[in] dataName   Name of travel time field to write.
+!>
+!>    @result 0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       INTEGER(C_INT) FUNCTION fteik_h5io_writeTravelTimesF(dataName) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
       !USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF !fteik_model_grid2indexF
@@ -252,7 +330,15 @@ MODULE FTEIK_H5IO64F
       ierr2 = fteik_h5io_closeFileF(h5fl)
       RETURN
       END
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Writes the velocity model in the solver to the archive.
+!>
+!>    @param[in] dataName   Name of velocity file to write.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       INTEGER(C_INT) FUNCTION fteik_h5io_writeVelocityModelF(dataName) &
                      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeVelocityModelF')
       USE FTEIK_MODEL64F, ONLY : slow, ncell, nx, ny, nz, nzm1, nzm1_nxm1, lhaveModel 

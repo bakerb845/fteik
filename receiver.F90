@@ -117,6 +117,7 @@ MODULE FTEIK_RECEIVER64F
 !>    @brief Utility function for determining the number of receivers set in the model.
 !>
 !>    @param[out] nrecOut  Number of receivers set in module.
+!>    @param[out] ierr     0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>

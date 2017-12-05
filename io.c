@@ -192,7 +192,7 @@ int fteik_io_readVelocityModel(const char *fileName,
         fprintf(stderr, "%s: File %s doesn't exist\n", __func__, fileName);
         return -1;
     }
-    printf("%s: Loading %s...\n", __func__, fileName); //basename(fileName));
+    fprintf(stdout, "\n%s: Loading %s...\n", __func__, fileName);
     // Open file and check the p velocity model exists
     fileID = H5Fopen(fileName, H5F_ACC_RDONLY, H5P_DEFAULT);
     lisvp = true;
@@ -272,7 +272,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     rank = H5Sget_simple_extent_ndims(dataSpace);
     if (rank != 3)
     {
-        printf("Error model rank=%d must be 3D\n", rank);
+        fprintf(stderr, "%s: Error model rank=%d must be 3D\n", __func__, rank);
         ierr = 1;
         goto ERROR;
     }
@@ -285,7 +285,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     nCell = (*ncellx)*(*ncelly)*(*ncellz);
     if (nCell < 1)
     {
-        printf("%s: No data to read!\n", __func__);
+        fprintf(stderr, "%s: No data to read!\n", __func__);
         ierr = 1;
         goto ERROR;
     } 
@@ -297,7 +297,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     memset(vin, 0, (size_t) nCell*sizeof(double));
     if (H5Tequal(dataType, H5T_NATIVE_INT16))
     {
-        printf("Reading int16_t data\n");
+        fprintf(stdout, "%s: Reading int16_t velocity model...\n", __func__);
         vi2 = (int16_t *) calloc((size_t) (nCell), sizeof(int16_t));
         status = H5Dread(dataSet, H5T_NATIVE_INT16, memSpace,
                          dataSpace, H5P_DEFAULT, vi2);
@@ -305,7 +305,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     else if (H5Tequal(dataType, H5T_NATIVE_INT32))
     {
-        printf("Reading int32_t data\n");
+        fprintf(stdout, "%s: Reading int32_t velocity model...\n", __func__);
         vi4 = (int32_t *) calloc((size_t) (nCell), sizeof(int32_t));
         status = H5Dread(dataSet, H5T_NATIVE_INT32, memSpace, 
                          dataSpace, H5P_DEFAULT, vi4);
@@ -313,7 +313,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     else if (H5Tequal(dataType, H5T_NATIVE_FLOAT))
     {
-        printf("Reading float data\n");
+        fprintf(stdout, "%s: Reading float velocity model...\n", __func__);
         v4 = (float *) calloc((size_t) (nCell), sizeof(float));
         status = H5Dread(dataSet, H5T_NATIVE_FLOAT, memSpace, 
                          dataSpace, H5P_DEFAULT, v4);
@@ -321,7 +321,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     else if (H5Tequal(dataType, H5T_NATIVE_DOUBLE))
     {
-        printf("Double not yet done\n");
+        fprintf(stdout, "%s: Reading double velocity model...\n", __func__);
         v8 = (double *) calloc((size_t) (nCell), sizeof(double));
         status = H5Dread(dataSet, H5T_NATIVE_DOUBLE, memSpace, 
                          dataSpace, H5P_DEFAULT, v8);
@@ -329,7 +329,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     else
     {
-        printf("Unknown datatype\n");
+        fprintf(stderr, "%s: Unknown datatype\n", __func__);
         status =-1;
     }
     H5Sclose(memSpace);
@@ -340,15 +340,17 @@ int fteik_io_readVelocityModel(const char *fileName,
         ierr = 1;
         goto ERROR;
     }
-    printf("Number of cells (nz,nx,ny)=(%d,%d,%d)\n",
-           *ncellz, *ncellx, *ncelly);
-    printf("Model origin (z,x,y)=(%f,%f,%f) meters\n", *z0, *x0, *y0);
-    printf("Cell spacing in (z,x,y)=(%f,%f,%f) meters\n", *dz ,*dx, *dy);
+    fprintf(stdout, "%s: Number of cells (nz,nx,ny)=(%d,%d,%d)\n",
+            __func__, *ncellz, *ncellx, *ncelly);
+    fprintf(stdout, "%s: Model origin (z,x,y)=(%f,%f,%f) meters\n",
+            __func__, *z0, *x0, *y0);
+    fprintf(stdout, "%s: Cell spacing in (z,x,y)=(%f,%f,%f) meters\n",
+            __func__, *dz ,*dx, *dy);
     lzDown = true;
     if (!zDown){lzDown = false;}
     if ((rightHanded && !lzDown) || (!(rightHanded) && lzDown))
     {
-        printf("I don't know how to unpack this model\n");
+        fprintf(stderr, "%s: I dont know how to unpack this model\n", __func__);
         ierr = 1;
         goto ERROR;
     }
@@ -363,14 +365,16 @@ int fteik_io_readVelocityModel(const char *fileName,
     }
     if (vmin <= 0.0)
     {
-        printf("Error minimum velocity %f is not positive\n", vmin);
+        fprintf(stdout, "%s: Error minimum velocity %f is not positive\n",
+                __func__, vmin);
         ierr = 1;
     }
     else
     {
-         printf("Maximum velocity is %f m/s\n", vmax);
-         printf("Minimum velocity is %f m/s\n", vmin);
+        fprintf(stdout, "%s: Minimum velocity is %f m/s\n", __func__, vmin);
+        fprintf(stdout, "%s: Maximum velocity is %f m/s\n", __func__, vmax);
     }
+    fprintf(stdout, "\n");
 ERROR:;
     if (vi2 != NULL){free(vi2);}
     if (vi4 != NULL){free(vi4);}
@@ -391,7 +395,7 @@ static void unpackInt16ModelToDouble(const bool lzDown,
                                      double *__restrict__ vin)
 {
     int indx, ix, iy, iz, jndx;
-    if (!lzDown)
+    if (lzDown)
     {
         for (iy=0; iy<ny; iy++)
         {
