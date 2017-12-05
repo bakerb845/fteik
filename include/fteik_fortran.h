@@ -5,6 +5,7 @@
 #include <mpi.h>
 #endif
 #include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -49,8 +50,9 @@ void fteik_receiver_initialize64fF(const int nrec,
                                    const double *__restrict__ z,
                                    const double *__restrict__ x,
                                    const double *__restrict__ y, int *ierr);
-void fteik_receiver_getTravelTimes64fF(const int nrec,
-                                       double *__restrict__ ttr, int *ierr);
+void fteik_receiver_getTravelTimes64fF(const int nrec, const int ngrd,
+                                       const double ttimes[], double ttr[],
+                                       int *ierr);
 void fteik_receiver_finalizeF(void);
 
 #ifdef FTEIK_USE_MPI
@@ -94,6 +96,14 @@ void fteik_solver_setSources64fF(const int nsrc,
                                  const double *__restrict__ xsrc,
                                  const double *__restrict__ ysrc,
                                  int *ierr);
+void fteik_solver_getTravelTimes64fF(const int nrec, double ttr[], int *ierr);
+void fteik_solver_getNumberOfSources(int *nsrc, int *ierr);
+void fteik_solver_getNumberOfReceivers(int *nrec, int *ierr);
+void fteik_solver_setReceivers64fF(const int nrec,
+                                   const double *__restrict__ zrec,
+                                   const double *__restrict__ xrec,
+                                   const double *__restrict__ yrec,
+                                   int *ierr);
 void fteik_solver_solveSourceLSMF(const int isrc, int *ierr);
 //----------------------------------------------------------------------------//
 //                             Locator Module                                 //

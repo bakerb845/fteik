@@ -24,6 +24,7 @@ MODULE FTEIK_MODEL64F
   INTEGER(C_INT), PROTECTED, SAVE :: nzm1 =-1      !< =(nz - 1)
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveModel = .FALSE. !< If true slowness model 
                                                            !> was set.
+
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                 Begin the Code                                         !
@@ -427,7 +428,8 @@ MODULE FTEIK_MODEL64F
 !>
       PURE INTEGER(C_INT)                                       &
       FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx)        &
-      BIND(C, NAME='fteik_model_grid2indexF') RESULT(grid2indexF)
+      BIND(C, NAME='fteik_model_grid2indexF')                   &
+      RESULT(grid2indexF)
       !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -452,7 +454,7 @@ MODULE FTEIK_MODEL64F
 !>    @copyright MIT
 !>
       PURE SUBROUTINE fteik_model_index2gridF(igrd, i, j, k, ierr) &
-                      BIND(C, NAME='fteik_model_index2gridF')
+      BIND(C, NAME='fteik_model_index2gridF')
       !$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
@@ -490,8 +492,8 @@ MODULE FTEIK_MODEL64F
 !>
       PURE INTEGER(C_INT)                                             &
       FUNCTION fteik_model_velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
-                           BIND(C, NAME='fteik_model_velGrid2indexF') &
-                           RESULT(velGrid2IndexF)
+      BIND(C, NAME='fteik_model_velGrid2indexF')                      &
+      RESULT(velGrid2IndexF)
       !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
       USE ISO_C_BINDING
       IMPLICIT NONE 

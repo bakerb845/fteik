@@ -8,14 +8,17 @@ MODULE FTEIK_SOLVER64F
   !> Maps from the level'th level to the first node node in the level.
   !> This has dimension [nLevels+1].
   INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: levelPtr(:)
-  INTEGER(C_INT), ALLOCATABLE, SAVE :: ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
-                                       ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
-  LOGICAL(C_BOOL), ALLOCATABLE, SAVE :: lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
-                                        lupd5(:), lupd6(:), lupd7(:), lupd8(:)
-  LOGICAL(C_BOOL), ALLOCATABLE, SAVE :: lupdInit1(:), lupdInit2(:), &
-                                        lupdInit3(:), lupdInit4(:), &
-                                        lupdInit5(:), lupdInit6(:), &
-                                        lupdInit7(:), lupdInit8(:)
+  INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE ::         &
+                  ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
+                  ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
+  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE ::         &
+                   lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
+                   lupd5(:), lupd6(:), lupd7(:), lupd8(:)
+  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE ::          &
+                   lupdInit1(:), lupdInit2(:), &
+                   lupdInit3(:), lupdInit4(:), &
+                   lupdInit5(:), lupdInit6(:), &
+                   lupdInit7(:), lupdInit8(:)
   !> Defines the transition from the spherical to the Cartesian solver solver
   !> during the initialization phase.  This has units of grid points.
   REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
@@ -623,7 +626,123 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       CALL fteik_source_initialize64fF(nsrc, zsrc, xsrc, ysrc, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources: Failed to set source'
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources64fF: Failed to set source'
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Utility routine to return the number of sources.
+!>
+!>    @param[out] nsrc   Number of sources.
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver_getNumberOfSources(nsrc, ierr) & 
+      BIND(C, NAME='fteik_solver_getNumberOfSources')
+      USE FTEIK_SOURCE64F, ONLY : fteik_source_getNumberOfSources
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: nsrc, ierr
+      CALL fteik_source_getNumberOfSources(nsrc, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_solver_getNumberOfSources: No sources initialized!'
+         RETURN
+      ENDIF 
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Extracts the travel times at the receivers.
+!>
+!>    @param[in] nrec   Number of receivers.
+!>
+!>    @param[out] ttr   Travel times (seconds) at the receivers.  This is a vector of
+!>                      dimension [nrec].
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver_getTravelTimes64fF(nrec, ttr, ierr) &
+      BIND(C, NAME='fteik_solver_getTravelTimes64fF')
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64fF
+      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
+      REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrec)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (nrec <= 0) THEN
+         WRITE(*,*) 'fteik_solver_getTravelTimes64fF: No receivers'
+         RETURN
+      ENDIF
+      IF (.NOT.lhaveTimes) THEN
+         WRITE(*,*) 'fteik_solver_getTravelTimes64fF: Travel times not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL fteik_receiver_getTravelTimes64fF(nrec, ngrd, ttimes, ttr, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_solver_getTravelTimes64fF: Error getting travel times'
+         ierr = 1
+      ENDIF
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Utility routine to return the number of receivers.
+!>
+!>    @param[out] nrec   Number of receivers.
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver_getNumberOfReceivers(nrec, ierr) &
+      BIND(C, NAME='fteik_solver_getNumberOfReceivers')
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getNumberOfReceivers
+      USE ISO_C_BINDING
+      INTEGER(C_INT), INTENT(OUT) :: nrec, ierr
+      ierr = 0
+      CALL fteik_receiver_getNumberOfReceivers(nrec, ierr)
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the receivers in the model.
+!>
+!>    @param[in] nrec    Number of receivers to set.  
+!>    @param[in] zrec    z locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>    @param[in] xrec    x locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>    @param[in] yrec    y locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver_setReceivers64fF(nrec, zrec, xrec, yrec, &
+                                               ierr)                   &
+      BIND(C, NAME='fteik_solver_setReceivers64fF')
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64fF
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
+      REAL(C_DOUBLE), INTENT(IN) :: zrec(nrec), xrec(nrec), yrec(nrec)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ! It's actually safe to have no receivers
+      ierr = 0
+      IF (nrec < 1) THEN
+         WRITE(*,*) 'fteik_solver_setReceivers64fF: No receivers to set'
+         RETURN
+      ENDIF
+      CALL fteik_receiver_initialize64fF(nrec, zrec, xrec, yrec, ierr)
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setReceivers64fF: Failed to set receivers'
       RETURN
       END
 !                                                                                        !
@@ -737,7 +856,7 @@ MODULE FTEIK_SOLVER64F
       CALL CPU_TIME(t1)
 print *, 'solver time:', t1 - t0 
 print *, minval(ttimes), maxval(ttimes)
-
+      lhaveTimes = .TRUE.
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE

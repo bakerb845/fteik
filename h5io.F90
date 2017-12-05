@@ -1,12 +1,101 @@
+MODULE FTEIK_H5IO64F
+    USE ISO_C_BINDING
+    IMPLICIT NONE
+    CHARACTER(C_CHAR), PRIVATE, SAVE :: fname(4096)
+    LOGICAL(C_BOOL), PRIVATE, SAVE :: linitH5FL  
+
+
+    INTERFACE
+         INTEGER(C_SIZE_T) FUNCTION strlenF(fileName) &
+         BIND(C, NAME='strlen')
+         USE ISO_C_BINDING
+         CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+         END FUNCTION
+
+         INTEGER(C_INT) FUNCTION fteik_h5io_initialize(fileName) &
+         BIND(C, NAME='fteik_h5io_initialize')
+         USE ISO_C_BINDING
+         IMPLICIT NONE 
+         CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+         END FUNCTION
+
+         INTEGER(C_INT64_T) FUNCTION fteik_h5io_openFileReadWriteF(fileName) &
+         BIND(C, NAME='h5io_openFileReadWriteF')
+         USE ISO_C_BINDING 
+         IMPLICIT NONE 
+         CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+         END FUNCTION
+
+         INTEGER(C_INT) &
+         FUNCTION fteik_h5io_writeLevelScheduleF(h5fl, sweep,   &
+                                                 nz, nx, ny,    &
+                                                 levelSchedule) &
+         BIND(C, NAME='fteik_h5io_writeLevelScheduleF')
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+         INTEGER(C_INT), INTENT(IN), VALUE :: nz, nx, ny, sweep
+         INTEGER(C_INT16_T), INTENT(IN) :: levelSchedule(nz*nx*ny)
+         END FUNCTION
+
+         INTEGER(C_INT) &
+         FUNCTION fteik_h5io_writeTravelTimes32fF(h5fl, ttName, &
+                                                  nz, nx, ny,   &
+                                                  tt)           &
+         BIND(C, NAME='fteik_h5io_writeTravelTimes32fF')
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+         CHARACTER(C_CHAR), INTENT(IN) :: ttName(*)
+         INTEGER(C_INT), INTENT(IN), VALUE :: nx, ny, nz
+         REAL(C_FLOAT), INTENT(IN) :: tt(nx*ny*nz)
+         END FUNCTION
+
+         INTEGER(C_INT) FUNCTION fteik_h5io_closeFileF(h5fl) &
+         BIND(C, NAME='h5io_closeFileF')
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+         END FUNCTION
+
+         INTEGER(C_INT) FUNCTION h5io_writeArray16iF(fid, dataName, n, x) &
+         BIND(C, NAME='h5io_writeArray16iF')
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT64_T), INTENT(IN), VALUE :: fid
+         INTEGER(C_INT), INTENT(IN), VALUE :: n
+         CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
+         INTEGER(C_INT16_T), INTENT(IN) :: x(n)
+         END FUNCTION
+
+         INTEGER(C_INT) FUNCTION fteik_h5io_writeVelocityModel16iF(h5fl, velName, &
+                                                                   nz, nx, ny,    &
+                                                                   vel)           &
+         BIND(C, NAME='fteik_h5io_writeVelocityModel16iF')
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
+         CHARACTER(C_CHAR), INTENT(IN) :: velName(*)
+         INTEGER(C_INT), INTENT(IN), VALUE :: nx, ny, nz
+         INTEGER(C_INT16_T), INTENT(IN) :: vel((nx-1)*(ny-1)*(nz-1))
+         END FUNCTION
+
+    END INTERFACE
+
+
+    CONTAINS
+!----------------------------------------------------------------------------------------!
+!                                 Begin the Code                                         !
+!----------------------------------------------------------------------------------------!
 
       INTEGER(C_INT) FUNCTION fteik_h5io_initializeF(fileName) &
-                     RESULT(ierr) BIND(C, NAME='fteik_h5io_initializeF')
-      USE FTEIK_UTILS64F, ONLY : lhaveGrid, lhaveGridSpacing
-      USE FTEIK_H5IO, ONLY : fteik_h5io_initialize, strlenF, fname, linitH5FL
+      RESULT(ierr) BIND(C, NAME='fteik_h5io_initializeF')
+      USE FTEIK_MODEL64F, ONLY : lhaveModel
       USE ISO_C_BINDING
+      IMPLICIT NONE
       CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
       INTEGER(C_SIZE_T) lenos
-      IF (.NOT.lhaveGrid .OR. .NOT.lhaveGridSpacing) THEN
+      IF (.NOT.lhaveModel) THEN
          WRITE(*,*) 'fteik_h5io_initializeF: File not initialized'
          ierr =-1
          RETURN
@@ -21,13 +110,12 @@
       RETURN
       END
 
-      SUBROUTINE fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels, &
-                                         levelPtr, ijkv, levels) &
-                 BIND(C, NAME='fteik_h5io_ijkv2levelsF')
-      USE FTEIK_UTILS64F, ONLY : grid2indexF
+      PURE SUBROUTINE fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
+                                             levelPtr, ijkv, levels) &
+      BIND(C, NAME='fteik_h5io_ijkv2levelsF')
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN) :: ngrd, nLevels , nz, nx, ny
+      INTEGER(C_INT), INTENT(IN) :: ngrd, nLevels, nx, ny
       INTEGER(C_INT), INTENT(IN) :: levelPtr(nLevels+1), ijkv(4*ngrd)
       INTEGER(C_INT16_T), INTENT(OUT) :: levels(ngrd)
       INTEGER(C_INT) level, indx, ix, iy, iz, node
@@ -45,14 +133,11 @@
       END
 
       INTEGER(C_INT) FUNCTION fteik_h5io_writeLevelSchedulesF( ) &
-                     RESULT(ierr) BIND(C, NAME='fteik_h5io_writeLevelSchedulesF')
-      USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
-                                 ijkv5, ijkv6, ijkv7, ijkv8,    &
-                                 levelPtr, nLevels, nz, nx, ny, &
-                                 ngrd, lhaveGrid
-      USE FTEIK_H5IO, ONLY : fteik_h5io_ijkv2levelsF, fteik_h5io_writeLevelScheduleF, &
-                             fteik_h5io_openFileReadWriteF, fteik_h5io_closeFileF
-      USE FTEIK_H5IO, ONLY : fname, linitH5FL
+      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeLevelSchedulesF')
+      USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
+                                  ijkv5, ijkv6, ijkv7, ijkv8,    &
+                                  levelPtr, nLevels
+      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lhaveModel
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT16_T), ALLOCATABLE :: levels(:)
@@ -64,7 +149,7 @@
          ierr =-1 
          RETURN
       ENDIF
-      IF (.NOT.lhaveGrid) THEN
+      IF (.NOT.lhaveModel) THEN
          WRITE(*,*) 'fteik_h5io_writeLevelSchedulesF: Grid not set'
          ierr =-1 
          RETURN
@@ -74,28 +159,28 @@
       ALLOCATE(levels(ngrd))
       DO 1 sweep=1,8
          IF (sweep == 1) THEN 
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv1, levels)
          ELSEIF (sweep == 2) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv2, levels)
          ELSEIF (sweep == 3) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv3, levels)
          ELSEIF (sweep == 4) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv4, levels)
          ELSEIF (sweep == 5) THEN 
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv5, levels)
          ELSEIF (sweep == 6) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv6, levels)
          ELSEIF (sweep == 7) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv7, levels)
          ELSEIF (sweep == 8) THEN
-            CALL fteik_h5io_ijkv2levelsF(nz, nx, ny, ngrd, nLevels,  &
+            CALL fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels,  &
                                          levelPtr, ijkv8, levels)
          ENDIF
          ierr2 = fteik_h5io_writeLevelScheduleF(h5fl, sweep, nz, nx, ny, levels)
@@ -110,45 +195,49 @@
       END
 
       INTEGER(C_INT) FUNCTION fteik_h5io_writeTravelTimesF(dataName) &
-                     RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
-      USE FTEIK_UTILS64F, ONLY : ttimes, nzx, nz, nx, ny, ngrd, &
-                                 lhaveGrid, lhaveTravelTimes
-      USE FTEIK_UTILS64F, ONLY : grid2indexF
-      USE FTEIK_H5IO, ONLY : fteik_h5io_writeTravelTimes32fF, &
-                             fteik_h5io_openFileReadWriteF, fteik_h5io_closeFileF
-      USE FTEIK_H5IO, ONLY : fname, linitH5FL
+      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
+      !USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF !fteik_model_grid2indexF
+      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd
+      USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
       USE ISO_C_BINDING
       IMPLICIT NONE
+      INTERFACE
+         PURE INTEGER(C_INT)                                       &
+         FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx)        &
+         BIND(C, NAME='fteik_model_grid2indexF')                   &
+         RESULT(grid2indexF)
+         !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx 
+         END FUNCTION
+      END INTERFACE
       CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
       INTEGER(C_INT64_T) h5fl
       REAL(C_FLOAT), ALLOCATABLE :: ttout(:)
-      INTEGER(C_INT) ierr2, indx, ix, iy, iz, jndx
+      INTEGER(C_INT) ierr2, indx, ix, iy, iz, jndx, nzx
       ierr = 0
       IF (.NOT.linitH5FL) THEN
          WRITE(*,*) 'fteik_h5io_writeTravelTimesF: File not initialized'
          ierr =-1 
          RETURN
       ENDIF
-      IF (.NOT.lhaveTravelTimes) THEN
+      IF (.NOT.lhaveTimes) THEN
          WRITE(*,*) 'fteik_h5io_writeTravelTimesF: Travel times not yet computed'
          ierr =-1
          RETURN
       ENDIF
-      IF (.NOT.lhaveGrid) THEN
-         WRITE(*,*) 'fteik_h5io_writeTravelTimesF: Grid not set'
-         ierr =-1
-         RETURN
-      ENDIF
+      nzx = nz*nx
       ALLOCATE(ttout(ngrd))
       ttout(:) = 0.0
       DO 1 iz=1,nz
          DO 2 iy=1,ny
             DO 3 ix=1,nx
                !jz = nz + 1 - iz ! flip coordinate syste
-               indx = grid2indexF(iz, ix, iy, nz, nzx)
+               indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
                jndx = (iz - 1)*nx*ny + (iy - 1)*nx + ix
                !print *, jndx
-               ttout(jndx) = (ttimes(indx))
+               ttout(jndx) = REAL(ttimes(indx))
     3       CONTINUE
     2    CONTINUE
     1 CONTINUE
@@ -166,31 +255,33 @@
 
       INTEGER(C_INT) FUNCTION fteik_h5io_writeVelocityModelF(dataName) &
                      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeVelocityModelF')
-      USE FTEIK_UTILS64F, ONLY : slow, ncell, nx, ny, nz, nzm1, nzm1_nxm1, &
-                                 lhaveSlownessModel, lhaveGrid !, dx, dy, dz
-      USE FTEIK_UTILS64F, ONLY : velGrid2indexF
-      USE FTEIK_H5IO, ONLY : fteik_h5io_writeVelocityModel16iF, &
-                             fteik_h5io_openFileReadWriteF, fteik_h5io_closeFileF
-      USE FTEIK_H5IO, ONLY : fname, linitH5FL
+      USE FTEIK_MODEL64F, ONLY : slow, ncell, nx, ny, nz, nzm1, nzm1_nxm1, lhaveModel 
+      !USE FTEIK_MODEL64F, ONLY : fteik_model_velGrid2indexF
       USE ISO_C_BINDING
       IMPLICIT NONE
+      INTERFACE
+         PURE INTEGER(C_INT)                                             &
+         FUNCTION fteik_model_velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
+         BIND(C, NAME='fteik_model_velGrid2indexF')                      &
+         RESULT(velGrid2IndexF)
+         !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1
+         END FUNCTION
+      END INTERFACE
       CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
       INTEGER(C_INT64_T) h5fl
       INTEGER(C_INT16_T), ALLOCATABLE :: vout(:)
-      INTEGER ierr2, indx, ix, iy, iz, jndx!, jz
+      INTEGER ierr2, indx, ix, iy, iz, jndx
       ierr = 0
       IF (.NOT.linitH5FL) THEN
          WRITE(*,*) 'fteik_h5io_writeVelocityModelF: File not initialized'
          ierr =-1
          RETURN
       ENDIF
-      IF (.NOT.lhaveSlownessModel) THEN
+      IF (.NOT.lhaveModel) THEN
          WRITE(*,*) 'fteik_h5io_writeVelocityModelF: Velocity model not set'
-         ierr =-1
-         RETURN
-      ENDIF
-      IF (.NOT.lhaveGrid) THEN
-         WRITE(*,*) 'fteik_h5io_writeVelocityModelF: Grid not set'
          ierr =-1
          RETURN
       ENDIF
@@ -201,7 +292,7 @@
          DO 2 iy=1,ny-1
             DO 3 ix=1,nx-1
                !jz = iz !nz-iz ! flip coordinate syste
-               indx = velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1) 
+               indx = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1) 
                jndx = (iz-1)*(nx-1)*(ny-1) + (iy-1)*(nx-1) + ix
                vout(jndx) = INT(1.d0/slow(indx)  + 0.5d0)
                !print *, vout(jndx), 1.d0/slow(indx)
@@ -219,3 +310,5 @@
       ierr2 = fteik_h5io_closeFileF(h5fl)
       RETURN
       END
+
+END MODULE !FTEIK_H5IO64F

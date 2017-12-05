@@ -101,7 +101,7 @@ int test_gridConversions(void)
         {
             for (i=1; i<=nz; i++)
             {
-                indx = fteik_grid2indexF(i, j, k, nz, nzx);
+                indx = fteik_model_grid2indexF(i, j, k, nz, nzx);
                 fteik_index2gridF(indx, &i1, &j1, &k1, &ierr);
                 if (ierr != 0)
                 {

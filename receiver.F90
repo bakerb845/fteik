@@ -12,6 +12,8 @@ MODULE FTEIK_RECEIVER64F
    REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: xdr(:)
    !> y distance from DBLE(yri) . This is for the linear interpolation.
    REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: ydr(:)
+   !> Flag indicating whether or not the module has been initialized.
+   LOGICAL(C_BOOL), PRIVATE, SAVE :: linit = .FALSE. 
    !> Number of receivers.
    INTEGER(C_INT), PROTECTED, SAVE :: nrec
    INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0
@@ -75,26 +77,26 @@ MODULE FTEIK_RECEIVER64F
       DO 1 irec=1,nrecIn
          IF (z(irec) < z0 .OR. z(irec) > z0 + dz*DBLE(nz - 1)) THEN
             WRITE(*,*) 'fteik_receiver_initialize64fF: z position is out of bounds', &
-                       z(irec)
+                       z(irec), z0, z0 + dz*DBLE(nz - 1)
             ierr = ierr + 1
          ENDIF
          IF (x(irec) < x0 .OR. x(irec) > x0 + dx*DBLE(nx - 1)) THEN
             WRITE(*,*) 'fteik_receiver_initialize64fF: x position is out of bounds', &
-                       x(irec)
+                       x(irec), x0, x0 + dx*DBLE(nx - 1)
             ierr = ierr + 1
          ENDIF
          IF (y(irec) < y0 .OR. y(irec) > y0 + dy*DBLE(ny - 1)) THEN
             WRITE(*,*) 'fteik_receiver_initialize64fF: y position is out of bounds', &
-                       y(irec)
+                       y(irec), y0, y0 + dy*DBLE(ny - 1)
             ierr = ierr + 1
          ENDIF
          ! Get the grid point position
          zr = (z(irec) - z0)/dz
          xr = (x(irec) - x0)/dx
          yr = (y(irec) - y0)/dy
-         iz = INT(zr) + 1
-         ix = INT(xr) + 1
-         iy = INT(yr) + 1
+         iz = INT(zr + 1.d0) ! convert to Fortran grid point
+         ix = INT(xr + 1.d0)
+         iy = INT(yr + 1.d0)
          ! Interpolation goes from (iz,ix,iy) to (iz+1,ix+1,iy+1).  This is an issue when
          ! the receiver is at the edge.  In this case; shift it to model bounds - 1.
          ! Additionally, being extra generous, I'll force the receiver into the model
@@ -102,10 +104,11 @@ MODULE FTEIK_RECEIVER64F
          zri(irec) = MAX(1, MIN(nz-1, iz))
          xri(irec) = MAX(1, MIN(nx-1, ix))
          yri(irec) = MAX(1, MIN(ny-1, iy))
-         zdr(irec) = (z(irec) - (z0 + dz*DBLE(zri(irec)-1)))/dz
-         xdr(irec) = (x(irec) - (x0 + dx*DBLE(xri(irec)-1)))/dx
-         ydr(irec) = (y(irec) - (y0 + dy*DBLE(yri(irec)-1)))/dy
+         zdr(irec) = (z(irec) - (z0 + dz*DBLE(zri(irec)-1)))!/dz
+         xdr(irec) = (x(irec) - (x0 + dx*DBLE(xri(irec)-1)))!/dx
+         ydr(irec) = (y(irec) - (y0 + dy*DBLE(yri(irec)-1)))!/dy
     1 CONTINUE
+      linit = .TRUE.
       RETURN
       END
 !                                                                                        !
@@ -113,19 +116,25 @@ MODULE FTEIK_RECEIVER64F
 !                                                                                        !
 !>    @brief Utility function for determining the number of receivers set in the model.
 !>
-!>    @result Number of receivers set in module.
+!>    @param[out] nrecOut  Number of receivers set in module.
 !>
-!>    @author Ben Baker
+!>    @copyright Ben Baker distributed under the MIT license.
 !>
-!>    @copyright MIT
-!>
-      INTEGER(C_INT) FUNCTION fteik_receiver_getNumberOfReceiversF( )     &
-      RESULT(nrecOut) BIND(C, NAME='fteik_receiver_getNumberOfReceiversF')
+      SUBROUTINE fteik_receiver_getNumberOfReceivers(nrecOut, ierr)  &
+      BIND(C, NAME='fteik_receiver_getNumberOfReceivers')
       USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: nrecOut, ierr
+      ierr = 0
+      nrecOut = 0
+      IF (.NOT.linit) THEN
+         WRITE(*,*) 'fteik_receiver_getNumberOfReceivers: Module not initialized'
+         ierr = 1
+         RETURN
+      ENDIF
       nrecOut = nrec
       RETURN
       END
-      
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -141,15 +150,12 @@ MODULE FTEIK_RECEIVER64F
 !>                         interpolated.  Excess values will be set to FTEIK_HUGE.
 !>    @param[out] ierr     0 indicates success.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
+!>    @copyright Ben Baker distributed under the MIT license.
 !>
       SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ngrd,       &
                                                    ttimes, ttr, ierr)  &
       BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
-!     USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
       USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE FTEIK_CONSTANTS64F, ONLY : one, FTEIK_HUGE
       USE ISO_C_BINDING
@@ -162,27 +168,30 @@ MODULE FTEIK_RECEIVER64F
                      tt000, tt100, tt010, tt110, tt001, tt101, tt011, tt111, xd, yd, zd 
       INTEGER(C_INT) i, i0, i1, i2, i3, i4, i5, i6, i7
       ierr = 0
-      IF (nrec < 1) THEN
+      IF (.NOT.linit) THEN
+         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Module not initialized'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nrecIn < 1) THEN
          WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: No receivers'
-         ierr = 1
          RETURN
       ENDIF
-      IF (nrecIn < nrec) THEN
-         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Error nrecIn < nrec'
-         ierr = 1
-         RETURN
+      IF (nrecIn /= nrec) THEN
+         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Warning nrecIn /= nrec', &
+                    nrecIn, nrec
+         ttr(1:nrecIn) = FTEIK_HUGE
       ENDIF
-      IF (nrecIn > nrec) ttr(nrec+1:nrecIn) = FTEIK_HUGE
-      DO 1 i=1,nrec
+      DO 1 i=1,MIN(nrec, nrecIn)
          ! extract travel-times in cache-friendly way
          i0 = fteik_model_grid2indexF(zri(i),   xri(i),   yri(i),   nz, nzx)
          i1 = fteik_model_grid2indexF(zri(i)+1, xri(i),   yri(i),   nz, nzx)
-         i2 = fteik_model_grid2indexF(zri(i),   xri(i+1), yri(i),   nz, nzx)
-         i3 = fteik_model_grid2indexF(zri(i)+1, xri(i+1), yri(i),   nz, nzx)
+         i2 = fteik_model_grid2indexF(zri(i),   xri(i)+1, yri(i),   nz, nzx)
+         i3 = fteik_model_grid2indexF(zri(i)+1, xri(i)+1, yri(i),   nz, nzx)
          i4 = fteik_model_grid2indexF(zri(i),   xri(i),   yri(i)+1, nz, nzx)
          i5 = fteik_model_grid2indexF(zri(i)+1, xri(i),   yri(i)+1, nz, nzx)
-         i6 = fteik_model_grid2indexF(zri(i),   xri(i+1), yri(i)+1, nz, nzx)
-         i7 = fteik_model_grid2indexF(zri(i)+1, xri(i+1), yri(i)+1, nz, nzx)
+         i6 = fteik_model_grid2indexF(zri(i),   xri(i)+1, yri(i)+1, nz, nzx)
+         i7 = fteik_model_grid2indexF(zri(i)+1, xri(i)+1, yri(i)+1, nz, nzx)
          tt000 = ttimes(i0)
          tt100 = ttimes(i1)
          tt010 = ttimes(i2)
@@ -192,9 +201,9 @@ MODULE FTEIK_RECEIVER64F
          tt011 = ttimes(i6)
          tt111 = ttimes(i7)
          ! perform trilinear interpolation
-         zd = zdr(i)/dz
-         xd = xdr(i)/dx
-         yd = ydr(i)/dy
+         zd = zdr(i)/dz ! zd = (z - z0)/(z1 - z0)
+         xd = xdr(i)/dx ! xd = (x - x0)/(x1 - x0)
+         yd = ydr(i)/dy ! yd = (y - y0)/(y1 - y0)
          ! step 1 - interpolate in first direction (z)
          one_m_zd = one - zd
          c00 = tt000*one_m_zd + tt100*zd
@@ -207,6 +216,10 @@ MODULE FTEIK_RECEIVER64F
          c1 = c01*one_m_xd + c11*xd
          ! step 3 - interpolate in third direction (y)
          ttr(i) = c0*(one - yd) + c1*yd 
+!if (ttr(i) < min(tt000, tt100, tt010, tt110, tt001, tt101, tt011, tt111) .or. &
+!    ttr(i) > max(tt000, tt100, tt010, tt110, tt001, tt101, tt011, tt111)) then
+!print *, 'weird'
+!endif
     1 CONTINUE
       RETURN
       END
@@ -230,6 +243,7 @@ MODULE FTEIK_RECEIVER64F
       IF (ALLOCATED(zdr)) DEALLOCATE(zdr)
       IF (ALLOCATED(xdr)) DEALLOCATE(xdr)
       IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
+      linit = .FALSE.
       RETURN
       END
 !----------------------------------------------------------------------------------------!

@@ -499,7 +499,7 @@ MODULE FTEIK_LOCATE
 !                                                                                        !
 !>    @brief Sets the number of travel time fields.
 !>
-!>    @param[in] nobs   Number of travel time fields. 
+!>    @param[in] ntfIn  Number of travel time fields. 
 !>
 !>    @param[out] ierr  0 indicate success.
 !>

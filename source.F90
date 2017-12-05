@@ -93,7 +93,7 @@ MODULE FTEIK_SOURCE64F
       ALLOCATE(ysrc(nsrc))
       ALLOCATE(zsiv(nsrc))
       ALLOCATE(xsiv(nsrc))
-      ALLOCATE(ysiv(nsrc)) 
+      ALLOCATE(ysiv(nsrc))
       ALLOCATE(zsav(nsrc))
       ALLOCATE(xsav(nsrc))
       ALLOCATE(ysav(nsrc))
@@ -118,15 +118,15 @@ MODULE FTEIK_SOURCE64F
              ysrcLoc < zero .OR. ysrcLoc > ymax) THEN
             IF (zsrcLoc < zero .OR. zsrcLoc > zmax) THEN
                WRITE(*,*) 'fteik_source_initialize64fF: zsrc is out of bounds', &
-                          isrc, zsrcLoc, zero + z0, zmax + z0
+                          isrc, zsrcLoc + z0, zero + z0, zmax + z0
             ENDIF
             IF (xsrcLoc < zero .OR. xsrcLoc > xmax) THEN
                WRITE(*,*) 'fteik_source_initialize64fF: xsrc is out of bounds', &
-                          isrc, xsrcLoc, zero + x0, xmax + x0
+                          isrc, xsrcLoc + x0, zero + x0, xmax + x0
             ENDIF
             IF (ysrcLoc < zero .OR. ysrcLoc > ymax) THEN
                WRITE(*,*) 'fteik_source_initialize64fF: ysrc is out of bounds', &
-                          isrc, ysrcLoc, zero + y0, ymax + y0
+                          isrc, ysrcLoc + y0, zero + y0, ymax + y0
             ENDIF
             ierr = 1
             RETURN
@@ -157,32 +157,76 @@ MODULE FTEIK_SOURCE64F
             WRITE(*,*)'fteik_source_initialize64fF: Warning solver may segfault', isrc
          ENDIF
          ! Set on the arrays
-         zsrc(isrc) = zsa + z0 !zsrcIn(isrc)
-         xsrc(isrc) = xsa + x0 !xsrcIn(isrc)
-         ysrc(isrc) = ysa + z0 !ysrcIn(isrc)
+         zsrc(isrc) = DBLE(zsi - 1)*dz + z0 !zsrcIn(isrc)
+         xsrc(isrc) = DBLE(xsi - 1)*dx + x0 !xsrcIn(isrc)
+         ysrc(isrc) = DBLE(ysi - 1)*dy + y0 !ysrcIn(isrc)
          zsiv(isrc) = zsi
          xsiv(isrc) = xsi
          ysiv(isrc) = ysi
          zsav(isrc) = zsa
          xsav(isrc) = xsa
          ysav(isrc) = ysa
+print *, z0, x0, y0, zsi, xsi, ysi
+print *, dz, dx, dy, xsa
          WRITE(*,900) zsrcIn(isrc), xsrcIn(isrc), ysrcIn(isrc)
          WRITE(*,901) zsrc(isrc), xsrc(isrc), ysrc(isrc)
          WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc)),   &
                       ABS(ysrc(isrc) - ysrcIn(isrc))
+         WRITE(*,*)
     1 CONTINUE
       lhaveSource = .TRUE.
   900 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x,y)=', &
-             3F12.3, ' (m)') 
+             3F12.2, ' (m)') 
   901 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x,y)=', &
-             3F12.3, ' (m)')
+             3F12.2, ' (m)')
   902 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
-             3F12.3, ' (m)')
+             3F12.2, ' (m)')
       RETURN
       END SUBROUTINE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Utility function to extract the number of sources.
+!>
+!>    @param[out] nsrcOut   Number of sources initialized on module.
+!>    @param[out] ierr      0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_source_getNumberOfSources(nsrcOut, ierr) &
+      BIND(C, NAME='fteik_source_getNumberOfSources')
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: nsrcOut, ierr
+      ierr = 0
+      nsrcOut = 0
+      IF (.NOT.lhaveSource) THEN
+         WRITE(*,*) 'fteik_source_getNumberOfSources: Never initialized'
+         ierr = 1
+         RETURN
+      ENDIF 
+      nsrcOut = nsrc
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Utility routine which returns the source properties for the solver.
+!>
+!>    @param[in] isrc     Number number.  This is in range [1,nsrc].
+!>
+!>    @param[out] zsi     z source index in grid.
+!>    @param[out] xsi     x source index in grid.
+!>    @param[out] ysi     y source index in grid.
+!>    @param[out] zsa     z source offset from origin in grid (meters).
+!>    @param[out] xsa     x source offset from origin in grid (meters).
+!>    @param[out] ysa     y source offset from origin in grid (meters).
+!>    @param[out] szero   Slowness (s/m) at the source.
+!>    @param[out] szero2  Slowness squared (s^2/m^2) at the source.
+!>    @param[out] ierr    0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       SUBROUTINE fteik_source_getSolverInfo64fF(isrc,          &
                                                 zsi, xsi, ysi, &
                                                 zsa, xsa, ysa, &
