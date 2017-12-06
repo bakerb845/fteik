@@ -306,7 +306,7 @@ printf("%4s %10.5f\n", parms.recvNames[i], ttr[i]);
             if (parms.lwriteArchive)
             {
                 // Initialize the archive
-                if (m == 0)
+                if (m == 0 && isrc == 0)
                 {
                     fteik_h5io_initializeF(parms.archiveFile);
                     if (parms.lwriteLevels){fteik_h5io_writeLevelSchedulesF();}

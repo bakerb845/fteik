@@ -128,7 +128,10 @@ MODULE FTEIK_H5IO64F
                                    nz, nx, ny, &
                                    dz, dx, dy, &
                                    z0, x0, y0)
-      IF (ierr /= 0) WRITE(*,*) 'Error initializing file'
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'Error initializing file'
+         RETURN
+      ENDIF
       lenos = strlenF(fileName)
       fname(1:lenos) = fileName(1:lenos)
       linitH5FL = .TRUE.

@@ -922,12 +922,12 @@
             INTEGER(C_INT64_T), INTENT(IN), VALUE :: h5fl
             END FUNCTION
 
-            INTEGER(C_INT64_T) FUNCTION fteik_h5io_createFileF(fileName) &
-            BIND(C, NAME='h5io_createFileF')
-            USE ISO_C_BINDING 
-            IMPLICIT NONE
-            CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
-            END FUNCTION
+!           INTEGER(C_INT64_T) FUNCTION fteik_h5io_createFileF(fileName) &
+!           BIND(C, NAME='h5io_createFileF')
+!           USE ISO_C_BINDING 
+!           IMPLICIT NONE
+!           CHARACTER(C_CHAR), INTENT(IN) :: fileName(*)
+!           END FUNCTION
 
             INTEGER(C_INT64_T) FUNCTION fteik_h5io_openFileReadWriteF(fileName) &
             BIND(C, NAME='h5io_openFileReadWriteF')

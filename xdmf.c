@@ -192,7 +192,7 @@ int fteik_xdmfGrid_add(const char *h5flName, const char *dataSet,
     int i;
     temp = strdup(h5flName);
     h5b = basename(temp);
-    if (xdmf->nDataSets + 1 > xdmf->mDataSets)
+    if (xdmf->nDataSets >= xdmf->mDataSets)
     {
         work1 = (char **) calloc(xdmf->mDataSets + CHUNK, sizeof(char *));
         work2 = (char **) calloc(xdmf->mDataSets + CHUNK, sizeof(char *));
