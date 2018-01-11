@@ -411,14 +411,13 @@ MODULE FTEIK_LOCALSOLVER64F
 !>    @result The travel time from the source at (zsa,xsa,ysa) to the (i,j,k)'th grid
 !>            point given a constant slowness around the source.
 !>
-!>    @author Mark Noble, Alexandrine, Gesret, and Ben Baker.
+!>    @author Mark Noble, Alexandrine Gesret, and Ben Baker.
 !>
 !>    @version 2
 !>
 !>    @date July 2017
 !>
 !>    @copyright CeCILL-3
-!>
 !>
       PURE REAL(C_DOUBLE)                                        &
       FUNCTION fteik_localSolver_tAna64fF(i, j, k, dz, dx, dy,   &
@@ -477,7 +476,7 @@ MODULE FTEIK_LOCALSOLVER64F
                                                   dz, dx, dy,    &
                                                   zsa, xsa, ysa, &
                                                   szero)         &
-                      BIND(C, NAME='fteik_localSolver_tAnaD64fF')
+      BIND(C, NAME='fteik_localSolver_tAnaD64fF')
       !$OMP DECLARE SIMD(fteik_localSolver_tAnaD64fF) &
       !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
@@ -560,7 +559,7 @@ MODULE FTEIK_LOCALSOLVER64F
                                           szero, szero2, &
                                           ierr) 
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_localSolver_meshConstants64fF: Problem with source'
+         WRITE(*,*) 'fteik_localSolver_initialize64fF: Problem with source'
          RETURN
       ENDIF
       ! Time after which solver switches from spherical to cartesian 

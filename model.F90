@@ -23,7 +23,9 @@ MODULE FTEIK_MODEL64F
   INTEGER(C_INT), PROTECTED, SAVE :: nzm1_nxm1 =-1 !< =(nz - 1)*(nx - 1)
   INTEGER(C_INT), PROTECTED, SAVE :: nzm1 =-1      !< =(nz - 1)
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveModel = .FALSE. !< If true slowness model 
-                                                           !> was set.
+                                                           !< was set.
+  LOGICAL(C_BOOL), PROTECTED, SAVE :: lis3dModel !< If true then the model is 3D.
+                                                 !< Otherwise, it is 2D. 
 
   CONTAINS
 !----------------------------------------------------------------------------------------!
@@ -31,15 +33,19 @@ MODULE FTEIK_MODEL64F
 !----------------------------------------------------------------------------------------!
 !>    @brief Convenience function to initialize the model geometry.
 !>
+!>    @param[in] lis3d    If true then this is a 3D model.  \n
+!>                        Otherwise, it is a 2D model and the y variables will be
+!>                        ignored. 
 !>    @param[in] nz       Number of z grid points in the travel-time field.
 !>                        This must be at least 3.
 !>    @param[in] nx       Number of x grid points in the travel-time field.
 !>                        This must be at least 3.
 !>    @param[in] ny       Number of y grid points in the travel-time field.
-!>                        This must be at least 3.
+!>                        This must be at least 3.  This is only accessed for 3D models.
 !>    @param[in] dz       Mesh spacing in z (meters).  This must be positive.
 !>    @param[in] dx       Mesh spacing in x (meters).  This must be positive.
-!>    @param[in] dy       Mesh spacing in y (meters).  This must be positive.
+!>    @param[in] dy       Mesh spacing in y (meters).  This must be positive and is only
+!>                        accessed for 3D models.
 !>    @param[in] z0       z origin (meters).
 !>    @param[in] x0       x origin (meters).
 !>    @param[in] y0       y origin (meters).
@@ -50,7 +56,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_intializeGeometryF(nz, nx, ny,    &
+      SUBROUTINE fteik_model_intializeGeometryF(lis3d,         &
+                                                nz, nx, ny,    &
                                                 dz, dx, dy,    &
                                                 z0, x0, y0,    &
                                                 ierr)          &
@@ -58,18 +65,24 @@ MODULE FTEIK_MODEL64F
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, dy, z0, x0, y0
+      LOGICAL(C_BOOl), VALUE, INTENT(IN) :: lis3d
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      CALL fteik_model_setGridSizeF(nz, nx, ny, ierr) 
+      lis3dModel = lis3d
+      CALL fteik_model_setGridSizeF(lis3d, nz, nx, ny, ierr) 
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_model_initializeGeometryF: Error setting gridsize'
          RETURN
       ENDIF 
-      CALL fteik_model_setGridSpacingF(dz, dx, dy, ierr)
+      CALL fteik_model_setGridSpacingF(lis3d, dz, dx, dy, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_model_initializeGeomtryF: Error setting grid spacing'
          RETURN
       ENDIF
-      CALL fteik_model_setOriginF(z0, x0, y0)
+      IF (lis3d) THEN
+         CALL fteik_model_setOrigin3DF(z0, x0, y0)
+      ELSE
+         CALL fteik_model_setOrigin2DF(z0, x0)
+      ENDIF
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -78,37 +91,44 @@ MODULE FTEIK_MODEL64F
 !>    @brief Sets the grid spacing of the solver.  This must be called to properly
 !>           start the solver.
 !>
+!>    @param[in] lis3d     If true then this is a 3D model. \n
+!>                         Otherwise, it is a 2D model and y will not be accessed.
 !>    @param[in] dzIn      Mesh spacing in z (meters).  This must be positive.
 !>    @param[in] dxIn      Mesh spacing in x (meters).  This must be positive.
-!>    @param[in] dyIn      Mesh spacing in y (meters).  This must be positive.
+!>    @param[in] dyIn      Mesh spacing in y (meters).  This must be positive if 
+!>                         the model is 3D.
 !>
 !>    @param[out] ierr     0 indicates success.
 !>
-!>    @author Ben Baker
+!>    @copyright Ben Baker distributed under the MIT license.
 !>
-!>    @copyright MIT
-!>
-      SUBROUTINE fteik_model_setGridSpacingF(dzIn, dxIn, dyIn, ierr) &
+      SUBROUTINE fteik_model_setGridSpacingF(lis3d, dzIn, dxIn, dyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSpacingF')
-      USE FTEIK_CONSTANTS64F, ONLY : zero
+      USE FTEIK_CONSTANTS64F, ONLY : zero, one
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dzIn, dxIn, dyIn
+      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: lis3d
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       dz = zero
       dx = zero 
       dy = zero
-      IF (dzIn <= zero .OR. dxIn <= zero .OR. dyIn <= zero) THEN
+      IF (dzIn <= zero .OR. dxIn <= zero .OR. (lis3d .AND. dyIn <= zero)) THEN
          IF (dzIn <= zero) WRITE(*,*) 'fteik_model_setGridSpacing: dz is too small', dzIn
          IF (dxIn <= zero) WRITE(*,*) 'fteik_model_setGridSpacing: dx is too small', dxIn
-         IF (dyIn <= zero) WRITE(*,*) 'fteik_model_setGridSpacing: dy is too small', dyIn
+         IF (lis3d .AND. dyIn <= zero) &
+         WRITE(*,*) 'fteik_model_setGridSpacing: dy is too small', dyIn
          ierr = 1
          RETURN
       ENDIF
       dz = dzIn
       dx = dxIn
-      dy = dyIn
+      IF (lis3d) THEN
+         dy = dyIn
+      ELSE
+         dy = one
+      ENDIF
       RETURN
       END
 !                                                                                        !
@@ -117,12 +137,14 @@ MODULE FTEIK_MODEL64F
 !>    @brief This sets the number of grid points in each dimension of the travel-time
 !>           field.  This function must be called to properly start the solver.
 !>
+!>    @param[in] lis3d    If true then this is a 3D model. \n
+!>                        Otherwise, it is a 2D model and y will not be accessed.
 !>    @param[in] nzIn     Number of z grid points in the travel-time field.
 !>                        This must be at least 3.
 !>    @param[in] nxIn     Number of x grid points in the travel-time field.
 !>                        This must be at least 3.
 !>    @param[in] nyIn     Number of y grid points in the travel-time field.
-!>                        This must be at least 3.
+!>                        This must be at least 3 if lis3d is true.
 !>
 !>    @param[out] ierr    0 indicates success.
 !>
@@ -130,12 +152,13 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setGridSizeF(nzIn, nxIn, nyIn, ierr) &
+      SUBROUTINE fteik_model_setGridSizeF(lis3d, nzIn, nxIn, nyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSizeF')
       USE ISO_C_BINDING
       USE FTEIK_CONSTANTS64F, ONLY : zero
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn
+      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: lis3d
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       nz = 0
@@ -143,17 +166,19 @@ MODULE FTEIK_MODEL64F
       ny = 0
       ngrd = 0
       ncell = 0
-      IF (nzIn < 3 .OR. nxIn < 3 .OR. nyIn < 3) THEN
+      IF (nzIn < 3 .OR. nxIn < 3 .OR. (lis3d .AND. nyIn < 3)) THEN
          IF (nzIn < 3) WRITE(*,*) 'fteik_model_setGridSize: ERROR nz is too small', nzIn
          IF (nxIn < 3) WRITE(*,*) 'fteik_model_setGridSize: ERROR nx is too small', nxIn
-         IF (nyIn < 3) WRITE(*,*) 'fteik_model_setGridSize: ERROR ny is too small', nyIn
+         IF (lis3d .AND. nyIn < 3) &
+         WRITE(*,*) 'fteik_model_setGridSize: ERROR ny is too small', nyIn
          ierr = 1
          RETURN
       ENDIF
       nz = nzIn
       nx = nxIn
       ny = nyIn
-      ncell = (nz - 1)*(nx - 1)*(ny - 1)
+      IF (.NOT. lis3d) ny = 1
+      ncell = (nz - 1)*(nx - 1)*MAX(1, (ny - 1))
       ngrd = nz*nx*ny
       nzx = nz*nx
       nzm1 = nz - 1
@@ -176,8 +201,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setOriginF(z0In, x0In, y0In) &
-                 BIND(C, NAME='fteik_model_setOriginF')
+      SUBROUTINE fteik_model_setOrigin3DF(z0In, x0In, y0In) &
+                 BIND(C, NAME='fteik_model_setOrigin3DF')
       USE ISO_C_BINDING
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In 
       z0 = z0In
@@ -185,6 +210,29 @@ MODULE FTEIK_MODEL64F
       y0 = y0In
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the model origin.
+!>
+!>    @param[in] z0In    z origin (meters).
+!>    @param[in] x0In    x origin (meters).
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_model_setOrigin2DF(z0In, x0In) &
+                 BIND(C, NAME='fteik_model_setOrigin2DF')
+      USE FTEIK_CONSTANTS64F, ONLY : zero
+      USE ISO_C_BINDING
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
+      z0 = z0In
+      x0 = x0In
+      y0 = zero 
+      RETURN
+      END SUBROUTINE
+
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -213,7 +261,7 @@ MODULE FTEIK_MODEL64F
       nyOut = 0
       ngrdOut = 0
       ncellOut = 0
-      IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
+      IF (nx < 1 .OR. nz < 1) THEN
          WRITE(*,*) 'fteik_model_getGridSize: Grid not yet set'
          ierr = 1
          RETURN
@@ -290,6 +338,7 @@ MODULE FTEIK_MODEL64F
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
+      lis3dModel = .TRUE.
       dx = zero
       dy = zero
       dz = zero
@@ -355,6 +404,30 @@ MODULE FTEIK_MODEL64F
       DO 1 i=1,ncell
          vel(i) = one/slow(i) 
     1 CONTINUE
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Determines if the model is 2D or 3D.
+!>
+!>    @param[out] lis3d    If true then the model is 3D.
+!>    @param[out] ierr     0 indicates usccess.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_model_isModel3DF(lis3d, ierr) &
+      BIND(C, NAME='fteik_model_isModel3DF')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      LOGICAL(C_BOOL), INTENT(OUT) :: lis3d
+      ierr = 0
+      lis3d = lis3dModel
+      IF (nx < 1 .OR. nz < 1) THEN
+         WRITE(*,*) 'fteik_model_isModel3DF: Model not yet initialized'
+         ierr = 1
+         RETURN
+      ENDIF
       RETURN
       END
 !                                                                                        !

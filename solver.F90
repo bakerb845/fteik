@@ -30,6 +30,8 @@ MODULE FTEIK_SOLVER64F
   INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
   !> The number of nodes in the largest level.
   INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 
+  !> This is for 3D 
+  LOGICAL(C_BOOL), PARAMETER :: lis3d = .TRUE.
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the Code                                     !
@@ -76,7 +78,8 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT), INTENT(OUT) :: ierr
       WRITE(*,*) 'fteik_solver_initialize64fF: Initializing...'
       CALL fteik_solver_finalizeF()
-      CALL fteik_model_intializeGeometryF(nzIn, nxIn, nyIn, &
+      CALL fteik_model_intializeGeometryF(lis3d,            &
+                                          nzIn, nxIn, nyIn, &
                                           dzIn, dxIn, dyIn, &
                                           z0In, x0In, y0In, &
                                           ierr)
@@ -511,7 +514,7 @@ MODULE FTEIK_SOLVER64F
       IF (ALLOCATED(ijkv7)) DEALLOCATE(ijkv7)
       IF (ALLOCATED(ijkv8)) DEALLOCATE(ijkv8)
       CALL fteik_receiver_finalizeF()
-      CALL fteiK_source_finalizeF()
+      CALL fteik_source_finalizeF()
       RETURN
       END
 !                                                                                        !
@@ -732,6 +735,7 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver_setReceivers64fF')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64fF
       USE ISO_C_BINDING
+      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
       REAL(C_DOUBLE), INTENT(IN) :: zrec(nrec), xrec(nrec), yrec(nrec)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -766,6 +770,7 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver_setVelocityModel64fF')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64fF 
       USE ISO_C_BINDING
+      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncell
       REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -802,6 +807,7 @@ MODULE FTEIK_SOLVER64F
                                  fteik_evaluateSweep7LS64fF, &
                                  fteik_evaluateSweep8LS64fF
       USE ISO_C_BINDING
+      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) ts8(8), t0, t1
@@ -809,25 +815,25 @@ MODULE FTEIK_SOLVER64F
       ierr = 0
       lhaveTimes = FALSE
       IF (.NOT.lhaveModel) THEN
-         WRITE(*,*) 'fteik_solver_solveSourceF: Model not yet set'
+         WRITE(*,*) 'fteik_solver_solveSourceLSMF: Model not yet set'
          ierr = 1
          GOTO 500
       ENDIF
       IF (isrc < 1 .OR. isrc > nsrc) THEN
-         WRITE(*,*) 'fteik_solver_solveSourceF: Invalid source number:', isrc, 1, nsrc
+         WRITE(*,*) 'fteik_solver_solveSourceLSMF: Invalid source number:', isrc, 1, nsrc
          ierr = 1
          GOTO 500
       ENDIF
       ! Set the update nodes for the first iteration
       CALL fteik_solver_setInitialUpdateNodesF(isrc, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver_solveSourceF: Error setting initial nodes'
+         WRITE(*,*) 'fteik_solver_solveSourceLSMF: Error setting initial nodes'
          GOTO 500
       ENDIF
       ! Define the mesh constants and get the travel-times near the source
       CALL fteik_localSolver_initialize64fF(isrc, epsS2C, dest, ts8, ierr) 
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver_solveSourceF: Error setting mesh constants'
+         WRITE(*,*) 'fteik_solver_solveSourceLSMF: Error setting mesh constants'
          GOTO 500
       ENDIF
       CALL CPU_TIME(t0)

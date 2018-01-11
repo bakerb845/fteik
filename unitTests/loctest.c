@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
                ((double)(t1-t0))/CLOCKS_PER_SEC);
     }
     // Set the observed travel times
-    printf("Setting observed travel times...\n");
+    if (myid == master){printf("Setting observed travel times...\n");}
     t0 = clock();
     locate_setObservation64f(0, nrec,  false, 0.0,
                              obs2tf, tobs, wts, &ierr); 
@@ -162,8 +162,11 @@ int optIndx;
     locate_locateEventF(1, &optIndx, &t0Opt, &objOpt);
 #endif
     t1 = clock();
+if (myid == master)
+{
 printf("optindex, t0, obj: %d %e %e\n", optIndx, t0Opt, objOpt);
 printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz*nx) + 1);
+}
     if (myid == master)
     {
         printf("Time to locate event %lf (s)\n", ((double)(t1-t0))/CLOCKS_PER_SEC);

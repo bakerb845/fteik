@@ -64,7 +64,7 @@ MODULE FTEIK_SOURCE64F
 !>
       SUBROUTINE fteik_source_initialize64fF(nsrcIn, zsrcIn, xsrcIn, ysrcIn, ierr) &
                  BIND(C, NAME='fteik_source_initialize64fF')
-      USE FTEIK_MODEL64F, ONLY : dz, dx, dy, z0, x0, y0, nz, nx, ny
+      USE FTEIK_MODEL64F, ONLY : lis3dModel, dz, dx, dy, z0, x0, y0, nz, nx, ny
       USE FTEIK_CONSTANTS64F, ONLY : DBL_EPSILON, perturbSource, one, zero 
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -145,33 +145,43 @@ MODULE FTEIK_SOURCE64F
          zsi = INT(zsa)
          xsi = INT(xsa)
          ysi = INT(ysa)
+         IF (.NOT.lis3dModel) ysi = 1
          ! verify bounds make sense
          IF (zsi < 1 .OR. zsi > nz .OR. &
              xsi < 1 .OR. xsi > nx .OR. &
-             ysi < 1 .OR. ysi > ny) THEN
+             (lis3dModel .AND. (ysi < 1 .OR. ysi > ny))) THEN
             WRITE(*,*)'fteik_source_initialize64fF: Point (',zsi,xsi,ysi,') out of bounds'
             ierr = 1 
             RETURN
          ENDIF
-         IF (zsi > nz - 1 .OR. xsi > nx - 1 .OR. ysi > ny - 1) THEN
+         IF (zsi > nz - 1 .OR. xsi > nx - 1 .OR. (lis3dModel .AND. ysi > ny - 1)) THEN
             WRITE(*,*)'fteik_source_initialize64fF: Warning solver may segfault', isrc
          ENDIF
          ! Set on the arrays
          zsrc(isrc) = DBLE(zsi - 1)*dz + z0 !zsrcIn(isrc)
          xsrc(isrc) = DBLE(xsi - 1)*dx + x0 !xsrcIn(isrc)
          ysrc(isrc) = DBLE(ysi - 1)*dy + y0 !ysrcIn(isrc)
+         IF (.NOT.lis3dModel) ysrc(isrc) = zero 
          zsiv(isrc) = zsi
          xsiv(isrc) = xsi
          ysiv(isrc) = ysi
+         IF (.NOT.lis3dModel) ysiv(isrc) = 1
          zsav(isrc) = zsa
          xsav(isrc) = xsa
          ysav(isrc) = ysa
+         IF (.NOT.lis3dModel) ysav(isrc) = one
 print *, z0, x0, y0, zsi, xsi, ysi
 print *, dz, dx, dy, xsa
-         WRITE(*,900) zsrcIn(isrc), xsrcIn(isrc), ysrcIn(isrc)
-         WRITE(*,901) zsrc(isrc), xsrc(isrc), ysrc(isrc)
-         WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc)),   &
-                      ABS(ysrc(isrc) - ysrcIn(isrc))
+         IF (lis3dModel) THEN
+            WRITE(*,900) zsrcIn(isrc), xsrcIn(isrc), ysrcIn(isrc)
+            WRITE(*,901) zsrc(isrc), xsrc(isrc), ysrc(isrc)
+            WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc)), &
+                         ABS(ysrc(isrc) - ysrcIn(isrc))
+         ELSE
+            WRITE(*,910) zsrcIn(isrc), xsrcIn(isrc)
+            WRITE(*,911) zsrc(isrc), xsrc(isrc)
+            WRITE(*,912) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc))
+         ENDIF
          WRITE(*,*)
     1 CONTINUE
       lhaveSource = .TRUE.
@@ -181,6 +191,12 @@ print *, dz, dx, dy, xsa
              3F12.2, ' (m)')
   902 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
              3F12.2, ' (m)')
+  910 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x,y)=', &
+             2F12.2, ' (m)') 
+  911 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x,y)=', &
+             2F12.2, ' (m)')
+  912 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
+             2F12.2, ' (m)')
       RETURN
       END SUBROUTINE
 !                                                                                        !
