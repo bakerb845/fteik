@@ -9,6 +9,7 @@
 
   ! Get local velocity parameters
   vref = slow(i1,j1)                      ! Slowness
+!print *, sngl(tv), sngl(te), sngl(tev), sngl(vref)
 
   ! 1D operators (refracted times)
   t1d1 = tv + dz * vref                   ! First dimension (Z axis)

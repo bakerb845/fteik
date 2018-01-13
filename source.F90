@@ -186,16 +186,16 @@ print *, dz, dx, dy, xsa
     1 CONTINUE
       lhaveSource = .TRUE.
   900 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x,y)=', &
-             3F12.2, ' (m)') 
+             3F12.2, ' (m)')
   901 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x,y)=', &
              3F12.2, ' (m)')
   902 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
              3F12.2, ' (m)')
-  910 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x,y)=', &
-             2F12.2, ' (m)') 
-  911 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x,y)=', &
+  910 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x)=', &
              2F12.2, ' (m)')
-  912 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
+  911 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x)=', &
+             2F12.2, ' (m)')
+  912 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx)=', &
              2F12.2, ' (m)')
       RETURN
       END SUBROUTINE

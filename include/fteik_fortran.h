@@ -106,6 +106,29 @@ void fteik_solver_setReceivers64fF(const int nrec,
                                    int *ierr);
 void fteik_solver_solveSourceLSMF(const int isrc, int *ierr);
 //----------------------------------------------------------------------------//
+//                           2D Solver Module                                 //
+//----------------------------------------------------------------------------//
+void fteik_solver2d_initialize64fF(const int nz, const int nx,
+                                   const double z0, const double x0,
+                                   const double dz, const double dx,
+                                   const int nsweep, const double eps,
+                                   int *ierr);
+void fteik_solver2d_setVelocityModel64fF(const int ncell,
+                                         const double *__restrict__ vel,
+                                         int *ierr);
+void fteik_solver2d_setReceivers64fF(const int nrec,
+                                     const double zrec[],
+                                     const double xrec[],
+                                     int *ierr);
+void fteik_solver2d_solveSourceLSMF(const int isrc, int *ierr);
+void fteik_solver2d_solveSoureFSMF(const int isrc, int *ierr);
+void fteik_solver2d_setSources64fF(const int nsrc,
+                                   const double zsrc[],
+                                   const double xsrc[],
+                                   int *ierr);
+void fteik_solver2d_getTravelTimes64fF(const int nrec, double ttr[], int *ierr);
+void fteik_solver2d_finalizeF(void);
+//----------------------------------------------------------------------------//
 //                             Locator Module                                 //
 //----------------------------------------------------------------------------//
 void locate_initializeF(const int nEventsIn, const int ntfIn, const int ngrdIn,

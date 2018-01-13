@@ -350,6 +350,17 @@ int fteik_h5io_writeVelocityModel16iF(const int64_t h5fl, const char *velName,
     char velNameOut[PATH_MAX];
     int nelem;
     int ierr;
+    // Make sure there is data to write
+    if (nz < 1 || nx < 1 || ny < 1)
+    {
+        fprintf(stderr, "%s: (nz,nx,ny)=(%d,%d,%d)\n", __func__, nz, nx, ny);
+        return -1;
+    }
+    if (vel == NULL)
+    {
+        fprintf(stderr, "%s: Error vel is NULL\n", __func__);
+        return -1;
+    }
     // Require the group exists and if not make it 
     fileID = (hid_t) h5fl;
     if (H5Lexists(fileID, VELMODEL_GROUP, H5P_DEFAULT) > 0)
@@ -368,7 +379,7 @@ int fteik_h5io_writeVelocityModel16iF(const int64_t h5fl, const char *velName,
         H5Gclose(groupID);
         return -1;
     }
-    nelem = (nx - 1)*(ny - 1)*(nz - 1);
+    nelem = MAX(1, (nx - 1))*MAX(1, (ny - 1))*MAX(1, (nz - 1));
     // Write it
     ierr = h5io_writeArray16i(groupID, velName, nelem, vel);
     if (ierr != 0)

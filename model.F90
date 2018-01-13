@@ -2,8 +2,9 @@ MODULE FTEIK_MODEL64F
   USE ISO_C_BINDING
   USE FTEIK_CONSTANTS64F, ONLY : zero
   IMPLICIT NONE
-  REAL(C_DOUBLE), ALLOCATABLE, SAVE :: slow(:)  !< Slowness model (seconds/meter).
-                                                !< This has dimension [ncell].
+  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: slow(:)  !< Slowness model in
+                                                           !< (seconds/meter).
+                                                           !< This has dimension [ncell].
   !DIR$ ATTRIBUTES ALIGN: 64 :: slow
   REAL(C_DOUBLE), PROTECTED, SAVE :: dx = zero  !< x origin (meters).
   REAL(C_DOUBLE), PROTECTED, SAVE :: dy = zero  !< y origin (meters).
@@ -316,7 +317,7 @@ MODULE FTEIK_MODEL64F
          ierr = 1
          RETURN
       ENDIF
-      IF (.NOT.ALLOCATED(slow)) ALLOCATE(slow(ncell))
+      !IF (.NOT.ALLOCATED(slow)) ALLOCATE(slow(ncell))
       DO 1 i=1,ncell
          slow(i) = one/vel(i)
     1 CONTINUE  
@@ -473,7 +474,7 @@ MODULE FTEIK_MODEL64F
          ierr = 1
          RETURN
       ENDIF
-      IF (.NOT.ALLOCATED(slow)) ALLOCATE(slow(ncell))
+      !IF (.NOT.ALLOCATED(slow)) ALLOCATE(slow(ncell))
       DO 1 i=1,ncell
          slow(i) = one/DBLE(vel4(i))
     1 CONTINUE

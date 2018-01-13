@@ -625,6 +625,7 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver_setSources64fF')
       USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64fF
       USE ISO_C_BINDING
+      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr

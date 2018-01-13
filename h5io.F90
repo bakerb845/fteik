@@ -208,7 +208,7 @@ MODULE FTEIK_H5IO64F
       USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
                                   ijkv5, ijkv6, ijkv7, ijkv8,    &
                                   levelPtr, nLevels
-      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lhaveModel
+      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lhaveModel, lis3dModel
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT16_T), ALLOCATABLE :: levels(:)
@@ -223,6 +223,11 @@ MODULE FTEIK_H5IO64F
       IF (.NOT.lhaveModel) THEN
          WRITE(*,*) 'fteik_h5io_writeLevelSchedulesF: Grid not set'
          ierr =-1 
+         RETURN
+      ENDIF
+      IF (.NOT.lis3dModel) THEN
+         WRITE(*,*) 'fteik_h5io_writeLevelSchedulesF: Not yet done for 2D'
+         ierr =-1
          RETURN
       ENDIF
       ! Open file 
@@ -278,8 +283,11 @@ MODULE FTEIK_H5IO64F
       INTEGER(C_INT) FUNCTION fteik_h5io_writeTravelTimesF(dataName) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
       !USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF !fteik_model_grid2indexF
-      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd
-      USE FTEIK_SOLVER64F, ONLY : ttimes, lhaveTimes
+      USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lis3dModel
+      USE FTEIK_SOLVER64F, ONLY : ttimes3d => ttimes
+      USE FTEIK_SOLVER64F, ONlY : lhaveTimes3d => lhaveTimes
+      USE FTEIK2D_SOLVER64F, ONLY : ttimes2d => ttimes
+      USE FTEIK2D_SOLVER64F, ONLY : lhaveTimes2d => lhaveTimes
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTERFACE
@@ -296,32 +304,52 @@ MODULE FTEIK_H5IO64F
       CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
       INTEGER(C_INT64_T) h5fl
       REAL(C_FLOAT), ALLOCATABLE :: ttout(:)
-      INTEGER(C_INT) ierr2, indx, ix, iy, iz, jndx, nzx
+      INTEGER(C_INT) ierr2, indx, ix, iy, iz, jndx, jz, nzx
       ierr = 0
       IF (.NOT.linitH5FL) THEN
          WRITE(*,*) 'fteik_h5io_writeTravelTimesF: File not initialized'
          ierr =-1 
          RETURN
       ENDIF
-      IF (.NOT.lhaveTimes) THEN
-         WRITE(*,*) 'fteik_h5io_writeTravelTimesF: Travel times not yet computed'
-         ierr =-1
-         RETURN
-      ENDIF
-      nzx = nz*nx
-      ALLOCATE(ttout(ngrd))
-      ttout(:) = 0.0
-      DO 1 iz=1,nz
-         DO 2 iy=1,ny
-            DO 3 ix=1,nx
-               !jz = nz + 1 - iz ! flip coordinate syste
-               indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
-               jndx = (iz - 1)*nx*ny + (iy - 1)*nx + ix
+      IF (lis3dModel) THEN
+         IF (.NOT.lhaveTimes3d) THEN
+            WRITE(*,*) 'fteik_h5io_writeTravelTimesF: 3D travel times not yet computed'
+            ierr =-1
+            RETURN
+         ENDIF
+         nzx = nz*nx
+         ALLOCATE(ttout(ngrd))
+         ttout(:) = 0.0
+         DO 1 iz=1,nz
+            DO 2 iy=1,ny
+               DO 3 ix=1,nx
+                  !jz = nz + 1 - iz ! flip coordinate syste
+                  indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
+                  jndx = (iz - 1)*nx*ny + (iy - 1)*nx + ix
+                  !print *, jndx
+                  ttout(jndx) = REAL(ttimes3d(indx))
+    3          CONTINUE
+    2       CONTINUE
+    1    CONTINUE
+      ELSE
+         IF (.NOT.lhaveTimes2d) THEN
+            WRITE(*,*) 'fteik_h5io_writeTravelTimesF: 2D travel times not yet computed'
+            ierr =-1 
+            RETURN
+         ENDIF
+         nzx = nz*nx
+         ALLOCATE(ttout(ngrd))
+         ttout(:) = 0.0 
+         DO 11 iz=1,nz
+            DO 12 ix=1,nx
+               jz = nz + 1 - iz ! flip coordinate system
+               indx = fteik_model_grid2indexF(jz, ix, 1, nz, nzx)
+               jndx = (iz - 1)*nx + ix
                !print *, jndx
-               ttout(jndx) = REAL(ttimes(indx))
-    3       CONTINUE
-    2    CONTINUE
-    1 CONTINUE
+               ttout(jndx) = REAL(ttimes2d(indx))
+   12       CONTINUE
+   11    CONTINUE
+      ENDIF
       ! Open and write the file
       h5fl = fteik_h5io_openFileReadWriteF(fname)
       ierr = fteik_h5io_writeTravelTimes32fF(h5fl, dataName, nz, nx, ny, ttout)
@@ -344,7 +372,8 @@ MODULE FTEIK_H5IO64F
 !>
       INTEGER(C_INT) FUNCTION fteik_h5io_writeVelocityModelF(dataName) &
                      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeVelocityModelF')
-      USE FTEIK_MODEL64F, ONLY : slow, ncell, nx, ny, nz, nzm1, nzm1_nxm1, lhaveModel 
+      USE FTEIK_MODEL64F, ONLY : slow, ncell, nx, ny, nz, nzm1, &
+                                 nzm1_nxm1, lhaveModel, lis3dModel
       !USE FTEIK_MODEL64F, ONLY : fteik_model_velGrid2indexF
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -362,7 +391,7 @@ MODULE FTEIK_H5IO64F
       CHARACTER(C_CHAR), INTENT(IN) :: dataName(*)
       INTEGER(C_INT64_T) h5fl
       INTEGER(C_INT16_T), ALLOCATABLE :: vout(:)
-      INTEGER ierr2, indx, ix, iy, iz, jndx
+      INTEGER ierr2, indx, ix, iy, iz, jndx, jz
       ierr = 0
       IF (.NOT.linitH5FL) THEN
          WRITE(*,*) 'fteik_h5io_writeVelocityModelF: File not initialized'
@@ -377,17 +406,30 @@ MODULE FTEIK_H5IO64F
       ! First dimension in topology is slowest changing (z)
       ALLOCATE(vout(ncell))
       vout(:) = 0
-      DO 1 iz=1,nz-1
-         DO 2 iy=1,ny-1
-            DO 3 ix=1,nx-1
-               !jz = iz !nz-iz ! flip coordinate syste
-               indx = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1) 
-               jndx = (iz-1)*(nx-1)*(ny-1) + (iy-1)*(nx-1) + ix
+      IF (lis3dModel) THEN
+         DO 1 iz=1,nz-1
+            DO 2 iy=1,ny-1
+               DO 3 ix=1,nx-1
+                  !jz = iz !nz-iz ! flip coordinate syste
+                  indx = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1) 
+                  jndx = (iz-1)*(nx-1)*(ny-1) + (iy-1)*(nx-1) + ix
+                  vout(jndx) = INT(1.d0/slow(indx)  + 0.5d0)
+                  !print *, vout(jndx), 1.d0/slow(indx)
+    3          CONTINUE
+    2       CONTINUE
+    1    CONTINUE
+      ELSE
+         iy = 1
+         DO 11 iz=1,nz-1
+            DO 12 ix=1,nx-1
+               jz = nz-iz ! flip coordinate syste
+               indx = fteik_model_velGrid2indexF(jz, ix, iy, nzm1, nzm1_nxm1) 
+               jndx = (iz-1)*(nx-1) + ix
                vout(jndx) = INT(1.d0/slow(indx)  + 0.5d0)
                !print *, vout(jndx), 1.d0/slow(indx)
-    3       CONTINUE
-    2    CONTINUE
-    1 CONTINUE
+   12       CONTINUE
+   11    CONTINUE
+      ENDIF
       ! Open and write the file
       h5fl = fteik_h5io_openFileReadWriteF(fname) 
       ierr = fteik_h5io_writeVelocityModel16iF(h5fl, dataName, nz, nx, ny, vout)

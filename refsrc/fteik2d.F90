@@ -15,9 +15,18 @@ module fteik2d
   real(kind = 8), parameter :: Big = 99999.d0, zerr = 1.d-4
 
 contains
+  subroutine solver2d_c(slow, tt, nz, nx, zsrc, xsrc, dz, dx, n_sweep) &
+  BIND(C, name='solver2d_c')
+  implicit none
+  real(kind = 8), dimension(nz-1,nx-1), intent(in) :: slow
+  real(kind = 8), dimension(nz,nx), intent(out) :: tt
+  integer(kind = 4), value, intent(in) :: nz, nx, n_sweep
+  real(kind = 8), value, intent(in) :: zsrc, xsrc, dz, dx
+  call solver2d(slow, tt, nz, nx, zsrc, xsrc, dz, dx, n_sweep)
+  end
 
   subroutine solver2d(slow, tt, nz, nx, zsrc, xsrc, dz, dx, n_sweep, ttgrad)
-    real(kind = 8), dimension(nz,nx), intent(in) :: slow
+    real(kind = 8), dimension(nz-1,nx-1), intent(in) :: slow
     real(kind = 8), dimension(nz,nx), intent(out) :: tt
     real(kind = 8), dimension(nz,nx,2), intent(out), optional :: ttgrad
     integer(kind = 4), intent(in) :: nz, nx, n_sweep
@@ -32,13 +41,14 @@ contains
     real(kind = 8) :: dzu, dzd, dxw, dxe
     real(kind = 8) :: zsa, xsa
     real(kind = 8) :: vzero, vref
-    real(kind = 8) :: t1d, t2d, t1, t2, t3, tdiag, ta, tb
+    real(kind = 8) :: t1d, t2d, ta, tb !t1, t2, t3, tdiag, ta, tb
     real(kind = 8) :: tv, te, tev
     real(kind = 8) :: tauv, taue, tauev
     real(kind = 8) :: dzi, dxi, dz2i, dx2i, dsum, dz2dx2
     real(kind = 8) :: sgnrz, sgnrx
     real(kind = 8) :: t0c, tzc, txc
     real(kind = 8) :: apoly, bpoly, cpoly, dpoly
+    real(kind = 8) :: tdiag, t1, t2, t3
     integer(kind = 4) :: epsin = 5
 
     ! Check inputs
@@ -94,6 +104,78 @@ contains
       xsa = dnint(xsa)
       iflag = 3
     end if
+
+    ! Precalculate constants
+    dzi = 1.d0 / dz
+    dxi = 1.d0 / dx
+    dz2i = 1.d0 / (dz*dz)
+    dx2i = 1.d0 / (dx*dx)
+    dsum = dz2i + dx2i
+    dz2dx2 = dz2i * dx2i
+
+
+print *, iflag, zsa, xsa, zsi, xsi
+print *, (xsi - 1)*nz + zsi, (xsi - 1)*nz + zsi + 1, &
+         xsi*nz + zsi, xsi*nz + zsi + 1
+print *, t_ana(zsi, xsi, dz, dx, zsa, xsa, vzero)
+print *, t_ana(zsi+1, xsi, dz, dx, zsa, xsa, vzero)
+print *, t_ana(zsi, xsi+1, dz, dx, zsa, xsa, vzero)
+print *, t_ana(zsi+1 ,xsi+1, dz, dx, zsa, xsa, vzero)
+tt(zsi,xsi) = t_ana(zsi, xsi, dz, dx, zsa, xsa, vzero)
+tt(zsi+1,xsi) = t_ana(zsi+1, xsi, dz, dx, zsa, xsa, vzero)
+tt(zsi,xsi+1) = t_ana(zsi, xsi+1, dz, dx, zsa, xsa, vzero)
+tt(zsi+1,xsi+1) = t_ana(zsi+1 ,xsi+1, dz, dx, zsa, xsa, vzero)
+iflag = 0 ! skip init cases
+DO j=MAX(2,xsi),nx
+   DO i=MAX(2,zsi),nz
+      sgntz = 1 
+      sgntx = 1 
+      sgnvz = 1 
+      sgnvx = 1 
+      sgnrz = dfloat(sgntz)
+      sgnrx = dfloat(sgntx)
+      INCLUDE 'Include_FTeik2d.f'
+   ENDDO
+ENDDO
+DO j=xsi+1,1,-1 
+   DO i=MAX(2,zsi),nz
+      sgntz = 1
+      sgntx = -1
+      sgnvz = 1
+      sgnvx = 0
+      sgnrz = dfloat(sgntz)
+      sgnrx = dfloat(sgntx)
+      INCLUDE 'Include_FTeik2d.f'
+   ENDDO
+ENDDO
+! Third sweep: Bottom->Top ; West->East
+DO j=MAX(2,xsi),nx
+   DO i=zsi+1,1,-1
+      sgntz = -1
+      sgntx = 1 
+      sgnvz = 0 
+      sgnvx = 1 
+      sgnrz = dfloat(sgntz)
+      sgnrx = dfloat(sgntx)
+      INCLUDE 'Include_FTeik2d.f'
+   ENDDO
+ENDDO
+! Fourth sweeping: Bottom->Top ; East->West
+DO j=xsi+1,1,-1
+   DO i=zsi+1,1,-1
+      sgntz = -1
+      sgntx = -1
+      sgnvz = 0
+      sgnvx = 0
+      sgnrz = dfloat(sgntz)
+      sgnrx = dfloat(sgntx)
+      INCLUDE 'Include_FTeik2d.f'
+   ENDDO
+ENDDO
+
+
+
+
 
     ! We know where src is - start first propagation
     select case(iflag)
@@ -308,8 +390,10 @@ contains
       do j = 2, nx
         do i = 2, nz
           include "Include_FTeik2d_grad.f"
+!print *, i, j, tt(i,j)
         end do
       end do
+print *, 'legacy p1:', minval(tt), maxval(tt)
 
       ! Second sweeping: Top->Bottom ; East->West
       sgntz = 1
@@ -323,6 +407,7 @@ contains
           include "Include_FTeik2d_grad.f"
         end do
       end do
+print *, 'legacy p2:', minval(tt), maxval(tt)
 
       ! Third sweep: Bottom->Top ; West->East
       sgntz = -1
@@ -336,6 +421,7 @@ contains
           include "Include_FTeik2d_grad.f"
         end do
       end do
+print *, 'legacy p3:',minval(tt), maxval(tt)
 
       ! Fourth sweeping: Bottom->Top ; East->West
       sgntz = -1
@@ -349,6 +435,7 @@ contains
           include "Include_FTeik2d_grad.f"
         end do
       end do
+print *, 'legacy p4:',minval(tt), maxval(tt)
 
     end do
 

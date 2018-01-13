@@ -1,5 +1,6 @@
 #ifndef FTEIK_XDMF_H__
 #define FTEIK_XDMF_H__ 1
+#include "fteik_config.h"
 
 enum fteikDataType_enum
 {
@@ -33,8 +34,9 @@ struct fteikXDMFGrid_struct
     int nz;           /*!< Number of grid points in z. */
     size_t mDataSets; /*!< Max number of datasets. */
     size_t nDataSets; /*!< Number of datasets in collection. */
+    bool lis3d;       /*!< If true then the mesh is 3D. */
     bool linit;       /*!< Flag indicating the struture has been initialized. */
-    char pad[3];
+    char pad[2];
 };
 
 #ifdef __cplusplus

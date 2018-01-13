@@ -31,14 +31,21 @@ static char *strdup(const char *string)
 
 static int writeTopology3d(const int nz, const int ny, const int nx,
                            xmlTextWriterPtr *writer);
-static int writeH5DataItem3d(const int nz, const int ny, const int nx,
-                             const enum fteikDataType_enum precision,
-                             const bool lcell,
-                             const char *h5File, const char *dataSet,
-                             xmlTextWriterPtr *writer);
+static int writeTopology2d(const int nz, const int nx,              
+                           xmlTextWriterPtr *writer);
+static int writeH5DataItem(const bool lis3d,
+                           const int nz, const int ny, const int nx,
+                           const enum fteikDataType_enum precision,
+                           const bool lcell,
+                           const char *h5File, const char *dataSet,
+                           xmlTextWriterPtr *writer);
 static int writeGridSpacing3d(const double dz, const double dy, const double dx, 
                               xmlTextWriterPtr *writer);
+static int writeGridSpacing2d(const double dz, const double dx,
+                              xmlTextWriterPtr *writer);
 static int writeOrigin3d(const double z0, const double y0, const double x0, 
+                         xmlTextWriterPtr *writer);
+static int writeOrigin2d(const double z0, const double x0,
                          xmlTextWriterPtr *writer);
 
 #define CHECKRC(rc) \
@@ -115,19 +122,19 @@ int fteik_xdmfGrid_initialize(
     struct fteikXDMFGrid_struct *xdmf)
 {
     memset(xdmf, 0, sizeof(struct fteikXDMFGrid_struct));
-    if (nx < 2 || ny < 2 || nz < 2 || dx == 0.0 || dy == 0.0 || dz == 0.0)
+    if (nx < 2 || ny < 1 || nz < 2 || dx == 0.0 || dy == 0.0 || dz == 0.0)
     {
         if (nx < 2)
         {
-            fprintf(stderr, "%s: nx=%d must be >= 2\n", __func__, nx);
+            fprintf(stderr, "%s: nx=%d must be > 1\n", __func__, nx);
         }
-        if (ny < 2)
+        if (ny < 1)
         {
-            fprintf(stderr, "%s: ny=%d must be >= 2\n", __func__, ny);
+            fprintf(stderr, "%s: ny=%d must be >= 1\n", __func__, ny);
         }
         if (nz < 2)
         {
-            fprintf(stderr, "%s: nz=%d must be >= 2\n", __func__, nz);
+            fprintf(stderr, "%s: nz=%d must be > 1\n", __func__, nz);
         }
         if (dx == 0.0)
         {
@@ -143,6 +150,8 @@ int fteik_xdmfGrid_initialize(
         }
         return -1;
     }
+    xdmf->lis3d = true;
+    if (ny == 1){xdmf->lis3d = false;}
     xdmf->nx = nx;
     xdmf->ny = ny;
     xdmf->nz = nz;
@@ -298,15 +307,34 @@ int fteik_xdmfGrid_write(const struct fteikXDMFGrid_struct xdmf)
         rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "GridType\0",
                                          BAD_CAST "Uniform\0"); CHECKRC(rc);
         // <Topology>
-        writeTopology3d(xdmf.nz, xdmf.ny, xdmf.nx, &writer);
+        if (xdmf.lis3d)
+        {
+            writeTopology3d(xdmf.nz, xdmf.ny, xdmf.nx, &writer);
+        }
+        else
+        {
+            writeTopology2d(xdmf.nz, xdmf.nx, &writer);
+        }
         // </Topology>
         // <Geometry>
         rc = xmlTextWriterStartElement(writer, BAD_CAST "Geometry\0");
         CHECKRC(rc);
-        rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "GeometryType\0",
-                                         BAD_CAST GEOMETRY3D_TYPE); CHECKRC(rc);
-        writeOrigin3d(xdmf.z0, xdmf.y0, xdmf.x0, &writer);
-        writeGridSpacing3d(xdmf.dz, xdmf.dy, xdmf.dx, &writer);
+        if (xdmf.lis3d)
+        {
+            rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "GeometryType\0",
+                                             BAD_CAST GEOMETRY3D_TYPE);
+            CHECKRC(rc);
+            writeOrigin3d(xdmf.z0, xdmf.y0, xdmf.x0, &writer);
+            writeGridSpacing3d(xdmf.dz, xdmf.dy, xdmf.dx, &writer);
+        }
+        else
+        {
+            rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "GeometryType\0",
+                                             BAD_CAST GEOMETRY2D_TYPE);
+            CHECKRC(rc);
+            writeOrigin2d(xdmf.z0, xdmf.x0, &writer);
+            writeGridSpacing2d(xdmf.dz, xdmf.dx, &writer);
+        }
         //  </Geometry>
         rc = xmlTextWriterEndElement(writer); CHECKRC(rc);
     }
@@ -329,10 +357,11 @@ int fteik_xdmfGrid_write(const struct fteikXDMFGrid_struct xdmf)
                                              BAD_CAST "Cell\0");
         }
         //    <DataItem>
-        rc = writeH5DataItem3d(xdmf.nz, xdmf.ny, xdmf.nx, xdmf.precision[i],
-                               xdmf.lcell[i],
-                               xdmf.h5flNames[i], xdmf.dataSets[i],
-                               &writer); CHECKRC(rc);
+        rc = writeH5DataItem(xdmf.lis3d,
+                             xdmf.nz, xdmf.ny, xdmf.nx, xdmf.precision[i],
+                             xdmf.lcell[i],
+                             xdmf.h5flNames[i], xdmf.dataSets[i],
+                             &writer); CHECKRC(rc);
         //  </Attribute>
         rc = xmlTextWriterEndElement(writer); CHECKRC(rc);
     }
@@ -389,6 +418,33 @@ static int writeOrigin3d(const double z0, const double y0, const double x0,
 }
 //============================================================================//
 /*!
+ * @brief Convenience function to write the origin in 2d.
+ */
+static int writeOrigin2d(const double z0, const double x0,
+                         xmlTextWriterPtr *writer)
+{
+    char cori[128];
+    int rc;
+    // Origin
+    rc = xmlTextWriterStartElement(*writer, BAD_CAST "DataItem\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Name\0",
+                                     BAD_CAST "Origin\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Dimensions\0",
+                                     BAD_CAST "2\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "DataType\0",
+                                     BAD_CAST "Float\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Precision\0",
+                                     BAD_CAST "8\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Format\0",
+                                     BAD_CAST "XML\0");
+    memset(cori, 0, 128*sizeof(char));
+    sprintf(cori, "%e %e", z0, x0); 
+    rc = xmlTextWriterWriteString(*writer, BAD_CAST cori);
+    rc = xmlTextWriterEndElement(*writer); //</DataItem>
+    return rc;
+}
+//============================================================================//
+/*!
  * @brief Convenience function to write the topology in 3d.
  */
 static int writeTopology3d(const int nz, const int ny, const int nx,
@@ -406,6 +462,26 @@ static int writeTopology3d(const int nz, const int ny, const int nx,
                                      BAD_CAST cdim);
     rc = xmlTextWriterEndElement(*writer); //</Topology>
     return rc;
+}
+//============================================================================//
+/*!
+ * @brief Convenience function to write the topology in 2d.
+ */
+static int writeTopology2d(const int nz, const int nx, 
+                           xmlTextWriterPtr *writer)
+{
+    char cdim[128];
+    int rc; 
+    memset(cdim, 0, 128*sizeof(char));
+    sprintf(cdim, "%d %d", nz, nx);
+    // Topology
+    rc = xmlTextWriterStartElement(*writer, BAD_CAST "Topology\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "TopologyType\0",
+                                     BAD_CAST TOPOLOGY2D_TYPE);
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Dimensions\0",
+                                     BAD_CAST cdim);
+    rc = xmlTextWriterEndElement(*writer); //</Topology>
+    return rc; 
 }
 //============================================================================//
 /*!
@@ -436,13 +512,41 @@ static int writeGridSpacing3d(const double dz, const double dy, const double dx,
 }
 //============================================================================//
 /*!
+ * @brief Convenience function to write the grid spacing in 2d.
+ */
+static int writeGridSpacing2d(const double dz, const double dx,
+                              xmlTextWriterPtr *writer)
+{
+    char cspace[128];
+    int rc;
+    memset(cspace, 0, 128*sizeof(char));
+    sprintf(cspace, "%e %e", dz, dx);
+    // Grid spacing
+    rc = xmlTextWriterStartElement(*writer, BAD_CAST "DataItem\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Name\0",
+                                     BAD_CAST "Spacing\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Dimensions\0",
+                                     BAD_CAST "2\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "DataType\0",
+                                     BAD_CAST "Float\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Precision\0",
+                                     BAD_CAST "8\0");
+    rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Format\0",
+                                     BAD_CAST "XML\0");
+    rc = xmlTextWriterWriteString(*writer, BAD_CAST cspace);
+    rc = xmlTextWriterEndElement(*writer); //</DataItem>
+    return rc;
+}
+//============================================================================//
+/*!
  * @brief Convenience function to write a data item.
  */
-static int writeH5DataItem3d(const int nz, const int ny, const int nx,
-                             const enum fteikDataType_enum precision,
-                             const bool lcell,
-                             const char *h5File, const char *dataSet,
-                             xmlTextWriterPtr *writer)
+static int writeH5DataItem(const bool lis3d,
+                           const int nz, const int ny, const int nx,
+                           const enum fteikDataType_enum precision,
+                           const bool lcell,
+                           const char *h5File, const char *dataSet,
+                           xmlTextWriterPtr *writer)
 {
     char path[PATH_MAX];
     char cdim[128];
@@ -452,11 +556,25 @@ static int writeH5DataItem3d(const int nz, const int ny, const int nx,
     memset(cdim, 0, 128*sizeof(char));
     if (!lcell)
     {
-        sprintf(cdim, "%d %d %d", nz, ny, nx);
+        if (lis3d)
+        {
+            sprintf(cdim, "%d %d %d", nz, ny, nx);
+        }
+        else
+        {
+            sprintf(cdim, "%d %d", nz, nx);
+        }
     }
     else
     {
-        sprintf(cdim, "%d %d %d", nz-1, ny-1, nx-1);
+        if (lis3d)
+        {
+            sprintf(cdim, "%d %d %d", nz-1, ny-1, nx-1);
+        }
+        else
+        {
+            sprintf(cdim, "%d %d", nz-1, nx-1);
+        }
     }
     rc = xmlTextWriterStartElement(*writer, BAD_CAST "DataItem\0");
     rc = xmlTextWriterWriteAttribute(*writer, BAD_CAST "Dimensions\0",
