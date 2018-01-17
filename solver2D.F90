@@ -71,7 +71,7 @@ MODULE FTEIK2D_SOLVER64F
       ! Set space for the travel-times
       IF (.NOT.ALLOCATED(ttimes)) ALLOCATE(ttimes(ngrd))
       ALLOCATE(lupdWork(maxLevelSize))
-      ALLOCATE(slocWork(maxLevelSize))
+      ALLOCATE(slocWork(4*maxLevelSize))
       ALLOCATE(ttvecWork(4*maxLevelSize))
       ALLOCATE(tupdWork(maxLevelSize))
       lupdWork(:) = FALSE
@@ -216,17 +216,41 @@ MODULE FTEIK2D_SOLVER64F
       REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: slow
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(IN) :: lupd
       REAL(C_DOUBLE), DIMENSION(:), INTENT(OUT) :: sloc
-      INTEGER(C_INT) i, ix, iz
+      INTEGER(C_INT) i, ix, ixcell, indx1, indx2, indx3, indx4, indx5, iz, izcell
+
+      ! Extract slownesses
+!     i1 = iz - sgnvz
+!     j1 = ix - sgnvx
+!     indx1 = (MAX(ix-1,1)  - 1)*(nz - 1) + i1 ! V Plane
+!     indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + i1 ! V Plane
+!     indx3 = (j1 - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
+!     indx4 = (j1 - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
+!     indx5 = (j1 - 1)*(nz - 1) + i1
+!     sref1 = MIN(slow(indx1), slow(indx2))
+!     sref2 = MIN(slow(indx3), slow(indx4))
+!     sref3 = slow(indx5)
+
       IF (sweep == 1) THEN
          !$OMP SIMD
          DO i=i1,i2
             ix = i 
             iz = level - i 
-            sloc(i+1-i1) = zero
+            izcell = iz - 1
+            ixcell = ix - 1
+            indx1 = (MAX(ix-1, 1) - 1)*(nz - 1) + izcell ! V Plane
+            indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + izcell ! V Plane
+            indx3 = (ixcell - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
+            indx4 = (ixcell - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
+            indx5 = (ixcell - 1)*(nz - 1) + izcell
+            !sloc(i+1-i1) = zero
+            sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
                !icellz = iz - 1
                !icellx = ix - 1
-               sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz - 1)
+               !sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz - 1)
+               sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
+               sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
+               sloc(4*(i-i1)+3) = slow(indx5)
             ENDIF
          ENDDO
       ELSEIF (sweep == 2) THEN
@@ -234,11 +258,22 @@ MODULE FTEIK2D_SOLVER64F
          DO i=i1,i2
             ix = nx + 1 - i  !flip ix
             iz = level - i
-            sloc(i+1-i1) = zero
+            izcell = iz - 1
+            ixcell = ix
+            indx1 = (MAX(ix-1, 1) - 1)*(nz - 1) + izcell ! V Plane
+            indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + izcell ! V Plane
+            indx3 = (ixcell - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
+            indx4 = (ixcell - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
+            indx5 = (ixcell - 1)*(nz - 1) + izcell
+            !sloc(i+1-i1) = zero
+            sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
                !icellz = iz - 1
                !icellx = ix 
-               sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz - 1)
+               !sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz - 1)
+               sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
+               sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
+               sloc(4*(i-i1)+3) = slow(indx5)
             ENDIF
          ENDDO
       ELSEIF (sweep == 3) THEN
@@ -246,11 +281,22 @@ MODULE FTEIK2D_SOLVER64F
          DO i=i1,i2
             ix = i 
             iz = nz + 1 - (level - i) ! flip iz
-            sloc(i+1-i1) = zero
+            izcell = iz
+            ixcell = ix - 1
+            indx1 = (MAX(ix-1, 1) - 1)*(nz - 1) + izcell ! V Plane
+            indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + izcell ! V Plane
+            indx3 = (ixcell - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
+            indx4 = (ixcell - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
+            indx5 = (ixcell - 1)*(nz - 1) + izcell
+            !sloc(i+1-i1) = zero
+            sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
                !icellz = iz
                !icellx = ix - 1
-               sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz)
+               !sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz)
+               sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
+               sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
+               sloc(4*(i-i1)+3) = slow(indx5)
             ENDIF
          ENDDO 
       ELSE
@@ -258,11 +304,22 @@ MODULE FTEIK2D_SOLVER64F
          DO i=i1,i2
             ix = nx + 1 - i           ! flip ix
             iz = nz + 1 - (level - i) ! flip iz
-            sloc(i+1-i1) = zero
+            izcell = iz
+            ixcell = ix
+            indx1 = (MAX(ix-1, 1) - 1)*(nz - 1) + izcell ! V Plane
+            indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + izcell ! V Plane
+            indx3 = (ixcell - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
+            indx4 = (ixcell - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
+            indx5 = (ixcell - 1)*(nz - 1) + izcell
+            !sloc(i+1-i1) = zero
+            sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN 
                !icellz = iz
                !icellx = ix
-               sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz)
+               !sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz)
+               sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2))
+               sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
+               sloc(4*(i-i1)+3) = slow(indx5)
             ENDIF
          ENDDO 
       ENDIF
@@ -580,6 +637,7 @@ print *, lhaveTimes
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) ts4(4), t0
       INTEGER(C_INT) dest(4), i, i1, ix, iz, j, j1, kiter, level, sgntx, sgntz, sgnvx, sgnvz 
+      INTEGER(C_INT) indx1, indx2, indx3, indx4, indx5
       ierr = 0 
       lhaveTimes = FALSE
       IF (.NOT.lhaveModel) THEN
@@ -652,10 +710,17 @@ print *, lhaveTimes
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
                ttvecWork(4) = ttimes((j - 1)*nz         + i) 
-               slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
+               indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx2 = (MIN(j,nx-1) - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx3 = (j - sgnvx - 1)*(nz - 1) + MAX(i-1,1)  ! WE Plane
+               indx4 = (j - sgnvx - 1)*(nz - 1) + MIN(i,nz-1) ! WE Plane
+               indx5 = (j - sgnvx - 1)*(nz - 1) + i - sgnvz
+               slocWork(1) = MIN(slow(indx1), slow(indx2))
+               slocWork(2) = MIN(slow(indx3), slow(indx4))
+               slocWork(3) = slow(indx5)
+               !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
                CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
-!print *, i, j, ttimes((j-1)*nz + i)
             ENDDO
          ENDDO
 !do i=1,nx*nz
@@ -685,10 +750,18 @@ print *, 'p1:', minval(ttimes), maxval(ttimes)
                ttvecWork(1) = ttimes((j - 1)*nz         + i - sgntz)
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
-               ttvecWork(4) = ttimes((j - 1)*nz         + i)  
+               ttvecWork(4) = ttimes((j - 1)*nz         + i)
 !print *, sngl(ttvec(1:4))
 !pause
-               slocWork(1) = slow((j1 - 1)*(nz - 1) + i1) 
+               indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx2 = (MIN(j,nx-1) - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx3 = (j - sgnvx - 1)*(nz - 1) + MAX(i-1,1)  ! WE Plane
+               indx4 = (j - sgnvx - 1)*(nz - 1) + MIN(i,nz-1) ! WE Plane
+               indx5 = (j - sgnvx - 1)*(nz - 1) + i - sgnvz
+               slocWork(1) = MIN(slow(indx1), slow(indx2))
+               slocWork(2) = MIN(slow(indx3), slow(indx4))
+               slocWork(3) = slow(indx5)
+               !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1) 
                CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
@@ -707,7 +780,15 @@ print *, 'p2:', minval(ttimes), maxval(ttimes)
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i) 
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
                ttvecWork(4) = ttimes((j - 1)*nz         + i)
-               slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
+               indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx2 = (MIN(j,nx-1) - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx3 = (j - sgnvx - 1)*(nz - 1) + MAX(i-1,1)  ! WE Plane
+               indx4 = (j - sgnvx - 1)*(nz - 1) + MIN(i,nz-1) ! WE Plane
+               indx5 = (j - sgnvx - 1)*(nz - 1) + i - sgnvz
+               slocWork(1) = MIN(slow(indx1), slow(indx2))
+               slocWork(2) = MIN(slow(indx3), slow(indx4))
+               slocWork(3) = slow(indx5)
+               !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
                CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
@@ -726,7 +807,15 @@ print *, 'p3:', minval(ttimes), maxval(ttimes)
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i) 
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
                ttvecWork(4) = ttimes((j - 1)*nz         + i)
-               slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
+               indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx2 = (MIN(j,nx-1) - 1)*(nz - 1) + i - sgnvz ! V Plane
+               indx3 = (j - sgnvx - 1)*(nz - 1) + MAX(i-1,1)  ! WE Plane
+               indx4 = (j - sgnvx - 1)*(nz - 1) + MIN(i,nz-1) ! WE Plane
+               indx5 = (j - sgnvx - 1)*(nz - 1) + i - sgnvz
+               slocWork(1) = MIN(slow(indx1), slow(indx2))
+               slocWork(2) = MIN(slow(indx3), slow(indx4))
+               slocWork(3) = slow(indx5)
+               !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
                CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
@@ -802,24 +891,27 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, four, chunkSize
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN) :: n
-      REAL(C_DOUBLE), INTENT(IN) :: ttvec(4*n), sloc(n)
+      REAL(C_DOUBLE), INTENT(IN) :: ttvec(4*n), sloc(4*n)
       REAL(C_DOUBLE), INTENT(OUT) :: tupd(n)
-      REAL(C_DOUBLE) four_sref2, sref2, t1_2d, t12min, ta, tb, tab, tab2, temtv, &
-                     te, tev, tv, tt
+      REAL(C_DOUBLE) four_sref2, s1, s2, s3, sref2, t1_2d, t12min, ta, tb, tab, &
+                     tab2, temtv, te, tev, tv, tt
       INTEGER(C_INT) i
       ! Loop on nodes in update
       DO i=1,n
+         s1 = sloc(4*(i-1)+1)
+         s2 = sloc(4*(i-1)+2)
+         s3 = sloc(4*(i-1)+3)
          tv  = ttvec(4*(i-1)+1)
          te  = ttvec(4*(i-1)+2)
          tev = ttvec(4*(i-1)+3)
          tt  = ttvec(4*(i-1)+4)
          temtv = te - tv
          ! 1D operators (refracted times)
-         t12min = MIN(tv + dz*sloc(i), te + dx*sloc(i))
+         t12min = MIN(tv + dz*s1, te + dx*s2)
          ! 2D operator
          t1_2d = FTEIK_HUGE
-         IF (temtv < dz*sloc(i) .AND. -temtv < dx*sloc(i)) THEN
-            sref2 = sloc(i)*sloc(i)
+         IF (temtv < dz*s3 .AND. -temtv < dx*s3) THEN
+            sref2 = s3*s3
             ta = tev + temtv
             tb = tev - temtv
             tab = ta - tb
