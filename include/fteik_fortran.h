@@ -122,6 +122,8 @@ void fteik_solver2d_setReceivers64fF(const int nrec,
                                      int *ierr);
 void fteik_solver2d_solveSourceLSMF(const int isrc, int *ierr);
 void fteik_solver2d_solveSoureFSMF(const int isrc, int *ierr);
+void fteik_solver2d_getTravelTimeField64fF(const int ngin,
+                                           double ttout[], int *ierr);
 void fteik_solver2d_setSources64fF(const int nsrc,
                                    const double zsrc[],
                                    const double xsrc[],
@@ -170,6 +172,16 @@ void locate_locateEventMPIF(const int evnmbr, int *optIndx,
                             double *t0Opt, double *objOpt);
 
 #endif
+//----------------------------------------------------------------------------//
+//                            3D Graph Reordering                             //
+//----------------------------------------------------------------------------//
+/* Initializes the 3D graph structure. */
+void fteik_graph3d_initializeF(const int nzIn, const int nxIn, const int nyIn,
+                               int *ierr);
+/* Makes the level structure */
+void fteik_graph3d_makeLevelStructuresF(int *ierr);
+/* Frees memory on the 3D graph. */
+void fteik_graph3d_finalizeF(void);
 
 //----------------------------------------------------------------------------//
 

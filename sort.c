@@ -82,23 +82,25 @@ static int cmp_int(const void *x, const void *y)
 }
 #endif
 
-int32_t sorting_sort32i_finter(const int32_t *n, int32_t *__restrict__ a,
-                               const int32_t *orderIn)
+int32_t sorting_sort32i_finter(const int32_t n, int32_t *__restrict__ a,
+                               const int32_t orderIn)
 {
     int32_t ierr;
     enum sortOrder_enum order;
-    order = (enum sortOrder_enum) *orderIn;
-    ierr = sorting_sort32i_work(*n, a, order);
+    order = SORT_ASCENDING;
+    if (orderIn == 1){order = SORT_DESCENDING;} 
+    ierr = sorting_sort32i_work(n, a, order);
     return ierr; 
 }
 
-int32_t sorting_sort64f_finter(const int32_t *n, double *__restrict__ a,
-                               const int32_t *orderIn)
+int32_t sorting_sort64f_finter(const int32_t n, double *__restrict__ a,
+                               const int32_t orderIn)
 {
     int32_t ierr;
     enum sortOrder_enum order;
-    order = (enum sortOrder_enum) *orderIn;
-    ierr = sorting_sort64f_work(*n, a, order);
+    order = SORT_ASCENDING;
+    if (orderIn == 1){order = SORT_DESCENDING;}
+    ierr = sorting_sort64f_work(n, a, order);
     return ierr; 
 }
 
@@ -221,7 +223,6 @@ int sorting_argsort64f_work(const int n,
                             const enum sortOrder_enum order,
                             int *__restrict__ perm)
 {
-    const char *fcnm = "sorting_argsort64f_work\0";
     struct double2d_struct *vals;
     int i;
     //------------------------------------------------------------------------//
@@ -229,13 +230,13 @@ int sorting_argsort64f_work(const int n,
     // Error check
     if (n < 1)
     {   
-        printf("%s: Warning: No data to sort!\n", fcnm);
+        printf("%s: Warning: No data to sort!\n", __func__);
         return -1;
     }
     if (a == NULL || perm == NULL)
     {   
-        if (a == NULL){printf("%s: Error a is NULL\n", fcnm);}
-        if (perm == NULL){printf("%s: Error perm is NULL\n", fcnm);}
+        if (a == NULL){printf("%s: Error a is NULL\n", __func__);}
+        if (perm == NULL){printf("%s: Error perm is NULL\n", __func__);}
         return -1;
     }
     // Special case
@@ -291,7 +292,6 @@ int sorting_argsort32i_work(const int n,
                             const enum sortOrder_enum order,
                             int *__restrict__ perm)
 {
-    const char *fcnm = "sorting_argsort32i_work\0";
     struct int2d_struct *vals;
     int i;
     //------------------------------------------------------------------------//
@@ -299,13 +299,13 @@ int sorting_argsort32i_work(const int n,
     // Error check
     if (n < 1)
     {
-        printf("%s: Warning: No data to sort!\n", fcnm);
+        printf("%s: Warning: No data to sort!\n", __func__);
         return -1;
     }
     if (ia == NULL || perm == NULL)
     {
-        if (ia == NULL){printf("%s: Error ia is NULL\n", fcnm);}
-        if (perm == NULL){printf("%s: Error perm is NULL\n", fcnm);}
+        if (ia == NULL){printf("%s: Error ia is NULL\n", __func__);}
+        if (perm == NULL){printf("%s: Error perm is NULL\n", __func__);}
         return -1;
     }
     // Special case
@@ -362,12 +362,11 @@ int sorting_sort64f_work(const int n,
                          double *__restrict__ a,
                          const enum sortOrder_enum order)
 {
-    const char *fcnm = "sorting_sort64f_work\0";
     IppStatus status;
     // Error checking
     if (n < 1)
     {
-        printf("%s: Error no data to sort\n", fcnm);
+        printf("%s: Error no data to sort\n", __func__);
         return -1;
     }
     if (order == SORT_ASCENDING)
@@ -380,7 +379,7 @@ int sorting_sort64f_work(const int n,
     }
     if (ippStsNoErr != status)
     {
-        printf("%s: Sort failed!\n", fcnm);
+        printf("%s: Sort failed!\n", __func__);
         return -1;
     }
     return 0;
@@ -390,7 +389,6 @@ static int array_reverse64f_work(const int n, double *a, double *b);
 int sorting_sort64f_work(const int n, double *__restrict__ a,
                          const enum sortOrder_enum order)
 {
-    const char *fcnm = "sorting_sort64f_work\0";
     int ierr;
     size_t ns = (size_t) n;
     //------------------------------------------------------------------------//
@@ -398,7 +396,7 @@ int sorting_sort64f_work(const int n, double *__restrict__ a,
     // Error checking
     if (n < 1)
     {
-        printf("%s: Error no data to sort\n", fcnm);
+        printf("%s: Error no data to sort\n", __func__);
         return -1;
     }
     // Early return
@@ -409,7 +407,7 @@ int sorting_sort64f_work(const int n, double *__restrict__ a,
         ierr = array_reverse64f_work(n, a, a);
         if (ierr != 0)
         {
-            printf("%s: Error reversing array!\n", fcnm);
+            printf("%s: Error reversing array!\n", __func__);
             return -1;
         }
     }
@@ -430,7 +428,6 @@ int sorting_sort64f_work(const int n, double *__restrict__ a,
  */
 static int array_reverse64f_work(const int n, double *a, double *b)
 {
-    const char *fcnm = "__array_reverse__double\0";
 #ifdef FTEIK_USE_INTEL
     IppStatus status;
 #else
@@ -439,9 +436,9 @@ static int array_reverse64f_work(const int n, double *a, double *b)
 #endif
     if (n < 1 || a == NULL || b == NULL)
     {
-        if (n < 1){printf("%s: Invalid length: %d\n", fcnm, n);}
-        if (a == NULL){printf("%s: Error a is NULL\n", fcnm);}
-        if (b == NULL){printf("%s: Error b is NULL\n", fcnm);}
+        if (n < 1){printf("%s: Invalid length: %d\n", __func__, n);}
+        if (a == NULL){printf("%s: Error a is NULL\n", __func__);}
+        if (b == NULL){printf("%s: Error b is NULL\n", __func__);}
         return -1;
     }
     // In place
@@ -455,12 +452,12 @@ static int array_reverse64f_work(const int n, double *a, double *b)
             {
                 if (a == NULL)
                 {
-                    printf("%s: Array is NULL\n", fcnm);
+                    printf("%s: Array is NULL\n", __func__);
                 }
             }
             if (status == ippStsSizeErr)
             {
-                printf("%s: Invalid size\n", fcnm);
+                printf("%s: Invalid size\n", __func__);
             }
             return -1; 
         }
@@ -487,12 +484,12 @@ static int array_reverse64f_work(const int n, double *a, double *b)
             {
                 if (a == NULL || b == NULL)
                 {
-                    printf("%s: Array a or b is NULL\n", fcnm);
+                    printf("%s: Array a or b is NULL\n", __func__);
                 }
             }
             if (status == ippStsSizeErr)
             {
-                printf("%s: Invalid size\n", fcnm);
+                printf("%s: Invalid size\n", __func__);
             }
             return -1; 
         }
@@ -526,12 +523,11 @@ static int array_reverse64f_work(const int n, double *a, double *b)
 int sorting_sort32i_work(const int n, int *__restrict__ a,
                          const enum sortOrder_enum order)
 {
-    const char *fcnm = "sorting_sort32i_work\0";
     IppStatus status;
     // Error checking
     if (n < 1)
     {
-        printf("%s: Error no data to sort\n", fcnm);
+        printf("%s: Error no data to sort\n", __func__);
         return -1; 
     }
     if (order == SORT_ASCENDING)
@@ -544,7 +540,7 @@ int sorting_sort32i_work(const int n, int *__restrict__ a,
     }
     if (ippStsNoErr != status)
     {
-        printf("%s: Sort failed!\n", fcnm);
+        printf("%s: Sort failed!\n", __func__);
         return -1;
     }
     return 0;
@@ -554,7 +550,6 @@ static int array_reverse32i_work(const int n, int *a, int *b);
 int sorting_sort32i_work(const int n, int *__restrict__ a,
                          const enum sortOrder_enum order)
 {
-    const char *fcnm = "sorting_sort32i_work\0";
     int ierr;
     size_t ns = (size_t) n;
     //------------------------------------------------------------------------//
@@ -562,7 +557,7 @@ int sorting_sort32i_work(const int n, int *__restrict__ a,
     // Error checking
     if (n < 1)
     {
-        printf("%s: Error no data to sort\n", fcnm);
+        printf("%s: Error no data to sort\n", __func__);
         return -1;
     }
     // Early return
@@ -573,7 +568,7 @@ int sorting_sort32i_work(const int n, int *__restrict__ a,
         ierr = array_reverse32i_work(n, a, a);
         if (ierr != 0)
         {
-            printf("%s: Error reversing array!\n", fcnm);
+            printf("%s: Error reversing array!\n", __func__);
             return -1;
         }
     }
@@ -594,14 +589,13 @@ int sorting_sort32i_work(const int n, int *__restrict__ a,
  */
 static int array_reverse32i_work(const int n, int *a, int *b)
 {
-    const char *fcnm = "array_reverse32i_work\0";
     int bj;
     int i, j;
     if (n < 1 || a == NULL || b == NULL)
     {   
-        if (n < 1){printf("%s: Invalid length: %d\n", fcnm, n);}
-        if (a == NULL){printf("%s: Error a is NULL\n", fcnm);}
-        if (b == NULL){printf("%s: Error b is NULL\n", fcnm);}
+        if (n < 1){printf("%s: Invalid length: %d\n", __func__, n);}
+        if (a == NULL){printf("%s: Error a is NULL\n", __func__);}
+        if (b == NULL){printf("%s: Error b is NULL\n", __func__);}
         return -1;
     }       
     // In place
@@ -652,15 +646,14 @@ static int array_reverse32i_work(const int n, int *a, int *b)
 int sorting_bsearch32i(const int key, const int *__restrict__ values,
                        const int n, const enum sortOrder_enum hint)
 {
-    const char *fcnm = "sorting_bsearch32i\0";
     int *item, indx;
     size_t np;
     bool lascending;
     // check the inputs
     if (n < 1 || values == NULL)
     {
-        if (n < 1){printf("%s: Error no points\n", fcnm);}
-        if (values == NULL){printf("%s: Error values is NULL\n", fcnm);}
+        if (n < 1){printf("%s: Error no points\n", __func__);}
+        if (values == NULL){printf("%s: Error values is NULL\n", __func__);}
         return -1;
     }
     // handle the edge case

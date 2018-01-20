@@ -1,5 +1,5 @@
-#ifndef FEM25_SORTING_H__
-#define FEM25_SORTING_H__ 1
+#ifndef FTEIK_SORTING_H__
+#define FTEIK_SORTING_H__ 1
 #include "fteik_config.h"
 enum sortOrder_enum 
 {

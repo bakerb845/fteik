@@ -781,12 +781,20 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = constants.F90 \
+INPUT                  = fteik.wiki/Home.md \
+                         fteik.wiki/Algorithmic-Details.md \
+                         fteik.wiki/Building-the-Software.md \
+                         fteik.wiki/Flow-of-Control.md \
+                         fteik.wiki/Solver-and-Archive-Coordinate-Conventions.md \
+                         fteik.wiki/The-SEG-Over-Thrust-Model.md \
+                         graph3d.F90 \
+                         constants.F90 \
                          model.F90 \
                          locate.F90 \
                          receiver.F90 \ 
                          source.F90 \
                          solver.F90 \
+                         solver2D.F90 \
                          modules.F90 \
                          localSolver.F90 \
                          h5io.F90 \

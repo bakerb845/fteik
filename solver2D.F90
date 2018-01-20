@@ -133,58 +133,101 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !>    @brief Determines if this is an update node in the level-set fast sweeping method.
 !>
+!>    @param[in] linit      If true then this is an initialization step and we can
+!>                          use a subset of the grid based on the source position. \n
+!>                          Otherwise, this is general sweeping during the Gauss-Seidel
+!>                          iteration. 
 !>    @param[in] level      Current level in level-set.
 !>    @param[in] sweep      Sweep number.  This is in the range [1,4].
 !>    @param[in] nz         Number of z grid points in travel time field.
 !>    @param[in] nx         Number of x grid points in travel time field.
 !>    @param[in] i1         Start index of level set.
 !>    @param[in] i2         End indx of level set.
+!>    @param[in] zsi        Source index in z.  This is only used if linit is true. 
+!>    @param[in] xsi        Source index in x.  This is only used if linit is true.
 !>
 !>    @param[out] lupd      If true then the k'th node in the level is to be updated.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      PURE SUBROUTINE fteik_solver2d_isUpdateNodeF(level, sweep, nz, nx, &
-                                                   i1, i2, lupd) &
+      PURE SUBROUTINE fteik_solver2d_isUpdateNodeF(linit, level, sweep, nz, nx, &
+                                                   i1, i2, zsi, xsi, lupd) &
       BIND(C, NAME='fteik_solver2d_isUpdateNodeF')
       USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep
+      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linit
+      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep, xsi, zsi
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(OUT) :: lupd
       INTEGER(C_INT) i, ix, iz
-      IF (sweep == 1) THEN
-         !$OMP SIMD
-         DO i=i1,i2
-            ix = i
-            iz = level - i
-            lupd(i+1-i1) = FALSE
-            IF (ix > 1 .AND. iz > 1) lupd(i+1-i1) = TRUE
-         ENDDO
-      ELSEIF (sweep == 2) THEN
-         !$OMP SIMD
-         DO i=i1,i2
-            ix = nx + 1 - i  !flip ix
-            iz = level - i
-            lupd(i+1-i1) = FALSE
-            IF (ix < nx .AND. iz > 1) lupd(i+1-i1) = TRUE
-         ENDDO
-      ELSEIF (sweep == 3) THEN
-         !$OMP SIMD
-         DO i=i1,i2
-            ix = i 
-            iz = nz + 1 - (level - i) ! flip iz
-            lupd(i+1-i1) = FALSE
-            IF (ix > 1 .AND. iz < nz - 1) lupd(i+1-i1) = TRUE
-         ENDDO
+      IF (.NOT.linit) THEN
+         IF (sweep == 1) THEN
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = i
+               iz = level - i
+               lupd(i+1-i1) = FALSE
+               IF (ix > 1 .AND. iz > 1) lupd(i+1-i1) = TRUE
+            ENDDO
+         ELSEIF (sweep == 2) THEN
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = nx + 1 - i  !flip ix
+               iz = level - i
+               lupd(i+1-i1) = FALSE
+               IF (ix < nx .AND. iz > 1) lupd(i+1-i1) = TRUE
+            ENDDO
+         ELSEIF (sweep == 3) THEN
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = i
+               iz = nz + 1 - (level - i) ! flip iz
+               lupd(i+1-i1) = FALSE
+               IF (ix > 1 .AND. iz < nz) lupd(i+1-i1) = TRUE
+            ENDDO
+         ELSE
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = nx + 1 - i           ! flip ix
+               iz = nz + 1 - (level - i) ! flip iz
+               lupd(i+1-i1) = FALSE
+               IF (ix < nx .AND. iz < nz) lupd(i+1-i1) = TRUE
+            ENDDO
+         ENDIF
       ELSE
-         !$OMP SIMD
-         DO i=i1,i2
-            ix = nx + 1 - i           ! flip ix
-            iz = nz + 1 - (level - i) ! flip iz
-            lupd(i+1-i1) = FALSE
-            IF (ix < nx - 1 .AND. iz < nz - 1) lupd(i+1-i1) = TRUE
-         ENDDO
+         IF (sweep == 1) THEN
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = i
+               iz = level - i
+               lupd(i+1-i1) = FALSE
+               IF (ix > MAX(1, xsi-1) .AND. iz > MAX(1, zsi-1)) lupd(i+1-i1) = TRUE
+            ENDDO
+         ELSEIF (sweep == 2) THEN 
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = nx + 1 - i  !flip ix
+               iz = level - i
+               lupd(i+1-i1) = FALSE
+               IF (ix < MIN(nx, xsi+2) .AND. iz > MAX(1, zsi-1)) lupd(i+1-i1) = TRUE
+            ENDDO
+         ELSEIF (sweep == 3) THEN 
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = i
+               iz = nz + 1 - (level - i) ! flip iz
+               lupd(i+1-i1) = FALSE
+               IF (ix > MAX(1, xsi-1) .AND. iz < MIN(nz, zsi+2)) lupd(i+1-i1) = TRUE 
+            ENDDO
+         ELSE
+            !$OMP SIMD
+            DO i=i1,i2
+               ix = nx + 1 - i           ! flip ix
+               iz = nz + 1 - (level - i) ! flip iz
+               lupd(i+1-i1) = FALSE
+               IF (ix < MIN(nx, xsi+2) .AND. iz < MIN(nz, zsi+2)) lupd(i+1-i1) = TRUE 
+            ENDDO
+         ENDIF
       ENDIF
       RETURN
       END
@@ -203,6 +246,10 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] slow    Slowness field (s/m) defined at cells.  This is a vector
 !>                       of dimension [nz-1 x nx-1] with leading dimenesion [nz-1].
 !>
+!>    @param[out] sloc   Slownesses (s/m) for finite difference stencil in the V, WE, and
+!>                       home position respetively.  This is a vector of dimension
+!>                       [4 x maxLevelSize] with leading dimension 4. 
+!>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
       PURE SUBROUTINE fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx, &
@@ -217,19 +264,7 @@ MODULE FTEIK2D_SOLVER64F
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(IN) :: lupd
       REAL(C_DOUBLE), DIMENSION(:), INTENT(OUT) :: sloc
       INTEGER(C_INT) i, ix, ixcell, indx1, indx2, indx3, indx4, indx5, iz, izcell
-
       ! Extract slownesses
-!     i1 = iz - sgnvz
-!     j1 = ix - sgnvx
-!     indx1 = (MAX(ix-1,1)  - 1)*(nz - 1) + i1 ! V Plane
-!     indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + i1 ! V Plane
-!     indx3 = (j1 - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
-!     indx4 = (j1 - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
-!     indx5 = (j1 - 1)*(nz - 1) + i1
-!     sref1 = MIN(slow(indx1), slow(indx2))
-!     sref2 = MIN(slow(indx3), slow(indx4))
-!     sref3 = slow(indx5)
-
       IF (sweep == 1) THEN
          !$OMP SIMD
          DO i=i1,i2
@@ -245,8 +280,6 @@ MODULE FTEIK2D_SOLVER64F
             !sloc(i+1-i1) = zero
             sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
-               !icellz = iz - 1
-               !icellx = ix - 1
                !sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz - 1)
                sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
                sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
@@ -268,8 +301,6 @@ MODULE FTEIK2D_SOLVER64F
             !sloc(i+1-i1) = zero
             sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
-               !icellz = iz - 1
-               !icellx = ix 
                !sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz - 1)
                sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
                sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
@@ -291,8 +322,6 @@ MODULE FTEIK2D_SOLVER64F
             !sloc(i+1-i1) = zero
             sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN
-               !icellz = iz
-               !icellx = ix - 1
                !sloc(i+1-i1) = slow((ix - 2)*(nz - 1) + iz)
                sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2)) 
                sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
@@ -314,8 +343,6 @@ MODULE FTEIK2D_SOLVER64F
             !sloc(i+1-i1) = zero
             sloc(4*(i-i1)+1:4*(i-i1)+4) = zero
             IF (lupd(i+1-i1)) THEN 
-               !icellz = iz
-               !icellx = ix
                !sloc(i+1-i1) = slow((ix - 1)*(nz - 1) + iz)
                sloc(4*(i-i1)+1) = MIN(slow(indx1), slow(indx2))
                sloc(4*(i-i1)+2) = MIN(slow(indx3), slow(indx4))
@@ -337,7 +364,7 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] i1      Start index of level set.
 !>    @param[in] i2      End indx of level set.
 !>    @param[in] lupd    If true then the k'th node in the level is to be updated.
-!>    @param[in] ttimes  Travel time field (s) defined at nodes.  This is a vector
+!>    @param[in] tt      Travel time field (s) defined at nodes.  This is a vector
 !>                       of dimension [nz x nx] with leading dimension [nz].
 !>
 !>    @param[out] ttvec  Travel times for finite differencing and updating.  
@@ -580,6 +607,32 @@ print *, dest
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
+      ! Initialize
+      DO sweep=1,4
+         ! Loop on the levels
+         DO level=2,nlevels
+            i1 = MAX(1, level - nz)
+            i2 = MIN(nx, level - 1) 
+            nnodes = i2 - i1 + 1
+            ! Get the update nodes
+            CALL fteik_solver2d_isUpdateNodeF(TRUE, level, sweep, nz, nx, &
+                                              i1, i2, zsi, xsi, lupdWork)
+            ! Prefetch the slowness
+            CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
+                                                     i1, i2,                 &
+                                                     lupdWork, slow, slocWork)
+            ! Prefetch travel times
+            CALL fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx,      &
+                                                        i1, i2,                    &
+                                                        lupdWork, ttimes, ttvecWork)
+            ! Compute the candidate travel times at each node in level set
+            !CALL fteik_localSolver2d_noInit64fF(nnodes, ttvecWork, slocWork, tupdWork)
+            ! And update
+            !CALL fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
+            !                                          i1, i2, lupdWork,     &
+            !                                          tupdWork, ttimes)
+         ENDDO
+      ENDDO
       ! Number of Gauss-Seidel iterations
       DO kiter=1,nsweep
          ! Loop on sweeping directions
@@ -590,8 +643,8 @@ print *, dest
                i2 = MIN(nx, level - 1)
                nnodes = i2 - i1 + 1
                ! Get the update nodes
-               CALL fteik_solver2d_isUpdateNodeF(level, sweep, nz, nx, &
-                                                 i1, i2, lupdWork)
+               CALL fteik_solver2d_isUpdateNodeF(FALSE, level, sweep, nz, nx, &
+                                                 i1, i2, zsi, xsi, lupdWork)
                ! Prefetch the slowness
                CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
                                                         i1, i2,                 &
@@ -660,6 +713,10 @@ print *, lhaveTimes
       ttimes(dest(1:4)) = ts4(1:4)
       ! Initialization
       ! First sweeping: Top->Bottom ; West->East
+      sgntz = 1
+      sgntx = 1
+      sgnvz = 1
+      sgnvx = 1
       DO ix=MAX(2,xsi),nx
          DO iz=MAX(2,zsi),nz
             CALL fteik_localSolver2d_init64fF(1, nz, nx, iz, ix, &
@@ -668,7 +725,11 @@ print *, lhaveTimes
          ENDDO
       ENDDO
       ! Second sweeping: Top->Bottom ; East->West
-      DO ix=xsi+1,1,-1
+      sgntz = 1
+      sgntx =-1
+      sgnvz = 1
+      sgnvx = 0
+      DO ix=MIN(nx-1,xsi+1),1,-1
          DO iz=MAX(2,zsi),nz
             CALL fteik_localSolver2d_init64fF(2, nz, nx, iz, ix, &
                                               slow, ttimes, tupdWork(1))
@@ -676,16 +737,24 @@ print *, lhaveTimes
          ENDDO
       ENDDO
       ! Third sweep: Bottom->Top ; West->East
+      sgntz =-1
+      sgntx = 1
+      sgnvz = 0
+      sgnvx = 1
       DO ix=MAX(2,xsi),nx
-         DO iz=zsi+1,1,-1
+         DO iz=MIN(nz-1,zsi+1),1,-1
             CALL fteik_localSolver2d_init64fF(3, nz, nx, iz, ix, &
                                               slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
       ! Fourth sweeping: Bottom->Top ; East->West
-      DO ix=xsi+1,1,-1
-         DO iz=zsi+1,1,-1
+      sgntz =-1
+      sgntx =-1
+      sgnvz = 0
+      sgnvx = 0
+      DO ix=MIN(nx-1,xsi+1),1,-1
+         DO iz=MIN(nz-1,zsi+1),1,-1
             CALL fteik_localSolver2d_init64fF(4, nz, nx, iz, ix, &
                                               slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
@@ -833,6 +902,39 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Returns the travel time field.
+!>
+!>    @param[in] ngin    Number of input grid points.  This must equal [nz x nx].
+!>
+!>    @param[out] ttout  Travel time field at the grid points.  This is a [nz x nx]
+!>                       vector with leading dimension nz.
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver2d_getTravelTimeField64fF(ngin, ttout, ierr) &
+      BIND(C, NAME='fteik_solver2d_getTravelTimeField64fF')
+      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ngin
+      REAL(C_DOUBLE), INTENT(OUT) :: ttout(ngin)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN 
+         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64fF: Travel times not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ngin /= ngrd) THEN
+         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64fF: No receivers'
+         RETURN
+      ENDIF
+      ttout(:) = ttimes(:)
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Extracts the travel times at the receivers.
 !>
 !>    @param[in] nrec   Number of receivers.
@@ -932,9 +1034,9 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nz, nx, iz, ix
       REAL(C_DOUBLE), INTENT(OUT) :: tupd
       REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: tt, slow
-      REAL(C_DOUBLE) apoly, bpoly, cpoly, dpoly, four_sref2, &
-                     ta, tb, taue, tauev, tauv, tdiag, tmin, tv, te, tev, t, &
-                     tab, tab2, t1, t2, t3, t1d, t2d, &
+      REAL(C_DOUBLE) apoly, bpoly, cpoly, dpoly, &
+                     ta, tb, taue, tauev, tauv, tdiag, tv, te, tev, t, &
+                     t1, t2, t3, t1d, t2d, &
                      sref1, sref2, sref3, sgnrx, sgnrz, &
                      sgnrx_txc, sgnrz_tzc, sgnrx_txc_dxi, sgnrz_tzc_dzi, t0c, txc, tzc
       INTEGER(C_INT) i1, indx, indxv, indxe, indxev, j1
@@ -1141,8 +1243,6 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>    @param[in] zrec    z locations (meters) of receivers.  This is a vector of
 !>                       of dimension [nrec].
 !>    @param[in] xrec    x locations (meters) of receivers.  This is a vector of
-!>                       of dimension [nrec].
-!>    @param[in] yrec    y locations (meters) of receivers.  This is a vector of
 !>                       of dimension [nrec].
 !>
 !>    @param[out] ierr   0 indicates success.
