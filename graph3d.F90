@@ -350,6 +350,90 @@ MODULE FTEIK_GRAPH3D
       IF (ALLOCATED(ijkv8))      DEALLOCATE(ijkv8)
       RETURN
       END SUBROUTINE
+
+      SUBROUTINE fteik_graphd_getIJKVF(nwork, sweep, ijkv, ierr) &
+      BIND(C, NAME='fteik_graphd_getIJKVF')
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nwork, sweep
+      INTEGER(C_INT), INTENT(OUT) :: ijkv(nwork), ierr
+      ierr = 0
+      IF (sweep < 1 .OR. sweep > 8) THEN
+         WRITE(*,*) 'fteik_graphd_getIJKVF: Invalid sweep', sweep
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nwork /= 4*ngrd) THEN
+         IF (nwork < 4*ngrd) THEN
+            WRITE(*,*) 'fteik_graphd_getIJKVF: Insufficient space'
+            ierr = 1
+            RETURN
+         ENDIF
+         ijkv(:) = 0
+      ENDIF
+      IF (.NOT.ALLOCATED(ijkv1)) THEN
+         WRITE(*,*) 'fteik_graphd_getIJKVF: ijkv not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (sweep == 1) ijkv(1:4*ngrd) = ijkv1(1:4*ngrd)
+      IF (sweep == 2) ijkv(1:4*ngrd) = ijkv2(1:4*ngrd)
+      IF (sweep == 3) ijkv(1:4*ngrd) = ijkv3(1:4*ngrd)
+      IF (sweep == 4) ijkv(1:4*ngrd) = ijkv4(1:4*ngrd)
+      IF (sweep == 5) ijkv(1:4*ngrd) = ijkv5(1:4*ngrd)
+      IF (sweep == 6) ijkv(1:4*ngrd) = ijkv6(1:4*ngrd)
+      IF (sweep == 7) ijkv(1:4*ngrd) = ijkv7(1:4*ngrd)
+      IF (sweep == 8) ijkv(1:4*ngrd) = ijkv8(1:4*ngrd)
+      RETURN
+      END
+
+      INTEGER(C_INT) FUNCTION fteik_graph3d_getMaxLevelSize(ierr) &
+      BIND(C, NAME='fteik_graph3d_getMaxLevelSize')
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0 
+      fteik_graph3d_getMaxLevelSize = maxLevelSize
+      IF (maxLevelSize < 1) THEN
+         WRITE(*,*) 'fteik_graph3d_getNumberOfLevels: maxLevelSize not yet computed'
+         ierr = 1 
+      ENDIF
+      RETURN
+      END
+
+      INTEGER(C_INT) FUNCTION fteik_graph3d_getNumberOfLevels(ierr) &
+      BIND(C, NAME='fteik_graph3d_getNumberOfLevels')
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      fteik_graph3d_getNumberOfLevels = nLevels
+      IF (nLevels < 1) THEN
+         WRITE(*,*) 'fteik_graph3d_getNumberOfLevels: nLevels not yet computed'
+         ierr = 1
+      ENDIF
+      RETURN
+      END
+
+      SUBROUTINE fteik_graph3d_getLevelPointerF(nwork, levelPtrOut, ierr) &
+      BIND(C, NAME='fteik_graph3d_getLevelPointerF')
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nwork
+      INTEGER(C_INT), INTENT(OUT) :: levelPtrOut(nwork), ierr
+      ierr = 0
+      IF (.NOT.ALLOCATED(levelPtr)) THEN
+         WRITE(*,*) 'fteik_graph3d_getLevelPointerF: levelPtr not yet made'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nwork < nLevels + 1) THEN
+         WRITE(*,*) 'fteik_graph3d_getLevelPointerF: Insufficient space'
+         ierr = 1
+         RETURN
+      ENDIF
+      levelPtrOut(1:nLevels+1) = levelPtr(1:nLevels+1)
+      IF (nwork > nLevels) levelPtrOut(nLevels+2:nwork) = 0
+      RETURN
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !

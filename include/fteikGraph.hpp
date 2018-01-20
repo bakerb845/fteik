@@ -45,6 +45,10 @@ class fteikGraph
            if (*k < 0 || *k > ny - 1){ierr = ierr + 1;}
            return ierr;
        };
+       int getMaxLevelSize(void)
+       {
+           return maxLevelSize;
+       };
        int getNumberOfLevels(void);
 
     private:

@@ -182,6 +182,11 @@ void fteik_graph3d_initializeF(const int nzIn, const int nxIn, const int nyIn,
 void fteik_graph3d_makeLevelStructuresF(int *ierr);
 /* Frees memory on the 3D graph. */
 void fteik_graph3d_finalizeF(void);
+void fteik_graph3d_getLevelPointerF(const int nwork, int levelPtr[], int *ierr);
+int fteik_graph3d_getMaxLevelSize(int *ierr);
+int fteik_graph3d_getNumberOfLevels(int *ierr);
+void fteik_graphd_getIJKVF(const int nwork, const int sweep,
+                           int ijkv[], int *ierr);
 
 //----------------------------------------------------------------------------//
 

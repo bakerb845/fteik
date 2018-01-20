@@ -978,15 +978,15 @@ int fteikGraph::generateIJKV(const int sweep)
 }
 //============================================================================//
 extern "C" void *fteik_graph_initializeF(const int *nz, const int *nx,
-                                               const int *ny, int *ierr)
+                                         const int *ny, int *ierr)
 {
     void *graph;
-    graph = fteik_graph_intialize(*nz, *nx, *ny, ierr);
+    graph = fteik_graph_initialize(*nz, *nx, *ny, ierr);
     return graph;
 }
 
-extern "C" void *fteik_graph_intialize(const int nz, const int nx, const int ny,
-                                       int *ierr)
+extern "C" void *fteik_graph_initialize(const int nz, const int nx, const int ny,
+                                        int *ierr)
 {
     const char *fcnm = "fteik_graphIntialize\0";
     fteikGraph *graph = NULL; 
@@ -1035,7 +1035,6 @@ extern "C" int fteik_graph_getLevelPointerF(void *graphIn, const int *nwork,
                                             const int *sweep,
                                             int *__restrict__ levelPtr)
 {
-    const char *fcnm = "fteik_graph_getLevelPointerF\0";
     int i, ierr;
     ierr = fteik_graph_getLevelPointer(graphIn, *nwork, *sweep, levelPtr);
     if (ierr == 0)
@@ -1045,7 +1044,7 @@ extern "C" int fteik_graph_getLevelPointerF(void *graphIn, const int *nwork,
     }
     else
     {   
-        printf("%s: Error copying levelPtr\n", fcnm);
+        printf("%s: Error copying levelPtr\n", __func__);
     }   
     return ierr;       
 }
@@ -1054,11 +1053,10 @@ extern "C" int fteik_graph_getLevelPointer(void *graphIn, const int nwork,
                                            const int sweep,
                                            int *__restrict__ levelPtr)
 {
-    const char *fcnm = "fteik_graph_getLevelPoint\0";
     int ierr;
     fteikGraph *graph = static_cast<fteikGraph *> (graphIn);
     ierr = graph->copyLevelPtr(nwork, sweep, levelPtr);
-    if (ierr != 0){printf("%s: Error getting levelPtr\n", fcnm);}
+    if (ierr != 0){printf("%s: Error getting levelPtr\n", __func__);}
     graph = NULL;
     return ierr;
 }
@@ -1092,4 +1090,13 @@ extern "C" int fteik_graph_getIJKV(void *graphIn, const int nwork,
     if (ierr != 0){printf("%s: Error getting ijkv\n", fcnm);}
     graph = NULL; 
     return ierr;
+}
+
+extern "C" int fteik_graph_getMaxLevelSize(void *graphIn)
+{
+    int maxLevelSize;
+    fteikGraph *graph = static_cast<fteikGraph *> (graphIn);
+    maxLevelSize = graph->getMaxLevelSize();
+    graph = NULL;
+    return maxLevelSize;
 }
