@@ -109,6 +109,7 @@ free(vwork);
 //printf("Press (ENTER)\n");
 //getchar();
 //omp_set_num_threads(1);
+/*
 fteik_xdmf_writeVelocityModel(1, "debug.h5", "debugModel", false,
                               nz, nx, ny, dz, dx, dy, z0, x0, y0);
 fteik_xdmf_writeVelocityModel(3, "debug.h5", "debugTimes", false,
@@ -117,6 +118,7 @@ fteik_xdmf_writeVelocityModel(4, "debug.h5", "debugModel", false,
                               nz, nx, ny, dz, dx, dy, z0, x0, y0);
 fteik_xdmf_writeVelocityModel(5, "debug.h5", "debugModel", false,
                               nz, nx, ny, dz, dx, dy, z0, x0, y0);
+*/
 
     memset(&xdmf, 0, sizeof(struct xdmf_struct));
     memset(&solver, 0, sizeof(struct fteikSolver_struct));
