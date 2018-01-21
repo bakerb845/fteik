@@ -11,7 +11,7 @@
 #include <boost/graph/edge_coloring.hpp>
 #include "fteikGraph.hpp"
 #include "fteikGraph.h"
-#include "sorting.h"
+#include "fteik_sorting.h"
 
 using namespace std;
 using namespace boost;

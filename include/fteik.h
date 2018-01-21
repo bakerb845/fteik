@@ -2,12 +2,12 @@
 #define FTEIK_H__ 1
 #include "fteik_config.h"
 #include "fteik_struct.h"
-#include "fteik_graph.h"
 #include "fteik_os.h"
 #include "fteik_io.h"
 #include "fteik_xdmf.h"
 #include "fteik_h5io.h"
 #include "fteik_fortran.h"
+#include "fteik_sorting.h"
 #include <stdbool.h>
 
 #ifdef __cplusplus

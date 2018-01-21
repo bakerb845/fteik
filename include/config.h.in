@@ -4,8 +4,12 @@
 
 /* using intel */
 #cmakedefine FTEIK_USE_INTEL
+/* using HDF5 */
 #cmakedefine FTEIK_USE_H5
+/* using MPI */
 #cmakedefine FTEIK_USE_MPI
+/* using boost */
+#cmakedefine FTEIK_USE_BOOST
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

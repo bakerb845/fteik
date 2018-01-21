@@ -6,9 +6,9 @@
 #include <fteik_graph.h>
 #include <fteikGraph.h>
 
-int test_slowPerm(void);
-int test_ttPerm(void);
-int test_sweepSigns(void);
+//int test_slowPerm(void);
+//int test_ttPerm(void);
+//int test_sweepSigns(void);
 int test_gridConversions(void);
 int test_graph3d();
 
@@ -21,6 +21,7 @@ int main()
         printf("Failed gridConversions test\n");
         return EXIT_FAILURE;
     }
+/*
     ierr = test_slowPerm();
     if (ierr != EXIT_SUCCESS)
     {
@@ -39,6 +40,7 @@ int main()
         printf("Failed sweepSigns test\n");
         return EXIT_FAILURE;
     }
+*/
     ierr = test_graph3d();
     if (ierr != EXIT_SUCCESS)
     {
@@ -51,15 +53,17 @@ int main()
 
 int test_graph3d(void)
 {
+#ifdef FTEIK_USE_BOOST
     void *graph;
-    int nz = 10;
-    int nx = 8;
-    int ny = 13;
+    int nz = 35;
+    int nx = 68;
+    int ny = 23;
     int ngrd = nx*ny*nz;
     int *ijkv1, *ijkv2, *ijkv3, *ijkv4, *ijkv5, *ijkv6, *ijkv7, *ijkv8;
     int *ijkv1R, *ijkv2R, *ijkv3R, *ijkv4R, *ijkv5R, *ijkv6R, *ijkv7R, *ijkv8R;
     int *levelPtr, *levelPtrRef;
     int i, ierr, maxLevelSize, nLevels, maxLevelSizeRef, nLevelsRef, nwork, sweep;
+    fprintf(stdout, "%s: Generating graph...\n", __func__);
     fteik_graph3d_initializeF(nz, nx, ny, &ierr); 
     if (ierr != 0)
     {
@@ -209,8 +213,12 @@ int test_graph3d(void)
     free(ijkv1R); free(ijkv2R); free(ijkv3R); free(ijkv4R); 
     free(ijkv5R); free(ijkv6R); free(ijkv7R); free(ijkv8R);
     return EXIT_SUCCESS;
+#else
+    return EXIT_SUCCESS;
+#endif
 }
 
+/*
 int test_sweepSigns(void)
 {
     const char *fcnm = "test_sweepSigns\0";
@@ -249,6 +257,7 @@ int test_sweepSigns(void)
     }
     return EXIT_SUCCESS;
 }
+*/
 
 int test_gridConversions(void)
 {
@@ -292,6 +301,7 @@ int test_gridConversions(void)
     return EXIT_SUCCESS;
 }
 
+/*
 int test_slowPerm(void)
 {
     const char *fcnm = "test_slowPerm\0";
@@ -335,3 +345,4 @@ int test_ttPerm(void)
     }
     return EXIT_SUCCESS;
 }
+*/

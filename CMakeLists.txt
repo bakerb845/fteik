@@ -22,7 +22,7 @@ SET(ORIGINAL_SRC refsrc/fteik.f90 refsrc/fteik2d.F90 lay2vel.f90)
 SET(UTILS_SRC h5io.c h5io.F90 io.c memory.F90 os.c xdmf.c xdmfOri.c)
 # Order matters here
 SET(F90_SRC constants.F90 ipps.F90 model.F90 source.F90 receiver.F90 localSolver.F90 solver.F90 solver2D.F90 locate.F90)
-SET(NEW_SRC fwrapper.c graph.c sort.c ${F90_SRC} modules.F90 graph.f90 graph3d.F90 fteikGraph.cpp
+SET(NEW_SRC fwrapper.c sort.c ${F90_SRC} modules.F90 graph3d.F90
             autoCode.f90 fteik_utils.F90 solveEikonal.F90)
 IF (FTEIK_USE_H5)
   SET(NEW_SRC ${NEW_SRC} h5io_utils.c)
@@ -37,18 +37,24 @@ ENDIF()
 IF (FTEIK_USE_MPI)
   ADD_DEFINITIONS(-DFTEIK_FORTRAN_USE_MPI)
 ENDIF()
+IF (FTEIK_USE_BOOST)
+  #ADD_DEFINITIONS(-DFTEIK_USE_BOOST)
+ENDIF()
 SET(SRCS ${ORIGINAL_SRC} ${NEW_SRC} ${UTILS_SRC})
 
 
 INCLUDE_DIRECTORIES(
   include
-  ${BOOST_INCLUDE_DIR}
   ${XML2_INCLUDE_DIR}
   ${INIPARSER_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/unitTests
 )
 IF (FTEIK_USE_MPI)
    INCLUDE_DIRECTORIES(${MPI_C_INCLUDE_PATH} ${MPI_Fortran_INCLUDE_PATH})
 ENDIF (FTEIK_USE_MPI)
+IF (FTEIK_USE_BOOST)
+   INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIR})
+ENDIF(FTEIK_USE_BOOST)
 
 IF (FTEIK_USE_H5)
   INCLUDE_DIRECTORIES(${H5_C_INCLUDE_DIR})
@@ -81,7 +87,11 @@ SET(LIB_ALL ${LIB_ALL} -ldl -lstdc++)
 
 TARGET_LINK_LIBRARIES(xtest ${LIB_ALL})
 
-ADD_EXECUTABLE(utils_test unitTests/tests.c)
+IF (FTEIK_USE_BOOST)
+   ADD_EXECUTABLE(utils_test unitTests/tests.c unitTests/fteikGraph.cpp graph.f90)
+ELSE()
+   ADD_EXECUTABLE(utils_test unitTests/tests.c graph.f90)
+ENDIF()
 ADD_EXECUTABLE(loc_test unitTests/loctest.c)
 ADD_EXECUTABLE(loh2d examples/lot2d.c)
 SET_TARGET_PROPERTIES(utils_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_TESTING_OUTPUT_DIRECTORY})

@@ -131,7 +131,7 @@ MODULE FTEIK_SOLVER64F
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
       !TYPE(GRAPH_TYPE) graph
-      INTEGER(C_INT) ierrs(8), i
+      INTEGER(C_INT) ierrs(8)
       ierr = 0
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1 .OR. ngrd < 1) THEN
          WRITE(*,*) 'fteik_solver_computeGraph: Error grid not yet set'

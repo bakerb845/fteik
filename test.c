@@ -58,9 +58,10 @@ int main()
     const double eps = 2.0;
     const int nsweep = 5;
     int nz = 13, nx = 10, ny = 15;
-nz = 23; nx = 20; ny = 25;
+//nz = 23; nx = 20; ny = 25;
 //nz = 35; nx = 76; ny = 76;
 //nz = 55; nx = 76; ny = 76;
+nz = 75; nx = 101; ny = 101;
     const double x0 = 0.0, y0 = 0.0, z0 = 0.0;
     const double dx = 1.1, dy = 1.2, dz = 1.3;
     const double xs = 0.5*(double) (nx - 1)*dx - 0.1;

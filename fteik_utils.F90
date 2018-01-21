@@ -99,10 +99,10 @@
       USE FTEIK_UTILS64F, ONLY : tt1 
       USE FTEIK_UTILS64F, ONLY : zero
       USE FTEIK_UTILS64F, ONLY : fteik_setUpdateNodesF
-      USE FTEIK_GRAPH
+!     USE FTEIK_GRAPH
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      TYPE(GRAPH_TYPE) graph
+!     TYPE(GRAPH_TYPE) graph
       INTEGER(C_INT) ierrs(8), i
       ierr = 0
       IF (.NOT.lhaveGrid) THEN
@@ -110,27 +110,31 @@
          ierr = 1
          RETURN
       ENDIF
-      CALL INIT(graph, nz, nx, ny, ierr)
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_computeGraphF: Error initializing graph'
-         ierr = 1
-         RETURN
-      ENDIF
-      nLevels = NUMBER_OF_LEVELS(graph)
-      ierr = IJKV(graph, 1, ijkv1)
-      ierr = IJKV(graph, 2, ijkv2) + ierr
-      ierr = IJKV(graph, 3, ijkv3) + ierr
-      ierr = IJKV(graph, 4, ijkv4) + ierr
-      ierr = IJKV(graph, 5, ijkv5) + ierr
-      ierr = IJKV(graph, 6, ijkv6) + ierr
-      ierr = IJKV(graph, 7, ijkv7) + ierr
-      ierr = IJKV(graph, 8, ijkv8) + ierr
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_computeGraphF: Errors encountered getting ijkv'
-         ierr = 1
-         RETURN
-      ENDIF
-      ierr = LEVEL_PTR(graph, 1, levelPtr)
+WRITE(*,*) 'fteik_computeGraph: this function is now defunct'
+ierr = 1
+RETURN
+! TODO put graph3d in here
+!     CALL INIT(graph, nz, nx, ny, ierr)
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_computeGraphF: Error initializing graph'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     nLevels = NUMBER_OF_LEVELS(graph)
+!     ierr = IJKV(graph, 1, ijkv1)
+!     ierr = IJKV(graph, 2, ijkv2) + ierr
+!     ierr = IJKV(graph, 3, ijkv3) + ierr
+!     ierr = IJKV(graph, 4, ijkv4) + ierr
+!     ierr = IJKV(graph, 5, ijkv5) + ierr
+!     ierr = IJKV(graph, 6, ijkv6) + ierr
+!     ierr = IJKV(graph, 7, ijkv7) + ierr
+!     ierr = IJKV(graph, 8, ijkv8) + ierr
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_computeGraphF: Errors encountered getting ijkv'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     ierr = LEVEL_PTR(graph, 1, levelPtr)
       ! TODO all levelPtrs better be the same; should only copy 1
       !ierr = LEVEL_PTR(graph, 1, levelPtr1)
       !ierr = LEVEL_PTR(graph, 2, levelPtr2) + ierr
@@ -147,7 +151,7 @@
          RETURN
       ENDIF
       ! finished with the graph
-      CALL DELETE(graph)
+!     CALL DELETE(graph)
       maxLevelSize = 0
       DO 1 i=1,nLevels
          maxLevelSize = MAX(maxLevelSize, levelPtr(i+1) - levelPtr(i))
