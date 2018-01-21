@@ -91,7 +91,7 @@
                  BIND(C, NAME='fteik_computeGraphF') 
       USE ISO_C_BINDING
       USE FTEIK_CONSTANTS64F, ONLY : FALSE
-      USE FTEIK_UTILS64F, ONLY : lhaveGrid, nx, ny, nz
+      USE FTEIK_UTILS64F, ONLY : lhaveGrid!, nx, ny, nz
       USE FTEIK_UTILS64F, ONLY : nLevels, maxLevelSize
       USE FTEIK_UTILS64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, ijkv5, ijkv6, ijkv7, ijkv8
       USE FTEIK_UTILS64F, ONLY : lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
