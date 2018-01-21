@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "fteik_fortran.h"
+#include "fteik/fteik_fortran.h"
 
 /*!
  * @brief Tests the locator. 

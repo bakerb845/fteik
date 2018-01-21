@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hdf5.h>
-#include "h5io.h"
+#include "fteik/h5io.h"
 
 
 int h5io_closeFileF(const int64_t fileID)

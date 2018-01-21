@@ -1,6 +1,6 @@
 #ifndef FTEIK_FORTRAN_H__
 #define FTEIK_FORTRAN_H__ 1
-#include "fteik_config.h"
+#include "fteik/fteik_config.h"
 #ifdef FTEIK_USE_MPI
 #include <mpi.h>
 #endif

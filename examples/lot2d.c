@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "fteik.h"
-#include "fteik_fortran.h"
+#include "fteik/fteik.h"
 
 void solver2d_c(const double *slow,
                 double *tt,

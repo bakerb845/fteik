@@ -7,9 +7,9 @@
 #include <libgen.h>
 #include <hdf5.h>
 #include <stdbool.h>
-#include "fteik_io.h"
-#include "fteik_os.h"
-#include "h5io.h"
+#include "fteik/fteik_io.h"
+#include "fteik/fteik_os.h"
+#include "fteik/h5io.h"
 
 static void unpackInt16ModelToDouble(const bool lzDown,
                                      const int nz, const int nx, const int ny, 

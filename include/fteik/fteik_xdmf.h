@@ -1,6 +1,6 @@
 #ifndef FTEIK_XDMF_H__
 #define FTEIK_XDMF_H__ 1
-#include "fteik_config.h"
+#include "fteik/fteik_config.h"
 
 enum fteikDataType_enum
 {

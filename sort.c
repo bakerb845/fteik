@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "fteik_sorting.h"
+#include "fteik/fteik_sorting.h"
 #ifdef FTEIK_USE_INTEL
 #include <ipps.h>
 #endif

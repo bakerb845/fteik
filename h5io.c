@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "fteik_h5io.h"
-#include "fteik_xdmf.h"
-#include "h5io.h"
-#include "fteik_os.h"
+#include "fteik/fteik_h5io.h"
+#include "fteik/fteik_xdmf.h"
+#include "fteik/h5io.h"
+#include "fteik/fteik_os.h"
 
 #define VELMODEL_GROUP "/VelocityModels\0"
 #define LEVEL_SCHEDULER_GROUP "/LevelSchedules\0"

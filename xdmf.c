@@ -9,7 +9,7 @@
 #include <libxml/encoding.h>
 #include <libxml/xmlwriter.h>
 #include <libxml/parser.h>
-#include "fteik_xdmf.h"
+#include "fteik/fteik_xdmf.h"
 
 #define XML_ENCODING "utf-8"
 #define XDMF_VERSION "3"

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "fteik_fortran.h"
+#include "fteik/fteik_fortran.h"
 
 //----------------------------------------------------------------------------//
 //                                 Model                                      //

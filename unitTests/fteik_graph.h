@@ -1,7 +1,7 @@
 #ifndef FTEIK_GRAPH_H__
 #define FTEIK_GRAPH_H__ 1
-#include "fteik_config.h"
-#include "fteik_struct.h"
+#include "fteik/fteik_config.h"
+#include "fteik/fteik_struct.h"
 
 #ifdef __cplusplus
 extern "C"

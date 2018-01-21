@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <fteik_fortran.h>
+#include <fteik/fteik_fortran.h>
 #include <fteik_graph.h>
 #include <fteikGraph.h>
 

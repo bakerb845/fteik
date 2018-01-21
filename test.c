@@ -4,12 +4,12 @@
 #include <time.h>
 #include <math.h>
 #include <omp.h>
-#include "fteik.h"
-#include "fteik_analytic.h"
-#include "fteik_io.h"
-#include "fteik_h5io.h"
-#include "fteik_graph.h"
-#include "fteik_fortran.h"
+#include "fteik/fteik.h"
+#include "fteik/fteik_analytic.h"
+#include "fteik/fteik_io.h"
+#include "fteik/fteik_h5io.h"
+//#include "fteik/fteik_graph.h"
+#include "fteik/fteik_fortran.h"
 
 
 void fteikTestGraph(const int nz, const int nx, const int ny);

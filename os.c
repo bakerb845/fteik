@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include "fteik_os.h"
+#include "fteik/fteik_os.h"
 
 #ifndef MIN
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))

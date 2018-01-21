@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <getopt.h>
 #include <limits.h>
-#include "fteik.h"
+#include "fteik/fteik.h"
 #include <iniparser.h>
 
 static void printUsage(void);

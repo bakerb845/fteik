@@ -1,6 +1,6 @@
 #ifndef FTEIK_SORTING_H__
 #define FTEIK_SORTING_H__ 1
-#include "fteik_config.h"
+#include "fteik/fteik_config.h"
 enum sortOrder_enum 
 {
     SORT_ASCENDING = 0,  /*!< Sort in ascending order */
