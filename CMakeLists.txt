@@ -6,6 +6,11 @@ ENABLE_LANGUAGE(C)
 ENABLE_LANGUAGE(CXX)
 ENABLE_TESTING()
 
+SET(FTEIK_VERSION_MAJOR 1)
+SET(FTEIK_VERSION_MINOR 1)
+SET(FTEIK_VERSION_PATCH 0)
+SET(FTEIK_VERSION ${FTEIK_VERSION_MAJOR}.${FTEIK_VERSION_MINOR}.${FTEIK_VERSION_PATCH})
+
 # Beat CMake into submissions w.r.t. Fortran modules
 SET(Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${Fortran_MODULE_DIRECTORY})
@@ -109,11 +114,52 @@ ADD_TEST(NAME loc_test
          WORKING_DIRECTORY ${CMAKE_TESTING_OUTPUT_DIRECTORY}
          COMMAND loc_test)
 
-SET(TARGET_NAMES ${fteik_shared})
-INSTALL(TARGETS ${TARGET_NAMES}
-        RUNTIME DESTINATION ${CMAKE_TESTING_OUTPUT_DIRECTORY}
-        LIBRARY DESTINATION ${LIBRARY_OUTPUT_PATH}
-        ARCHIVE DESTINATION ${LIBRARY_OUTPUT_PATH})
-#INSTALL(TARGETS fteik_static LIBRARY DESTINATION ${LIBRARY_OUTPUT_PATH})
+#------------------------------------------------------------------------------#
+#                                   CPack Packaging                            #
+#------------------------------------------------------------------------------#
 SET(CPACK_PACKAGE_NAME "fteik")
+SET(CPACK_PACKAGE_VENDOR "N/A")
+SET(CPACK_PACKAGE_CONTACT "bakerb845@gmail.com")
 SET(CPACK_PACKAGE_LICENSE "MIT")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A parallel fast sweeping Eikonal solver for strongly heterogeneous media.")
+SET(CPACK_PACKAGE_VERSION_MAJOR ${FTEIK_VERSION_MAJOR})
+SET(CPACK_PACKAGE_VERSION_MINOR ${FTEIK_VERSION_MINOR})
+SET(CPACK_PACKAGE_VERSION_PATCH ${FTEIK_VERSION_PATCH})
+SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+#IF (WIN32 AND NOT UNIX)
+
+#ELSE(WIN32 AND NOT UNIX)
+  SET(CPACK_GENERATOR "TGZ")
+  SET(CPACK_SOURCE_GENERATOR TGZ)
+  SET(CPACK_SOURCE_PACKAGE_FILE_NAME "fteik-${FTEIK_VERSION}" )
+  #SET(CPACK_SOURCE_IGNORE_FILES ~$ .svn ${CPACK_SOURCE_IGNORE_FILES} )
+#ENDIF(WIN32 AND NOT UNIX)
+INCLUDE(CPack)
+
+#------------------------------------------------------------------------------#
+#                              Configuration Details                           #
+#------------------------------------------------------------------------------#
+SET(FTEIK_LIBRARY fteik)
+SET(INCLUDE_INSTALL_DIR include/) #${INCLUDE_DIRECTORIES}) #$include/ ... CACHE)
+SET(LIB_INSTALL_DIR lib/)
+SET(SYSCONFIG_INSTALL_DIR etc/fteik/)
+#SET(LIB_INSTALL_DIR ${LIBRARY_OUTPUT_PATH})
+INCLUDE(CMakePackageConfigHelpers)
+CONFIGURE_PACKAGE_CONFIG_FILE(${CMAKE_MODULE_PATH}/Find_fteik.cmake.in
+                              ${CMAKE_BINARY_DIR}/Find_fteik.cmake
+                              INSTALL_DESTINATION ${LIB_INSTALL_DIR}/fteik/cmake
+                              PATH_VARS INCLUDE_INSTALL_DIR SYSCONFIG_INSTALL_DIR)
+WRITE_BASIC_PACKAGE_VERSION_FILE(${LIBRARY_OUTPUT_PATH}/fteikConfigVersion.cmake #fteik-config.version.cmake
+                                 #${CMAKE_BINARY_DIR}/fteik-config-version.cmake
+                                 VERSION ${FTEIK_VERSION} 
+                                 COMPATIBILITY SameMajorVersion) #ExactVersion)
+SET(TARGET_NAMES fteik_shared)# fteik_static)
+INSTALL(TARGETS ${TARGET_NAMES}
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_WRITE GROUP_READ WORLD_EXECUTE WORLD_WRITE WORLD_READ
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+INSTALL(FILES
+        ${CMAKE_BINARY_DIR}/Find_fteik.cmake
+        ${LIBRARY_OUTPUT_PATH}/fteikConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/fteik/cmake)
+

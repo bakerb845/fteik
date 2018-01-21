@@ -1,4 +1,6 @@
-/* Copyright Ben Baker distributed under MIT */
+/* Copyright: Ben Baker
+ * Author: Ben Baker 
+ * License: MIT */
 #ifndef FTEIK_CONFIG_H__
 #define FTEIK_CONFIG_H__ 1
 
@@ -10,6 +12,11 @@
 #cmakedefine FTEIK_USE_MPI
 /* using boost */
 #cmakedefine FTEIK_USE_BOOST
+
+#cmakedefine FTEIK_VERSION_MAJOR @FTEIK_VERSION_MAJOR@
+#cmakedefine FTEIK_VERSION_MINOR @FTEIK_VERSION_MINOR@
+#cmakedefine FTEIK_VERSION_PATCH @FTEIK_VERSION_PATCH@
+#cmakedefine FTEIK_VERSION "@FTEIK_VERSION@"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
