@@ -15,6 +15,7 @@ extern "C"
 {
 #endif
 
+/*
 int fteik_free(struct fteikSolver_struct *solver);
 int fteik_legacySolver(struct fteikSolver_struct *solver);
 int fteik_initializeGraph(struct fteikSolver_struct *solver);
@@ -66,6 +67,7 @@ bool fteik_haveValidSourceIndex(const struct fteikSolver_struct solver);
 bool fteik_haveValidGridSpacing(const struct fteikSolver_struct solver);
 bool fteik_haveValidGridSize(const struct fteikSolver_struct solver);
 bool fteik_haveValidEpsilon(const struct fteikSolver_struct solver);
+*/
 
 #ifdef __cplusplus
 }
