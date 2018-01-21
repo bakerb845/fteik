@@ -1,5 +1,8 @@
 MODULE FTEIK_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : zero
+  USE FTEIK_GRAPH3D, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, &
+                            ijkv5, ijkv6, ijkv7, ijkv8, &
+                            levelPtr, nLevels, maxLevelSize
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
@@ -7,10 +10,10 @@ MODULE FTEIK_SOLVER64F
   !DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
   !> Maps from the level'th level to the first node node in the level.
   !> This has dimension [nLevels+1].
-  INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: levelPtr(:)
-  INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE ::         &
-                  ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
-                  ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
+! INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: levelPtr(:)
+! INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE ::         &
+!                 ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
+!                 ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
   LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE ::         &
                    lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
                    lupd5(:), lupd6(:), lupd7(:), lupd8(:)
@@ -27,9 +30,9 @@ MODULE FTEIK_SOLVER64F
   !> Flag indicating whether or not the travel times were computed.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveTimes = .FALSE. 
   !> Number of levels in level scheduling method.
-  INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
+! INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
   !> The number of nodes in the largest level.
-  INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 
+! INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 
   !> This is for 3D 
   LOGICAL(C_BOOL), PARAMETER :: lis3d = .TRUE.
   CONTAINS
@@ -122,10 +125,12 @@ MODULE FTEIK_SOLVER64F
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
       USE FTEIK_CONSTANTS64F, ONLY : FALSE, zero
-      USE FTEIK_GRAPH
+      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_initializeF, &
+                                fteik_graph3d_makeLevelStructuresF
+      !USE FTEIK_GRAPH
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      TYPE(GRAPH_TYPE) graph
+      !TYPE(GRAPH_TYPE) graph
       INTEGER(C_INT) ierrs(8), i
       ierr = 0
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1 .OR. ngrd < 1) THEN
@@ -133,48 +138,61 @@ MODULE FTEIK_SOLVER64F
          ierr = 1
          RETURN
       ENDIF
-      CALL INIT(graph, nz, nx, ny, ierr)
+      ! Compute the graph
+      CALL fteik_graph3d_initializeF(nz, nx, ny, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver_computeGraphF: Error initializing graph'
          ierr = 1
          RETURN
       ENDIF
-      nLevels = NUMBER_OF_LEVELS(graph)
-      IF (.NOT.ALLOCATED(ijkv1)) ALLOCATE(ijkv1(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv2)) ALLOCATE(ijkv2(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv3)) ALLOCATE(ijkv3(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv4)) ALLOCATE(ijkv4(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv5)) ALLOCATE(ijkv5(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv6)) ALLOCATE(ijkv6(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv7)) ALLOCATE(ijkv7(4*ngrd))
-      IF (.NOT.ALLOCATED(ijkv8)) ALLOCATE(ijkv8(4*ngrd))
-      ierr = IJKV(graph, 1, ijkv1)
-      ierr = IJKV(graph, 2, ijkv2) + ierr
-      ierr = IJKV(graph, 3, ijkv3) + ierr
-      ierr = IJKV(graph, 4, ijkv4) + ierr
-      ierr = IJKV(graph, 5, ijkv5) + ierr
-      ierr = IJKV(graph, 6, ijkv6) + ierr
-      ierr = IJKV(graph, 7, ijkv7) + ierr
-      ierr = IJKV(graph, 8, ijkv8) + ierr
+      CALL fteik_graph3d_makeLevelStructuresF(ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver_computeGraphF: Errors encountered getting ijkv'
+         WRITE(*,*) 'fteik_solver_computeGraphF: Error making level structures'
          ierr = 1
          RETURN
       ENDIF
-      ierr = LEVEL_PTR(graph, 1, levelPtr)
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver_computeGraphF: Error encountered getting levelPtr'
-         ierr = 1
-         RETURN
-      ENDIF
-      ! finished with the graph
-      CALL DELETE(graph)
-      maxLevelSize = 0
-      DO 1 i=1,nLevels
-         maxLevelSize = MAX(maxLevelSize, levelPtr(i+1) - levelPtr(i))
-    1 CONTINUE
-!     ALLOCATE(tt1(maxLevelSize))
-!     tt1(:) = zero
+!     CALL INIT(graph, nz, nx, ny, ierr)
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_solver_computeGraphF: Error initializing graph'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     nLevels = NUMBER_OF_LEVELS(graph)
+!     IF (.NOT.ALLOCATED(ijkv1)) ALLOCATE(ijkv1(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv2)) ALLOCATE(ijkv2(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv3)) ALLOCATE(ijkv3(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv4)) ALLOCATE(ijkv4(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv5)) ALLOCATE(ijkv5(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv6)) ALLOCATE(ijkv6(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv7)) ALLOCATE(ijkv7(4*ngrd))
+!     IF (.NOT.ALLOCATED(ijkv8)) ALLOCATE(ijkv8(4*ngrd))
+!     ierr = IJKV(graph, 1, ijkv1)
+!     ierr = IJKV(graph, 2, ijkv2) + ierr
+!     ierr = IJKV(graph, 3, ijkv3) + ierr
+!     ierr = IJKV(graph, 4, ijkv4) + ierr
+!     ierr = IJKV(graph, 5, ijkv5) + ierr
+!     ierr = IJKV(graph, 6, ijkv6) + ierr
+!     ierr = IJKV(graph, 7, ijkv7) + ierr
+!     ierr = IJKV(graph, 8, ijkv8) + ierr
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_solver_computeGraphF: Errors encountered getting ijkv'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     ierr = LEVEL_PTR(graph, 1, levelPtr)
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_solver_computeGraphF: Error encountered getting levelPtr'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     ! finished with the graph
+!     CALL DELETE(graph)
+!     maxLevelSize = 0
+!     DO 1 i=1,nLevels
+!        maxLevelSize = MAX(maxLevelSize, levelPtr(i+1) - levelPtr(i))
+!   1 CONTINUE
+!!    ALLOCATE(tt1(maxLevelSize))
+!!    tt1(:) = zero
       ! Set the update grid.  This will mask nodes on the boundary.
       IF (.NOT.ALLOCATED(lupd1)) ALLOCATE(lupd1(ngrd))
       IF (.NOT.ALLOCATED(lupd2)) ALLOCATE(lupd2(ngrd))
@@ -480,6 +498,7 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver_finalizeF()             &
       BIND(C, NAME='fteik_solver_finalizeF')
+      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_finalizeF
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
       USE FTEIK_SOURCE64F, ONLY : fteik_source_finalizeF
       USE FTEIK_CONSTANTS64F, ONLY : zero
@@ -505,14 +524,15 @@ MODULE FTEIK_SOLVER64F
       IF (ALLOCATED(lupdInit6)) DEALLOCATE(lupdInit6)
       IF (ALLOCATED(lupdInit7)) DEALLOCATE(lupdInit7)
       IF (ALLOCATED(lupdInit8)) DEALLOCATE(lupdInit8)
-      IF (ALLOCATED(ijkv1)) DEALLOCATE(ijkv1)
-      IF (ALLOCATED(ijkv2)) DEALLOCATE(ijkv2)
-      IF (ALLOCATED(ijkv3)) DEALLOCATE(ijkv3)
-      IF (ALLOCATED(ijkv4)) DEALLOCATE(ijkv4)
-      IF (ALLOCATED(ijkv5)) DEALLOCATE(ijkv5)
-      IF (ALLOCATED(ijkv6)) DEALLOCATE(ijkv6)
-      IF (ALLOCATED(ijkv7)) DEALLOCATE(ijkv7)
-      IF (ALLOCATED(ijkv8)) DEALLOCATE(ijkv8)
+!     IF (ALLOCATED(ijkv1)) DEALLOCATE(ijkv1)
+!     IF (ALLOCATED(ijkv2)) DEALLOCATE(ijkv2)
+!     IF (ALLOCATED(ijkv3)) DEALLOCATE(ijkv3)
+!     IF (ALLOCATED(ijkv4)) DEALLOCATE(ijkv4)
+!     IF (ALLOCATED(ijkv5)) DEALLOCATE(ijkv5)
+!     IF (ALLOCATED(ijkv6)) DEALLOCATE(ijkv6)
+!     IF (ALLOCATED(ijkv7)) DEALLOCATE(ijkv7)
+!     IF (ALLOCATED(ijkv8)) DEALLOCATE(ijkv8)
+      CALL fteik_graph3d_finalizeF()
       CALL fteik_receiver_finalizeF()
       CALL fteik_source_finalizeF()
       RETURN
