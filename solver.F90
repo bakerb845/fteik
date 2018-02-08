@@ -35,6 +35,8 @@ MODULE FTEIK_SOLVER64F
 ! INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 
   !> This is for 3D 
   LOGICAL(C_BOOL), PARAMETER :: lis3d = .TRUE.
+  !> Controls the verbosity
+  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the Code                                     !
@@ -645,13 +647,13 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver_setSources64fF(nsrc, zsrc, xsrc, ysrc, &
                                              ierr)                   &
       BIND(C, NAME='fteik_solver_setSources64fF')
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64fF
+      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      CALL fteik_source_initialize64fF(nsrc, zsrc, xsrc, ysrc, ierr)
+      CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
       IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources64fF: Failed to set source'
       RETURN
       END

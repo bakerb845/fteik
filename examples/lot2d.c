@@ -70,11 +70,11 @@ printf("%d %d\n", nx, nz);
     }
     // Initialize the solver
     fprintf(stdout, "%s: Initializing solver...\n", __func__);
-    fteik_solver2d_initialize64fF(nz, nx, 
-                                  z0, x0,  
-                                  dz, dx, 
-                                  nsweep, eps,
-                                  &ierr);
+    fteik_solver2d_initialize64f(nz, nx, 
+                                 z0, x0,  
+                                 dz, dx, 
+                                 nsweep, eps,
+                                 0, &ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error initializing solver\n", __func__);
@@ -83,24 +83,24 @@ printf("%d %d\n", nx, nz);
     // Set the velocity model
     fprintf(stdout, "%s: Setting the velocity model...\n", __func__);
     ncell = (nz - 1)*(nx - 1);
-    fteik_solver2d_setVelocityModel64fF(ncell, vel, &ierr);
+    fteik_solver2d_setVelocityModel64f(ncell, vel, &ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error setting velocity model\n", __func__);
         return EXIT_FAILURE;
     } 
     fprintf(stdout, "%s: Setting the source locations...\n", __func__);
-    fteik_solver2d_setSources64fF(nsrc, zsrc, xsrc, &ierr); 
+    fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, &ierr); 
 ttimes = (double *) calloc((size_t) (nz*nx), sizeof(double));
 double *slow = (double *) calloc((size_t) ((nz-1)*(nx-1)), sizeof(double));
 for (int k=0; k<(nz-1)*(nx-1); k++){slow[k] = 1.0/vel[k];}
 printf("calling ref\n");
 solver2d_c(slow, ttimes, nz, nx, zsrc[0], xsrc[0], dz, dx, nsweep); 
     fprintf(stdout, "%s: Calling debug solver...\n", __func__);
-fteik_solver2d_solveSoureFSMF(1, &ierr);
+fteik_solver2d_solveSourceFSM(1, &ierr);
 printf("calling lsm\n"); 
     fprintf(stdout, "%s: Calling solver...\n", __func__);
-    fteik_solver2d_solveSourceLSMF(1, &ierr);
+    fteik_solver2d_solveSourceLSM(1, &ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error calling solver\n", __func__);
@@ -114,7 +114,7 @@ printf("calling lsm\n");
     fteik_h5io_finalizeF();
 
     fprintf(stdout, "%s: Finalizing solver...\n", __func__);
-    fteik_solver2d_finalizeF();
+    fteik_solver2d_free();
     // Free resources
     free(vel);
     return EXIT_SUCCESS;

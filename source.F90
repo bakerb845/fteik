@@ -14,6 +14,8 @@ MODULE FTEIK_SOURCE64F
   INTEGER(C_INT), PROTECTED, SAVE :: nsrc = 0
   !> Flag indicating the sources have been set -> this should be removed.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveSource = .FALSE.
+  !> Verbosity flag
+  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                   Begin the Code                                       !
@@ -55,6 +57,7 @@ MODULE FTEIK_SOURCE64F
 !>                          of dimension [nsrcIn].
 !>    @param[in] ysrcIn     y locations of source in model (meters).  This is a vector
 !>                          of dimension [nsrcIn].
+!>    @param[in] verboseIn  Controls the verbosity. 
 !>
 !>    @param[out] ierr      0 indicates success.
 !>
@@ -62,13 +65,15 @@ MODULE FTEIK_SOURCE64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_source_initialize64fF(nsrcIn, zsrcIn, xsrcIn, ysrcIn, ierr) &
-                 BIND(C, NAME='fteik_source_initialize64fF')
+      SUBROUTINE fteik_source_initialize64f(nsrcIn,                 &
+                                            zsrcIn, xsrcIn, ysrcIn, &
+                                            verboseIn, ierr)        &
+                 BIND(C, NAME='fteik_source_initialize64f')
       USE FTEIK_MODEL64F, ONLY : lis3dModel, dz, dx, dy, z0, x0, y0, nz, nx, ny
       USE FTEIK_CONSTANTS64F, ONLY : DBL_EPSILON, perturbSource, one, zero 
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nsrcIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nsrcIn, verboseIn
       REAL(C_DOUBLE), INTENT(IN) :: zsrcIn(nsrcIn), xsrcIn(nsrcIn), ysrcIn(nsrcIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) xsa, ysa, zsa, xsrcLoc, ysrcLoc, zsrcLoc, xmax, ymax, zmax
@@ -76,6 +81,7 @@ MODULE FTEIK_SOURCE64F
       !----------------------------------------------------------------------------------!
       ierr = 0
       CALL fteik_source_finalizeF()
+      CALL fteik_source_setVerobosity(verboseIn)
       IF (nsrcIn < 1) THEN
          WRITE(*,*) 'fteik_source_initialize64fF: No sources'
          ierr = 1
@@ -150,12 +156,12 @@ MODULE FTEIK_SOURCE64F
          IF (zsi < 1 .OR. zsi > nz .OR. &
              xsi < 1 .OR. xsi > nx .OR. &
              (lis3dModel .AND. (ysi < 1 .OR. ysi > ny))) THEN
-            WRITE(*,*)'fteik_source_initialize64fF: Point (',zsi,xsi,ysi,') out of bounds'
+            WRITE(*,*)'fteik_source_initialize64f: Point (',zsi,xsi,ysi,') out of bounds'
             ierr = 1 
             RETURN
          ENDIF
          IF (zsi > nz - 1 .OR. xsi > nx - 1 .OR. (lis3dModel .AND. ysi > ny - 1)) THEN
-            WRITE(*,*)'fteik_source_initialize64fF: Warning solver may segfault', isrc
+            WRITE(*,*)'fteik_source_initialize64f: Warning solver may segfault', isrc
          ENDIF
          ! Set on the arrays
          zsrc(isrc) = DBLE(zsi - 1)*dz + z0 !zsrcIn(isrc)
@@ -170,35 +176,53 @@ MODULE FTEIK_SOURCE64F
          xsav(isrc) = xsa
          ysav(isrc) = ysa
          IF (.NOT.lis3dModel) ysav(isrc) = one
-print *, z0, x0, y0, zsi, xsi, ysi
-print *, dz, dx, dy, xsa
-         IF (lis3dModel) THEN
-            WRITE(*,900) zsrcIn(isrc), xsrcIn(isrc), ysrcIn(isrc)
-            WRITE(*,901) zsrc(isrc), xsrc(isrc), ysrc(isrc)
-            WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc)), &
-                         ABS(ysrc(isrc) - ysrcIn(isrc))
-         ELSE
-            WRITE(*,910) zsrcIn(isrc), xsrcIn(isrc)
-            WRITE(*,911) zsrc(isrc), xsrc(isrc)
-            WRITE(*,912) ABS(zsrc(isrc) - zsrcIn(isrc)), ABS(xsrc(isrc) - xsrcIn(isrc))
+         !print *, z0, x0, y0, zsi, xsi, ysi
+         !print *, dz, dx, dy, xsa
+         IF (verbose > 0) THEN
+            IF (lis3dModel) THEN
+               WRITE(*,900) zsrcIn(isrc), xsrcIn(isrc), ysrcIn(isrc)
+               WRITE(*,901) zsrc(isrc), xsrc(isrc), ysrc(isrc)
+               WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), &
+                            ABS(xsrc(isrc) - xsrcIn(isrc)), &
+                            ABS(ysrc(isrc) - ysrcIn(isrc))
+            ELSE
+               WRITE(*,910) zsrcIn(isrc), xsrcIn(isrc)
+               WRITE(*,911) zsrc(isrc), xsrc(isrc)
+               WRITE(*,912) ABS(zsrc(isrc) - zsrcIn(isrc)), &
+                            ABS(xsrc(isrc) - xsrcIn(isrc))
+            ENDIF
          ENDIF
          WRITE(*,*)
     1 CONTINUE
       lhaveSource = .TRUE.
-  900 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x,y)=', &
+  900 FORMAT(' fteik_source_initialize64f: Original source coordinates (z,x,y)=', &
              3F12.2, ' (m)')
-  901 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x,y)=', &
+  901 FORMAT(' fteik_source_initialize64f: Grid source coordinates (z,x,y)=', &
              3F12.2, ' (m)')
-  902 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx,dy)=', &
+  902 FORMAT(' fteik_source_initialize64f: Source translation: (dz,dx,dy)=', &
              3F12.2, ' (m)')
-  910 FORMAT(' fteik_source_initialize64fF: Original source coordinates (z,x)=', &
+  910 FORMAT(' fteik_source_initialize64f: Original source coordinates (z,x)=', &
              2F12.2, ' (m)')
-  911 FORMAT(' fteik_source_initialize64fF: Grid source coordinates (z,x)=', &
+  911 FORMAT(' fteik_source_initialize64f: Grid source coordinates (z,x)=', &
              2F12.2, ' (m)')
-  912 FORMAT(' fteik_source_initialize64fF: Source translation: (dz,dx)=', &
+  912 FORMAT(' fteik_source_initialize64f: Source translation: (dz,dx)=', &
              2F12.2, ' (m)')
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the verbosity on the module.
+!>
+!>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
+!>
+      SUBROUTINE fteik_source_setVerobosity(verboseIn) &
+      BIND(C, NAME='fteik_source_setVerbosity')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
+      verbose = verboseIn
+      RETURN
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !

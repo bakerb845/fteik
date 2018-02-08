@@ -9,6 +9,8 @@ MODULE FTEIK2D_SOLVER64F
   INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0
   !> Defines the max level size.
   INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0
+  !> Controls the verbosity
+  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0
   !> Defines the transition from the spherical to the Cartesian solver solver
   !> during the initialization phase.  This has units of grid points.
   REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
@@ -27,17 +29,17 @@ MODULE FTEIK2D_SOLVER64F
   REAL(C_DOUBLE), SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), tupdWork(:)
   LOGICAL(C_BOOL), SAVE, PRIVATE, ALLOCATABLE :: lupdWork(:)
   ! Label the subroutines/functions
-  PUBLIC :: fteik_solver2d_setVelocityModel64fF
-  PUBLIC :: fteik_solver2d_initialize64fF
-  PUBLIC :: fteik_solver2d_finalizeF
-  PUBLIC :: fteik_solver2d_solveSourceLSMF
-  PUBLIC :: fteik_solver2d_solveSoureFSMF
-  PUBLIC :: fteik_solver2d_getTravelTimeField64fF
-  PUBLIC :: fteik_solver2d_getTravelTimes64fF
-  PUBLIC :: fteik_solver2d_setNumberOfSweepsF
-  PUBLIC :: fteik_solver2d_setReceivers64fF
-  PUBLIC :: fteik_solver2d_setSources64fF
-  PUBLIC :: fteik_solver2d_setSphereToCartEpsilonF
+  PUBLIC :: fteik_solver2d_setVelocityModel64f
+  PUBLIC :: fteik_solver2d_initialize64f
+  PUBLIC :: fteik_solver2d_free
+  PUBLIC :: fteik_solver2d_solveSourceLSM
+  PUBLIC :: fteik_solver2d_solveSourceFSM
+  PUBLIC :: fteik_solver2d_getTravelTimeField64f
+  PUBLIC :: fteik_solver2d_getTravelTimes64f
+  PUBLIC :: fteik_solver2d_setNumberOfSweeps
+  PUBLIC :: fteik_solver2d_setReceivers64f
+  PUBLIC :: fteik_solver2d_setSources64f
+  PUBLIC :: fteik_solver2d_setSphereToCartEpsilon
   PUBLIC :: fteik_solver2d_getNumberOfReceivers
   PRIVATE :: fteik_solver2d_isUpdateNodeF
   PRIVATE :: fteik_solver2d_prefetchTravelTimes64fF
@@ -47,16 +49,17 @@ MODULE FTEIK2D_SOLVER64F
   PRIVATE :: fteik_localSolver2d_init64fF
   PRIVATE :: fteik_localSolver2d_tAna64fF
   PRIVATE :: fteik_localSolver2d_tAnaD64fF
-  PRIVATE :: fteik_localSolver2d_initialize64fF
+  PRIVATE :: fteik_localSolver2d_initialize64f
   CONTAINS
   !--------------------------------------------------------------------------------------!
   !                                      Begin the Code                                  !
   !--------------------------------------------------------------------------------------!
-      SUBROUTINE fteik_solver2d_initialize64fF(nzIn, nxIn,            &
-                                               z0In, x0In,            &
-                                               dzIn, dxIn,            &   
-                                               nsweepIn, epsIn, ierr) &
-                 BIND(C, NAME='fteik_solver2d_initialize64fF')
+      SUBROUTINE fteik_solver2d_initialize64f(nzIn, nxIn,       &
+                                              z0In, x0In,       &
+                                              dzIn, dxIn,       &   
+                                              nsweepIn, epsIn,  &
+                                              verboseIn, ierr)  &
+                 BIND(C, NAME='fteik_solver2d_initialize64f')
       USE ISO_C_BINDING
       USE FTEIK_MEMORY, ONLY : padLength64F
       USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometry, ngrd
@@ -66,27 +69,28 @@ MODULE FTEIK2D_SOLVER64F
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dzIn
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nzIn
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      WRITE(*,*) 'fteik_solver_initialize64fF: Initializing...'
-      CALL fteik_solver2d_finalizeF()
+      IF (verboseIn > 0) WRITE(*,*) 'fteik_solver_initialize64f: Initializing...'
+      CALL fteik_solver2d_free()
+      CALL fteik_solver2d_setVerobosity(verboseIn)
       CALL fteik_model_intializeGeometry(lis3d,            &
                                          nzIn, nxIn, 1,    &
                                          dzIn, dxIn, one,  &
                                          z0In, x0In, zero, &
                                          ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_initialize64fF: Error setting grid geometry'
+         WRITE(*,*) 'fteik_solver2d_initialize64f: Error setting grid geometry'
          RETURN
       ENDIF
-      CALL fteik_solver2d_setNumberOfSweepsF(nsweepIn, ierr)
+      CALL fteik_solver2d_setNumberOfSweeps(nsweepIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_initialize64fF: Failed to set max number of sweeps'
+         WRITE(*,*) 'fteik_solver2d_initialize64f: Failed to set max number of sweeps'
          RETURN
       ENDIF
-      CALL fteik_solver2d_setSphereToCartEpsilonF(epsIn, ierr)
+      CALL fteik_solver2d_setSphereToCartEpsilon(epsIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_initialize64fF: Failed to set epsilon'
+         WRITE(*,*) 'fteik_solver2d_initialize64f: Failed to set epsilon'
          RETURN
       ENDIF
       ! Compute the number of levels
@@ -107,14 +111,28 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Sets the verbosity on the module.
+!>
+!>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
+!>
+      SUBROUTINE fteik_solver2d_setVerobosity(verboseIn) &
+      BIND(C, NAME='fteik_solver2d_setVerbosity')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
+      verbose = verboseIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Releases all memory associated with the solver and resets all variables.
 !>
 !>    @author Ben Baker
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_solver2d_finalizeF()             &
-      BIND(C, NAME='fteik_solver2d_finalizeF')
+      SUBROUTINE fteik_solver2d_free()   &
+      BIND(C, NAME='fteik_solver2d_free')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
       USE FTEIK_SOURCE64F, ONLY : fteik_source_finalizeF
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
@@ -125,6 +143,7 @@ MODULE FTEIK2D_SOLVER64F
       epsS2C = zero
       nsweep = 0
       nLevels = 0
+      verbose = 0
       IF (ALLOCATED(ttimes))     DEALLOCATE(ttimes)
       IF (ALLOCATED(lupdWork))   DEALLOCATE(lupdWork)
       IF (ALLOCATED(slocWork))   DEALLOCATE(slocWork)
@@ -563,8 +582,8 @@ MODULE FTEIK2D_SOLVER64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_solveSourceLSMF(isrc, ierr)   &
-                 BIND(C, NAME='fteik_solver2d_solveSourceLSMF')
+      SUBROUTINE fteik_solver2d_solveSourceLSM(isrc, ierr)   &
+                 BIND(C, NAME='fteik_solver2d_solveSourceLSM')
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel, nx, nz, slow
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
@@ -586,15 +605,16 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          GOTO 500
       ENDIF
-      CALL fteik_localSolver2d_initialize64fF(isrc, dest, ts4, ierr)
+      CALL fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver2d_solveSourceLSMF: Error setting mesh constants'
          GOTO 500
       ENDIF
+      t0 = 0.d0
       CALL CPU_TIME(t0)
       ttimes(:) = FTEIK_HUGE
       ttimes(dest(1:4)) = ts4(1:4)
-print *, dest
+!print *, dest
 !print *, ts4
 !return
       ! Initialization
@@ -630,32 +650,32 @@ print *, dest
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
-      ! Initialize
-      DO sweep=1,4
-         ! Loop on the levels
-         DO level=2,nlevels
-            i1 = MAX(1, level - nz)
-            i2 = MIN(nx, level - 1) 
-            nnodes = i2 - i1 + 1
-            ! Get the update nodes
-            CALL fteik_solver2d_isUpdateNodeF(TRUE, level, sweep, nz, nx, &
-                                              i1, i2, zsi, xsi, lupdWork)
-            ! Prefetch the slowness
-            CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
-                                                     i1, i2,                 &
-                                                     lupdWork, slow, slocWork)
-            ! Prefetch travel times
-            CALL fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx,      &
-                                                        i1, i2,                    &
-                                                        lupdWork, ttimes, ttvecWork)
-            ! Compute the candidate travel times at each node in level set
-            !CALL fteik_localSolver2d_noInit64fF(nnodes, ttvecWork, slocWork, tupdWork)
-            ! And update
-            !CALL fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
-            !                                          i1, i2, lupdWork,     &
-            !                                          tupdWork, ttimes)
-         ENDDO
-      ENDDO
+!     ! Initialize
+!     DO sweep=1,4
+!        ! Loop on the levels
+!        DO level=2,nlevels
+!           i1 = MAX(1, level - nz)
+!           i2 = MIN(nx, level - 1) 
+!           nnodes = i2 - i1 + 1
+!           ! Get the update nodes
+!           CALL fteik_solver2d_isUpdateNodeF(TRUE, level, sweep, nz, nx, &
+!                                             i1, i2, zsi, xsi, lupdWork)
+!           ! Prefetch the slowness
+!           CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
+!                                                    i1, i2,                 &
+!                                                    lupdWork, slow, slocWork)
+!           ! Prefetch travel times
+!           CALL fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx,      &
+!                                                       i1, i2,                    &
+!                                                       lupdWork, ttimes, ttvecWork)
+!           ! Compute the candidate travel times at each node in level set
+!           !CALL fteik_localSolver2d_noInit64fF(nnodes, ttvecWork, slocWork, tupdWork)
+!           ! And update
+!           !CALL fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
+!           !                                          i1, i2, lupdWork,     &
+!           !                                          tupdWork, ttimes)
+!        ENDDO
+!     ENDDO
       ! Number of Gauss-Seidel iterations
       DO kiter=1,nsweep
          ! Loop on sweeping directions
@@ -683,28 +703,37 @@ print *, dest
                                                          i1, i2, lupdWork, &
                                                          tupdWork, ttimes)
             ENDDO
-!do i2=1,nx*nz
-!print *, i2, ttimes(i2)
-!enddo
-print *, minval(ttimes), maxval(ttimes)
+            !do i2=1,nx*nz
+            !   print *, i2, ttimes(i2)
+            !enddo
+            !print *, minval(ttimes), maxval(ttimes)
+            IF (verbose > 3) WRITE(*,901) kiter, sweep, MINVAL(ttimes), MAXVAL(ttimes)
          ENDDO
+         IF (verbose > 2) WRITE(*,900) kiter, MINVAL(ttimes), MAXVAL(ttimes)
       ENDDO
-      CALL CPU_TIME(t1)
-      print *, 'time:', t1 - t0
+      IF (verbose > 2) THEN
+         CALL CPU_TIME(t1)
+         WRITE(*,902) t1 - t0 
+      ENDIF
       lhaveTimes = TRUE
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = FALSE
       ENDIF
-print *, lhaveTimes
+  900 FORMAT(' fteik_solver2d_solveSourceLSM: (iteration,ttmin,ttmax)=', &
+             I4, 2F14.8) 
+  901 FORMAT(' fteik_solver2d_solveSourceLSM: (iteration,sweep,ttmin,ttmax)=', &
+             2I4, 2F14.8)
+  902 FORMAT(' fteik_solver2d_solveSourceLSM: Solver time in seconds=', F14.8)
+!print *, lhaveTimes
       RETURN
       END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-      SUBROUTINE fteik_solver2d_solveSoureFSMF(isrc, ierr) &
-      BIND(C, NAME='fteik_solver2d_solveSoureFSMF')
+      SUBROUTINE fteik_solver2d_solveSourceFSM(isrc, ierr) &
+      BIND(C, NAME='fteik_solver2d_solveSourceFSM')
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel, nx, nz, slow
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
@@ -717,18 +746,18 @@ print *, lhaveTimes
       ierr = 0 
       lhaveTimes = FALSE
       IF (.NOT.lhaveModel) THEN
-         WRITE(*,*) 'fteik_solver2d_solveSourceLSMF: Model not yet set'
+         WRITE(*,*) 'fteik_solver2d_solveSourceFSM: Model not yet set'
          ierr = 1
          GOTO 500
       ENDIF
       IF (isrc < 1 .OR. isrc > nsrc) THEN
-         WRITE(*,*) 'fteik_solver2d_solveSourceLSMF: Invalid source number:',isrc, 1, nsrc
+         WRITE(*,*) 'fteik_solver2d_solveSourceFSM: Invalid source number:',isrc, 1, nsrc
          ierr = 1
          GOTO 500
       ENDIF
-      CALL fteik_localSolver2d_initialize64fF(isrc, dest, ts4, ierr)
+      CALL fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_solveSourceLSMF: Error setting mesh constants'
+         WRITE(*,*) 'fteik_solver2d_solveSourceFSM: Error setting mesh constants'
          GOTO 500
       ENDIF
       CALL CPU_TIME(t0)
@@ -935,8 +964,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_getTravelTimeField64fF(ngin, ttout, ierr) &
-      BIND(C, NAME='fteik_solver2d_getTravelTimeField64fF')
+      SUBROUTINE fteik_solver2d_getTravelTimeField64f(ngin, ttout, ierr) &
+      BIND(C, NAME='fteik_solver2d_getTravelTimeField64f')
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngin
@@ -944,12 +973,12 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (.NOT.lhaveTimes) THEN 
-         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64fF: Travel times not yet computed'
+         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64f: Travel times not yet computed'
          ierr = 1
          RETURN
       ENDIF
       IF (ngin /= ngrd) THEN
-         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64fF: No receivers'
+         WRITE(*,*) 'fteik_solver2d_getTravelTimeField64f: No receivers'
          RETURN
       ENDIF
       ttout(:) = ttimes(:)
@@ -968,8 +997,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_getTravelTimes64fF(nrec, ttr, ierr) &
-      BIND(C, NAME='fteik_solver2d_getTravelTimes64fF')
+      SUBROUTINE fteik_solver2d_getTravelTimes64f(nrec, ttr, ierr) &
+      BIND(C, NAME='fteik_solver2d_getTravelTimes64f')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64fF
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE ISO_C_BINDING
@@ -979,17 +1008,17 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (nrec <= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_getTravelTimes64fF: No receivers'
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: No receivers'
          RETURN
       ENDIF
       IF (.NOT.lhaveTimes) THEN
-         WRITE(*,*) 'fteik_solver2d_getTravelTimes64fF: Travel times not yet computed'
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Travel times not yet computed'
          ierr = 1
          RETURN
       ENDIF
       CALL fteik_receiver_getTravelTimes64fF(nrec, ngrd, ttimes, ttr, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_getTravelTimes64fF: Error getting travel times'
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Error getting travel times'
          ierr = 1
       ENDIF
       RETURN
@@ -1179,7 +1208,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !> 
-      SUBROUTINE fteik_localSolver2d_initialize64fF(isrc, dest, ts4, ierr)
+      SUBROUTINE fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
       USE FTEIK_SOURCE64F, ONLY : fteik_source_getSolverInfo64fF
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
       USE FTEIK_MODEL64F, ONLY : nz, nzx
@@ -1205,7 +1234,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
                                           szero, szero2, &
                                           ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_localSolver2d_initialize64fF: Problem with source'
+         WRITE(*,*) 'fteik_localSolver2d_initialize64f: Problem with source'
          RETURN
       ENDIF
       eps = epsS2C*szero*MIN(dz, dx)
@@ -1245,8 +1274,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_setNumberOfSweepsF(nsweepIn, ierr) &
-      BIND(C, NAME='fteik_solver2d_setNumberOfSweepsF')
+      SUBROUTINE fteik_solver2d_setNumberOfSweeps(nsweepIn, ierr) &
+      BIND(C, NAME='fteik_solver2d_setNumberOfSweeps')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn 
@@ -1254,7 +1283,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       ierr = 0 
       nsweep = 0 
       IF (nsweepIn < 0) THEN
-         WRITE(*,*) 'fteik_solver2d_setNumberOfSweepsF: nsweep must be positive', nsweep
+         WRITE(*,*) 'fteik_solver2d_setNumberOfSweeps: nsweep must be positive', nsweep
          ierr = 1 
          RETURN
       ENDIF
@@ -1276,8 +1305,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_setReceivers64fF(nrec, zrec, xrec, ierr) &
-      BIND(C, NAME='fteik_solver2d_setReceivers64fF')
+      SUBROUTINE fteik_solver2d_setReceivers64f(nrec, zrec, xrec, ierr) &
+      BIND(C, NAME='fteik_solver2d_setReceivers64f')
       USE FTEIK_MODEL64F, ONLY : y0
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64fF
       USE ISO_C_BINDING
@@ -1295,7 +1324,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       ALLOCATE(yrec(MAX(nrec, 1)))
       yrec(:) = y0
       CALL fteik_receiver_initialize64fF(nrec, zrec, xrec, yrec, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setReceivers64fF: Failed to set receivers'
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setReceivers64f: Failed to set receivers'
       IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
       RETURN
       END
@@ -1312,10 +1341,10 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_setSources64fF(nsrc, zsrc, xsrc, ierr) &
-      BIND(C, NAME='fteik_solver2d_setSources64fF')
+      SUBROUTINE fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, ierr) &
+      BIND(C, NAME='fteik_solver2d_setSources64f')
       USE FTEIK_MODEL64F, ONLY : y0
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64fF
+      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
@@ -1324,8 +1353,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       REAL(C_DOUBLE), ALLOCATABLE :: ysrc(:)
       ALLOCATE(ysrc(MAX(1, nsrc)))
       ysrc(:) = y0
-      CALL fteik_source_initialize64fF(nsrc, zsrc, xsrc, ysrc, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources64fF: Failed to set source'
+      CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources64f: Failed to set source'
       IF (ALLOCATED(ysrc)) DEALLOCATE(ysrc)
       RETURN
       END
@@ -1349,8 +1378,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    This is now a subroutine and incorporated with the fteik Fortran modules.
 !>
-      SUBROUTINE fteik_solver2d_setSphereToCartEpsilonF(epsIn, ierr) &
-      BIND(C, NAME='fteik_solver2d_setSphereToCartEpsilonF')
+      SUBROUTINE fteik_solver2d_setSphereToCartEpsilon(epsIn, ierr) &
+      BIND(C, NAME='fteik_solver2d_setSphereToCartEpsilon')
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx
       USE FTEIK_CONSTANTS64F, ONLY : zero
@@ -1360,17 +1389,17 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       ierr = 0
       epsS2C = zero
       IF (nx < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_solver_setSphereToCartEpsilonF: Grid not yet set'
+         WRITE(*,*) 'fteik_solver_setSphereToCartEpsilon: Grid not yet set'
          ierr = 1
          RETURN
       ENDIF
       IF (INT(epsIn) > nz .OR. INT(epsIn) > nx) THEN
          IF (INT(epsIn) > nz) THEN
-            WRITE(*,*) 'fteik_solver2d_setSphereToCartEpsilonF: eps bigger than nz', &
+            WRITE(*,*) 'fteik_solver2d_setSphereToCartEpsilon: eps bigger than nz', &
                        INT(epsIn), nz
          ENDIF
          IF (INT(epsIn) > nx) THEN
-            WRITE(*,*) 'fteik_solver2d_setSphereToCartEpsilonF: eps bigger than nx', &
+            WRITE(*,*) 'fteik_solver2d_setSphereToCartEpsilon: eps bigger than nx', &
                        INT(epsIn), nx
          ENDIF
          ierr = 1
@@ -1385,7 +1414,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>    @brief Sets the velocity model on the solver.
 !>
 !>    @param[in] ncell    Number of cells in velocity model.  This should be 
-!>                        (nz-1)*(nx-1)*(ny-1).
+!>                        (nz-1)*(nx-1).
 !>    @param[in] vel      Velocity model (meters/second) in model cells.  This is
 !>                        a vector of dimension [ncell] whose fastest direction is
 !>                        z and whose slowest direction is y.
@@ -1394,8 +1423,8 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_setVelocityModel64fF(ncell, vel, ierr) &
-      BIND(C, NAME='fteik_solver2d_setVelocityModel64fF')
+      SUBROUTINE fteik_solver2d_setVelocityModel64f(ncell, vel, ierr) &
+      BIND(C, NAME='fteik_solver2d_setVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64f
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -1404,7 +1433,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       CALL fteik_model_setVelocityModel64f(ncell, vel, ierr)
       IF (ierr /= 0) &
-      WRITE(*,*) 'fteik_solver2d_setVelocityModel64fF: Error setting velocity model'
+      WRITE(*,*) 'fteik_solver2d_setVelocityModel64f: Error setting velocity model'
       RETURN
       END
 !                                                                                        !
