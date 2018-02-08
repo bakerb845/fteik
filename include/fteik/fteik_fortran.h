@@ -14,23 +14,24 @@ extern "C"
 //----------------------------------------------------------------------------//
 //                              Model Module                                  //
 //----------------------------------------------------------------------------//
-void fteik_model_finalizeF(void);
-void fteik_model_getVelocityModel64fF(const int nwork, int *nv, 
-                                      double *__restrict__ vel, int *ierr);
-void fteik_model_intializeGeometryF(
+void fteik_model_free(void);
+void fteik_model_getVelocityModel64f(const int nwork, int *nv, 
+                                     double *__restrict__ vel, int *ierr);
+void fteik_model_intializeGeometry(
     const int nz, const int nx, const int ny,
     const double dz, const double dx, const double dy,
     const double z0, const double x0, const double y0,
     int *ierr);
-void fteik_model_setGridSizeF(const int nz, const int nx, const int ny,
-                              int *ierr);
-void fteik_model_setOriginF(const double z0, const double x0, const double y0);
-void fteik_model_setGridSpacingF( 
+void fteik_model_setGridSize(const int nz, const int nx, const int ny,
+                             int *ierr);
+void fteik_model_setOrigin(const double z0, const double x0, const double y0);
+void fteik_model_setGridSpacing( 
     const double dz, const double dx, const double dy, int *ierr);
-void fteik_model_setVelocityModel64fF(
+void fteik_model_setVelocityModel64f(
     const int nv, const double *__restrict__ vel, int *ierr);
-void fteik_model_setVelocityModel32fF(
+void fteik_model_setVelocityModel32f(
     const int nv, const float *__restrict__ vel4, int *ierr);
+void fteik_model_isModel3D(bool *lis3d, int *ierr);
 #pragma omp declare simd uniform(nz, nzx)
 int fteik_model_grid2indexF(const int iz, const int ix, const int iy, 
                             const int nz, const int nzx);

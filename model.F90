@@ -27,7 +27,21 @@ MODULE FTEIK_MODEL64F
                                                            !< was set.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lis3dModel !< If true then the model is 3D.
                                                  !< Otherwise, it is 2D. 
+  ! Label the routines
+  PUBLIC :: fteik_model_intializeGeometry
+  PUBLIC :: fteik_model_setVelocityModel64f
+  PUBLIC :: fteik_model_setVelocityModel32f
+  PUBLIC :: fteik_model_getVelocityModel64f
+  PUBLIC :: fteik_model_isModel3D
+  PUBLIC :: fteik_model_free
+  PUBLIC :: fteik_model_setGridSpacing
+  PUBLIC :: fteik_model_setOrigin3D
+  PUBLIC :: fteik_model_setOrigin2D
+  PUBLIC :: fteik_model_setGridSize
 
+  PUBLIC :: fteik_model_grid2indexF
+  PUBLIC :: fteik_model_index2gridF
+  PUBLIC :: fteik_model_velGrid2indexF
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                 Begin the Code                                         !
@@ -57,32 +71,32 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_intializeGeometryF(lis3d,         &
-                                                nz, nx, ny,    &
-                                                dz, dx, dy,    &
-                                                z0, x0, y0,    &
-                                                ierr)          &
-                 BIND(C, NAME='fteik_model_initializeGeometryF')
+      SUBROUTINE fteik_model_intializeGeometry(lis3d,         &
+                                               nz, nx, ny,    &
+                                               dz, dx, dy,    &
+                                               z0, x0, y0,    &
+                                               ierr)          &
+                 BIND(C, NAME='fteik_model_initializeGeometry')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, dy, z0, x0, y0
       LOGICAL(C_BOOl), VALUE, INTENT(IN) :: lis3d
       INTEGER(C_INT), INTENT(OUT) :: ierr
       lis3dModel = lis3d
-      CALL fteik_model_setGridSizeF(lis3d, nz, nx, ny, ierr) 
+      CALL fteik_model_setGridSize(lis3d, nz, nx, ny, ierr) 
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_model_initializeGeometryF: Error setting gridsize'
+         WRITE(*,*) 'fteik_model_initializeGeometry: Error setting gridsize'
          RETURN
       ENDIF 
-      CALL fteik_model_setGridSpacingF(lis3d, dz, dx, dy, ierr)
+      CALL fteik_model_setGridSpacing(lis3d, dz, dx, dy, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_model_initializeGeomtryF: Error setting grid spacing'
+         WRITE(*,*) 'fteik_model_initializeGeomtry: Error setting grid spacing'
          RETURN
       ENDIF
       IF (lis3d) THEN
-         CALL fteik_model_setOrigin3DF(z0, x0, y0)
+         CALL fteik_model_setOrigin3D(z0, x0, y0)
       ELSE
-         CALL fteik_model_setOrigin2DF(z0, x0)
+         CALL fteik_model_setOrigin2D(z0, x0)
       ENDIF
       RETURN
       END SUBROUTINE
@@ -103,8 +117,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_model_setGridSpacingF(lis3d, dzIn, dxIn, dyIn, ierr) &
-                 BIND(C, NAME='fteik_model_setGridSpacingF')
+      SUBROUTINE fteik_model_setGridSpacing(lis3d, dzIn, dxIn, dyIn, ierr) &
+                 BIND(C, NAME='fteik_model_setGridSpacing')
       USE FTEIK_CONSTANTS64F, ONLY : zero, one
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -153,8 +167,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setGridSizeF(lis3d, nzIn, nxIn, nyIn, ierr) &
-                 BIND(C, NAME='fteik_model_setGridSizeF')
+      SUBROUTINE fteik_model_setGridSize(lis3d, nzIn, nxIn, nyIn, ierr) &
+                 BIND(C, NAME='fteik_model_setGridSize')
       USE ISO_C_BINDING
       USE FTEIK_CONSTANTS64F, ONLY : zero
       IMPLICIT NONE
@@ -202,8 +216,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setOrigin3DF(z0In, x0In, y0In) &
-                 BIND(C, NAME='fteik_model_setOrigin3DF')
+      SUBROUTINE fteik_model_setOrigin3D(z0In, x0In, y0In) &
+                 BIND(C, NAME='fteik_model_setOrigin3D')
       USE ISO_C_BINDING
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In 
       z0 = z0In
@@ -223,8 +237,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setOrigin2DF(z0In, x0In) &
-                 BIND(C, NAME='fteik_model_setOrigin2DF')
+      SUBROUTINE fteik_model_setOrigin2D(z0In, x0In) &
+                 BIND(C, NAME='fteik_model_setOrigin2D')
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
@@ -250,9 +264,9 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_getGridSizeF(nzOut, nxOut, nyOut,     &
-                                          ngrdOut, ncellOut, ierr) &
-                 BIND(C, NAME='fteik_model_getGridSizeF')
+      SUBROUTINE fteik_model_getGridSize(nzOut, nxOut, nyOut,     &
+                                         ngrdOut, ncellOut, ierr) &
+                 BIND(C, NAME='fteik_model_getGridSize')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: nzOut, nxOut, nyOut, ngrdOut, ncellOut, ierr
@@ -291,8 +305,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setVelocityModel64fF(nv, vel, ierr) &
-                 BIND(C, NAME='fteik_model_setVelocityModel64fF')
+      SUBROUTINE fteik_model_setVelocityModel64f(nv, vel, ierr) &
+                 BIND(C, NAME='fteik_model_setVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -303,17 +317,17 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (nv /= ncell) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64fF: ERROR - ncell /= nv', ncell, nv
+         WRITE(*,*) 'fteik_model_setVelocityModel64f: ERROR - ncell /= nv', ncell, nv
          ierr = 1 
          RETURN
       ENDIF
       IF (nv < 1) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64fF: ERROR - no cells in vel', nv
+         WRITE(*,*) 'fteik_model_setVelocityModel64f: ERROR - no cells in vel', nv
          ierr = 1 
          RETURN
       ENDIF
       IF (MINVAL(vel) <= zero) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64fF: All velocities must be positive'
+         WRITE(*,*) 'fteik_model_setVelocityModel64f: All velocities must be positive'
          ierr = 1
          RETURN
       ENDIF
@@ -334,8 +348,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_finalizeF() &
-                 BIND(C, NAME='fteik_model_finalizeF')
+      SUBROUTINE fteik_model_free() &
+                 BIND(C, NAME='fteik_model_free')
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -375,8 +389,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_getVelocityModel64fF(nwork, nv, vel, ierr) &
-                 BIND(C, NAME='fteik_model_getVelocityModel64fF')
+      SUBROUTINE fteik_model_getVelocityModel64f(nwork, nv, vel, ierr) &
+                 BIND(C, NAME='fteik_model_getVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE 
@@ -391,12 +405,12 @@ MODULE FTEIK_MODEL64F
          RETURN
       ENDIF
       IF (nwork < ncell) THEN
-         WRITE(*,*) 'fteik_model_getVelocityModel64fF: nv < ncell'
+         WRITE(*,*) 'fteik_model_getVelocityModel64f: nv < ncell'
          ierr = 1
          RETURN
       ENDIF
       IF (.NOT.lhaveModel) THEN
-         WRITE(*,*) 'fteik_model_getVelocityModel64fF: Velocity model not yet set'
+         WRITE(*,*) 'fteik_model_getVelocityModel64f: Velocity model not yet set'
          ierr = 1
          vel(:) = zero
          RETURN
@@ -417,15 +431,15 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_model_isModel3DF(lis3d, ierr) &
-      BIND(C, NAME='fteik_model_isModel3DF')
+      SUBROUTINE fteik_model_isModel3D(lis3d, ierr) &
+      BIND(C, NAME='fteik_model_isModel3D')
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(OUT) :: ierr
       LOGICAL(C_BOOL), INTENT(OUT) :: lis3d
       ierr = 0
       lis3d = lis3dModel
       IF (nx < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_model_isModel3DF: Model not yet initialized'
+         WRITE(*,*) 'fteik_model_isModel3D: Model not yet initialized'
          ierr = 1
          RETURN
       ENDIF
@@ -448,8 +462,8 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_setVelocityModel32fF(nv, vel4, ierr) &
-                 BIND(C, NAME='fteik_model_setVelocityModel32fF')
+      SUBROUTINE fteik_model_setVelocityModel32f(nv, vel4, ierr) &
+                 BIND(C, NAME='fteik_model_setVelocityModel32f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -460,17 +474,17 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (nv /= ncell) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel32fF: ERROR - ncell /= nv', ncell, nv
+         WRITE(*,*) 'fteik_model_setVelocityModel32f: ERROR - ncell /= nv', ncell, nv
          ierr = 1
          RETURN
       ENDIF
       IF (nv < 1) THEN
-         WRITE(*,*) 'fteik_model_setVelocityMode32flF: ERROR - no cells in vel', nv
+         WRITE(*,*) 'fteik_model_setVelocityModel32f: ERROR - no cells in vel', nv
          ierr = 1
          RETURN
       ENDIF
       IF (MINVAL(vel4) <= 0.0) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel32fF: All velocities must be positive'
+         WRITE(*,*) 'fteik_model_setVelocityModel32f: All velocities must be positive'
          ierr = 1
          RETURN
       ENDIF

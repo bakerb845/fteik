@@ -71,7 +71,7 @@ MODULE FTEIK_SOLVER64F
                                              nsweepIn, epsIn, ierr) &
                  BIND(C, NAME='fteik_solver_initialize64fF')
       USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometryF, ngrd
+      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometry, ngrd
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
@@ -81,11 +81,11 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT), INTENT(OUT) :: ierr
       WRITE(*,*) 'fteik_solver_initialize64fF: Initializing...'
       CALL fteik_solver_finalizeF()
-      CALL fteik_model_intializeGeometryF(lis3d,            &
-                                          nzIn, nxIn, nyIn, &
-                                          dzIn, dxIn, dyIn, &
-                                          z0In, x0In, y0In, &
-                                          ierr)
+      CALL fteik_model_intializeGeometry(lis3d,            &
+                                         nzIn, nxIn, nyIn, &
+                                         dzIn, dxIn, dyIn, &
+                                         z0In, x0In, y0In, &
+                                         ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver_initialize64fF: Error setting grid geometry'
          RETURN
@@ -501,6 +501,7 @@ MODULE FTEIK_SOLVER64F
       USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_finalizeF
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
       USE FTEIK_SOURCE64F, ONLY : fteik_source_finalizeF
+      USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -535,6 +536,7 @@ MODULE FTEIK_SOLVER64F
       CALL fteik_graph3d_finalizeF()
       CALL fteik_receiver_finalizeF()
       CALL fteik_source_finalizeF()
+      CALL fteik_model_free()
       RETURN
       END
 !                                                                                        !
@@ -789,13 +791,13 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver_setVelocityModel64fF(ncell, vel, ierr) &
       BIND(C, NAME='fteik_solver_setVelocityModel64fF')
-      USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64fF 
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncell
       REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      CALL fteik_model_setVelocityModel64fF(ncell, vel, ierr)
+      CALL fteik_model_setVelocityModel64f(ncell, vel, ierr)
       IF (ierr /= 0) &
       WRITE(*,*) 'fteik_solver_setVelocityModel64fF: Error setting velocity model'
       RETURN

@@ -32,7 +32,7 @@ contains
     integer(kind = 4), intent(in) :: nz, nx, n_sweep
     real(kind = 8), intent(in) :: zsrc, xsrc, dz, dx
 
-    integer(kind = 4) :: imin, i, j, kk, i1, j1, ierr, iflag
+    integer(kind = 4) :: imin, i, j, kk, i1, j1, iflag
     integer(kind = 4) :: zsi, xsi
     integer(kind = 4) :: sgntz, sgntx, sgnvz, sgnvx
 
