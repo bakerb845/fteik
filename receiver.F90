@@ -15,10 +15,18 @@ MODULE FTEIK_RECEIVER64F
    !> Flag indicating whether or not the module has been initialized.
    LOGICAL(C_BOOL), PRIVATE, SAVE :: linit = .FALSE. 
    !> Number of receivers.
-   INTEGER(C_INT), PROTECTED, SAVE :: nrec
-   INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0
-   INTEGER(C_INT), PARAMETER :: INTERP_LINEAR = 1
-   INTEGER(C_INT), PARAMETER :: INTERP_HIGHACCURACY = 2
+   INTEGER(C_INT), PROTECTED, SAVE :: nrec = 0
+   !> Controls verbosity.
+   INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0 
+   INTEGER(C_INT), PARAMETER :: INTERP_NEAREST = 0      !< Nearest neighbor interpolation.
+   INTEGER(C_INT), PARAMETER :: INTERP_LINEAR = 1       !< Linear interpolation.
+   INTEGER(C_INT), PARAMETER :: INTERP_HIGHACCURACY = 2 !< Not programmed.
+   ! Subroutine availability
+   PUBLIC :: fteik_receiver_initialize64f
+   PUBLIC :: fteik_receiver_getNumberOfReceivers
+   PUBLIC :: fteik_receiver_getTravelTimes64f
+   PUBLIC :: fteik_receiver_setVerobosity
+   PUBLIC :: fteik_receiver_free
    CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                      Begin the Code                                    !
@@ -28,31 +36,33 @@ MODULE FTEIK_RECEIVER64F
 !>           linear interpolation.
 !>           https://github.com/bottero/IMCMCrun/blob/master/src/functions.cpp
 !>
-!>    @param[in] nrecIn   Number of receivers.  If this is -1 then this function will
-!>                        simply deallocate/reset the receiver information.
-!>    @param[in] z        Receiver positions in z (meters).  This has dimension [nrecIn].
-!>    @param[in] x        Receiver positions in x (meters).  This has dimension [nrecIn].
-!>    @param[in] y        Receiver positions in y (meters).  This has dimension [nrecIn].
+!>    @param[in] nrecIn     Number of receivers.  If this is -1 then this function will
+!>                          simply deallocate/reset the receiver information.
+!>    @param[in] z          Receiver positions in z (meters).
+!>    @param[in] x          Receiver positions in x (meters).
+!>    @param[in] y          Receiver positions in y (meters).
+!>    @param[in] verboseIn  Controls the verbosity.  < 1 is quiet.
 !>
-!>    @param[out] ierr    0 indicate success.
+!>    @param[out] ierr      0 indicate success.
 !>
 !>    @author Ben Baker
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_receiver_initialize64fF(nrecIn, z, x, y, ierr) &
-                 BIND(C, NAME='fteik_receiver_initialize64fF')
+      SUBROUTINE fteik_receiver_initialize64f(nrecIn, z, x, y, verboseIn, ierr) &
+                 BIND(C, NAME='fteik_receiver_initialize64f')
       USE FTEIK_MODEL64F, ONLY : dx, dy, dz, nx, ny, nz, x0, y0, z0
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn
+      INTEGER(C_INT), INTENT(IN), VALUE :: nrecIn, verboseIn
       REAL(C_DOUBLE), INTENT(IN) :: z(nrecIn), x(nrecIn), y(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) xr, yr, zr
       INTEGER(C_INT) irec, ix, iy, iz
       ! Initialize 
       ierr = 0
-      CALL fteik_receiver_finalizeF() 
+      CALL fteik_receiver_free()
+      CALL fteik_receiver_setVerobosity(verboseIn)
       ! Check that the model has been initialized
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
          WRITE(*,*) 'fteik_receiver_initialize64fF: Grid not yet set'
@@ -114,6 +124,20 @@ MODULE FTEIK_RECEIVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Sets the verbosity on the module.
+!>
+!>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
+!>
+      SUBROUTINE fteik_receiver_setVerobosity(verboseIn) &
+      BIND(C, NAME='fteik_receiver_setVerbosity')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
+      verbose = verboseIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Utility function for determining the number of receivers set in the model.
 !>
 !>    @param[out] nrecOut  Number of receivers set in module.
@@ -153,9 +177,9 @@ MODULE FTEIK_RECEIVER64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_receiver_getTravelTimes64fF(nrecIn, ngrd,       &
-                                                   ttimes, ttr, ierr)  &
-      BIND(C, NAME='fteik_receiver_getTravelTimes64fF')
+      SUBROUTINE fteik_receiver_getTravelTimes64f(nrecIn, ngrd,       &
+                                                  ttimes, ttr, ierr)  &
+      BIND(C, NAME='fteik_receiver_getTravelTimes64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
       USE FTEIK_MODEL64F, ONLY : dz, dx, dy, nz, nzx, dx, dy, dz
       USE FTEIK_CONSTANTS64F, ONLY : one, FTEIK_HUGE
@@ -174,11 +198,11 @@ MODULE FTEIK_RECEIVER64F
          ierr = 1
          RETURN
       ENDIF
-      IF (nrecIn < 1) THEN
+      IF (nrecIn < 1 .AND. verbose > 0) THEN
          WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: No receivers'
          RETURN
       ENDIF
-      IF (nrecIn /= nrec) THEN
+      IF (nrecIn /= nrec .AND. verbose > 0) THEN
          WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Warning nrecIn /= nrec', &
                     nrecIn, nrec
          ttr(1:nrecIn) = FTEIK_HUGE
@@ -233,11 +257,12 @@ MODULE FTEIK_RECEIVER64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_receiver_finalizeF( ) &
-                 BIND(C, NAME='fteik_receiver_finalizeF')
+      SUBROUTINE fteik_receiver_free( ) &
+                 BIND(C, NAME='fteik_receiver_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
       nrec = 0 
+      verbose = 0
       IF (ALLOCATED(zri)) DEALLOCATE(zri)
       IF (ALLOCATED(xri)) DEALLOCATE(xri)
       IF (ALLOCATED(yri)) DEALLOCATE(yri)
@@ -260,10 +285,11 @@ MODULE FTEIK_RECEIVER64F
       INTEGER(C_INT), INTENT(OUT) :: mpierr
       INTEGER(C_INT) myid
       CALL MPI_Comm_rank(comm, myid, mpierr)
-      CALL MPI_Bcast(nrec, 1, MPI_INT, root, comm, mpierr) 
+      CALL MPI_Bcast(nrec,    1, MPI_INT, root, comm, mpierr) 
       IF (nrec < 1) RETURN 
+      CALL MPI_Bcast(verbose, 1, MPI_INT, root, comm, mpierr)
       IF (myid /= root) THEN 
-         CALL fteik_receiver_finalizeF()
+         CALL fteik_receiver_free()
          ALLOCATE(zri(nrec))
          ALLOCATE(xri(nrec))
          ALLOCATE(yri(nrec))

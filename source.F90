@@ -27,12 +27,13 @@ MODULE FTEIK_SOURCE64F
 !>
 !>    @copyright MIT
 !> 
-      SUBROUTINE fteik_source_finalizeF()             &
-                 BIND(C, NAME='fteik_source_finalizeF')
+      SUBROUTINE fteik_source_free()             &
+                 BIND(C, NAME='fteik_source_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
       lhaveSource = .FALSE.
       nsrc = 0 
+      verbose = 0
       IF (ALLOCATED(zsrc)) DEALLOCATE(zsrc)
       IF (ALLOCATED(xsrc)) DEALLOCATE(xsrc)
       IF (ALLOCATED(ysrc)) DEALLOCATE(ysrc)
@@ -80,7 +81,7 @@ MODULE FTEIK_SOURCE64F
       INTEGER(C_INT) isrc, xsi, ysi, zsi
       !----------------------------------------------------------------------------------!
       ierr = 0
-      CALL fteik_source_finalizeF()
+      CALL fteik_source_free()
       CALL fteik_source_setVerobosity(verboseIn)
       IF (nsrcIn < 1) THEN
          WRITE(*,*) 'fteik_source_initialize64fF: No sources'

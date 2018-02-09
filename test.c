@@ -157,21 +157,23 @@ omp_set_num_threads(1);
 //printf("SOMETHING IS AMISS WITH THE LOCAL SOLVERS!!!!!!!!!!!\n");
 //printf("INSPECTOR SAYS slow(?), i.e., prefetchSlowness ARE UNINITIALIZED - CHECK THERE FIRST\n");
 //getchar();
-    fteik_solver_initialize64fF(nz, nx, ny,
-                                z0, x0, y0,
-                                dz, dx, dy,
-                                nsweep, eps, &ierr);
+ int verbose = 2;
+    fteik_solver3d_initialize64f(nz, nx, ny,
+                                 z0, x0, y0,
+                                 dz, dx, dy,
+                                 nsweep, eps,
+                                 verbose, &ierr);
     // Set the sources
     printf("Setting sources...\n");
-    fteik_solver_setSources64fF(1, &zs, &xs, &ys, &ierr);
+    fteik_solver3d_setSources64f(1, &zs, &xs, &ys, &ierr);
     // Set the velocity model
     printf("Setting velocity model...\n");
-    fteik_solver_setVelocityModel64fF(ncell, vel, &ierr);
+    fteik_solver3d_setVelocityModel64f(ncell, vel, &ierr);
     // Solve the Eikonal equation
     printf("Solving the Eikonal equation...\n");
-    fteik_solver_solveSourceLSMF(1, &ierr);
+    fteik_solver3d_solveSourceLSM(1, &ierr);
     printf("Finalizing the solver\n");
-//    fteik_solver_finalizeF();
+//    fteik_solver3d_free();
 //return 0;
 
     // Intialize the solver
@@ -220,7 +222,7 @@ omp_set_num_threads(1);
     fteik_finalizeF();
 
     printf("Finalize the solver\n");
-    fteik_solver_finalizeF();
+    fteik_solver3d_free();
 
 
 float zs4 = zs;

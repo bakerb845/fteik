@@ -133,8 +133,8 @@ MODULE FTEIK2D_SOLVER64F
 !>
       SUBROUTINE fteik_solver2d_free()   &
       BIND(C, NAME='fteik_solver2d_free')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_finalizeF
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_finalizeF
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_free
+      USE FTEIK_SOURCE64F, ONLY : fteik_source_free
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
@@ -149,8 +149,8 @@ MODULE FTEIK2D_SOLVER64F
       IF (ALLOCATED(slocWork))   DEALLOCATE(slocWork)
       IF (ALLOCATED(ttvecWork))  DEALLOCATE(ttvecWork)
       IF (ALLOCATED(tupdWork))   DEALLOCATE(tupdWork)
-      CALL fteik_receiver_finalizeF()
-      CALL fteik_source_finalizeF()
+      CALL fteik_receiver_free()
+      CALL fteik_source_free()
       CALL fteik_model_free()
       RETURN
       END
@@ -999,7 +999,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
       SUBROUTINE fteik_solver2d_getTravelTimes64f(nrec, ttr, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimes64f')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64fF
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64f
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -1016,7 +1016,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
          ierr = 1
          RETURN
       ENDIF
-      CALL fteik_receiver_getTravelTimes64fF(nrec, ngrd, ttimes, ttr, ierr)
+      CALL fteik_receiver_getTravelTimes64f(nrec, ngrd, ttimes, ttr, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Error getting travel times'
          ierr = 1
@@ -1308,7 +1308,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       SUBROUTINE fteik_solver2d_setReceivers64f(nrec, zrec, xrec, ierr) &
       BIND(C, NAME='fteik_solver2d_setReceivers64f')
       USE FTEIK_MODEL64F, ONLY : y0
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64fF
+      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
@@ -1323,7 +1323,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       ENDIF
       ALLOCATE(yrec(MAX(nrec, 1)))
       yrec(:) = y0
-      CALL fteik_receiver_initialize64fF(nrec, zrec, xrec, yrec, ierr)
+      CALL fteik_receiver_initialize64f(nrec, zrec, xrec, yrec, verbose, ierr)
       IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setReceivers64f: Failed to set receivers'
       IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
       RETURN

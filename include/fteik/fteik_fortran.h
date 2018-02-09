@@ -47,14 +47,15 @@ int fteik_model_velGrid2indexF(const int iz, const int ix, const int iy,
 //----------------------------------------------------------------------------//
 //                            Receiver Module                                 //
 //----------------------------------------------------------------------------//
-void fteik_receiver_initialize64fF(const int nrec,
-                                   const double *__restrict__ z,
-                                   const double *__restrict__ x,
-                                   const double *__restrict__ y, int *ierr);
-void fteik_receiver_getTravelTimes64fF(const int nrec, const int ngrd,
-                                       const double ttimes[], double ttr[],
-                                       int *ierr);
-void fteik_receiver_finalizeF(void);
+void fteik_receiver_initialize64f(const int nrec,
+                                  const double *__restrict__ z,
+                                  const double *__restrict__ x,
+                                  const double *__restrict__ y,
+                                  const int verbose, int *ierr);
+void fteik_receiver_getTravelTimes64f(const int nrec, const int ngrd,
+                                      const double ttimes[], double ttr[],
+                                      int *ierr);
+void fteik_receiver_free(void);
 
 #ifdef FTEIK_USE_MPI
 int fteik_receiver_broadcast(const int root, const MPI_Comm comm);
@@ -62,17 +63,18 @@ int fteik_receiver_broadcast(const int root, const MPI_Comm comm);
 //----------------------------------------------------------------------------//
 //                            Source Module                                   //
 //----------------------------------------------------------------------------//
-void fteik_source_finalizeF(void);
-void fteik_source_initialize64fF(const int nsrcIn,
-                                 const double *__restrict__ zsrcIn,
-                                 const double *__restrict__ xsrcIn,
-                                 const double *__restrict__ ysrcIn,
-                                 int *ierr);
+void fteik_source_free(void);
+void fteik_source_initialize64f(const int nsrcIn,
+                                const double *__restrict__ zsrcIn,
+                                const double *__restrict__ xsrcIn,
+                                const double *__restrict__ ysrcIn,
+                                const int verbose, int *ierr);
 void fteik_source_getSolverInfo64fF(const int isrc, 
                                     int *zsi, int *xsi, int *ysi,
                                     double *zsa, double *xsa, double *ysa,
                                     double *szero, double *szero2,
                                     int *ierr);
+/*
 void fteik_source_getSourceIndices64fF(const int isrc,
                                        double *zsa, double *xsa, double *ysa,
                                        int *ierr);
@@ -80,32 +82,34 @@ void fteik_source_getSourceIndices32iF(const int isrc,
                                        int *zsi, int *xsi, int *ysi, int *ierr);
 void fteik_source_getSzero64fF(const int isrc,
                                double *szero, double *szero2, int *ierr);
+*/
 //----------------------------------------------------------------------------//
 //                             Solver Module                                  //
 //----------------------------------------------------------------------------//
-void fteik_solver_initialize64fF(
+void fteik_solver3d_initialize64f(
     const int nzIn, const int nxIn, const int nyIn,
     const double z0In, const double x0In, const double y0In,
     const double dzIn, const double dxIn, const double dyIn,
-    const int nsweepIn, const double epsIn, int *ierr);
-void fteik_solver_finalizeF(void);
-void fteik_solver_setVelocityModel64fF(const int ncell, 
-                                       const double *__restrict__ vel,
-                                       int *ierr);
-void fteik_solver_setSources64fF(const int nsrc,
-                                 const double *__restrict__ zsrc,
-                                 const double *__restrict__ xsrc,
-                                 const double *__restrict__ ysrc,
-                                 int *ierr);
-void fteik_solver_getTravelTimes64fF(const int nrec, double ttr[], int *ierr);
-void fteik_solver_getNumberOfSources(int *nsrc, int *ierr);
-void fteik_solver_getNumberOfReceivers(int *nrec, int *ierr);
-void fteik_solver_setReceivers64fF(const int nrec,
-                                   const double *__restrict__ zrec,
-                                   const double *__restrict__ xrec,
-                                   const double *__restrict__ yrec,
-                                   int *ierr);
-void fteik_solver_solveSourceLSMF(const int isrc, int *ierr);
+    const int nsweepIn, const double epsIn,
+    const int verbose, int *ierr);
+void fteik_solver3d_free(void);
+void fteik_solver3d_setVelocityModel64f(const int ncell, 
+                                        const double vel[],
+                                        int *ierr);
+void fteik_solver3d_setSources64f(const int nsrc,
+                                  const double zsrc[],
+                                  const double xsrc[],
+                                  const double ysrc[],
+                                  int *ierr);
+void fteik_solver3d_getTravelTimes64f(const int nrec, double ttr[], int *ierr);
+void fteik_solver3d_getNumberOfSources(int *nsrc, int *ierr);
+void fteik_solver3d_getNumberOfReceivers(int *nrec, int *ierr);
+void fteik_solver3d_setReceivers64f(const int nrec,
+                                    const double zrec[],
+                                    const double xrec[],
+                                    const double yrec[],
+                                    int *ierr);
+void fteik_solver3d_solveSourceLSM(const int isrc, int *ierr);
 //----------------------------------------------------------------------------//
 //                           2D Solver Module                                 //
 //----------------------------------------------------------------------------//

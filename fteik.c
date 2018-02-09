@@ -55,6 +55,7 @@ struct fteikParms_struct
     int nzGrid;        /*!< Number of grid points in z. */
     int nxGrid;        /*!< Number of grid points in x. */
     int nyGrid;        /*!< Number of grid points in y. */
+    int verbose;       /*!< Controls the verbosity on the solver. */
     bool lwriteArchive;/*!< If true then write a HDF5 archive file */
     bool lwriteLevels; /*!< If true then write the level schedules. */
     bool lwriteVel;    /*!< If true then write the velocity models to the
@@ -168,10 +169,11 @@ int nyGrid = ny; //150;
         if (!linit)
         {
             fprintf(stdout, "%s: Initializing solver...\n", __func__);
-            fteik_solver_initialize64fF(nz, nx, ny,
-                                        z0, x0, y0,
-                                        dz, dx, dy,
-                                        parms.nsweep, parms.eps, &ierr);
+            fteik_solver3d_initialize64f(nz, nx, ny,
+                                         z0, x0, y0,
+                                         dz, dx, dy,
+                                         parms.nsweep, parms.eps,
+                                         parms.verbose, &ierr);
             if (ierr != 0)
             {
                 fprintf(stderr, "%s: Error initializing solver\n", __func__);
@@ -181,18 +183,18 @@ int nyGrid = ny; //150;
             if (!parms.lreciprocal)
             {
                 fprintf(stdout, "%s: Setting the sources...\n", __func__);
-                fteik_solver_setSources64fF(parms.nsrc,
-                                            parms.zs, parms.xs, parms.ys,
-                                            &ierr);
+                fteik_solver3d_setSources64f(parms.nsrc,
+                                             parms.zs, parms.xs, parms.ys,
+                                             &ierr);
                 if (ierr != 0)
                 {
                     fprintf(stderr, "%s: Error setting sources\n", __func__);
                     return EXIT_FAILURE;
                 }
                 fprintf(stdout, "%s: Setting the receivers...\n", __func__);
-                fteik_solver_setReceivers64fF(parms.nrec,
-                                              parms.zr, parms.xr, parms.yr,
-                                              &ierr);
+                fteik_solver3d_setReceivers64f(parms.nrec,
+                                               parms.zr, parms.xr, parms.yr,
+                                               &ierr);
                 if (ierr != 0)
                 {
                     fprintf(stderr, "%s: Error setting receivers\n", __func__);
@@ -204,9 +206,9 @@ int nyGrid = ny; //150;
             {
                 fprintf(stdout, "%s: Setting receivers as sources...\n",
                         __func__);
-                fteik_solver_setSources64fF(parms.nrec,
-                                            parms.zr, parms.xr, parms.yr,
-                                            &ierr); 
+                fteik_solver3d_setSources64f(parms.nrec,
+                                             parms.zr, parms.xr, parms.yr,
+                                             &ierr); 
                 if (ierr != 0)
                 {
                     fprintf(stderr, "%s: Error setting sources\n", __func__);
@@ -214,9 +216,9 @@ int nyGrid = ny; //150;
                 }
                 fprintf(stdout, "%s: Setting sources as receiver...\n",
                             __func__); 
-                fteik_solver_setReceivers64fF(parms.nsrc,
-                                              parms.zs, parms.xs, parms.ys,
-                                              &ierr);
+                fteik_solver3d_setReceivers64f(parms.nsrc,
+                                               parms.zs, parms.xs, parms.ys,
+                                               &ierr);
                 if (ierr != 0)
                 {
                     fprintf(stderr, "%s: Error setting receiver locations\n", 
@@ -225,8 +227,8 @@ int nyGrid = ny; //150;
                 }
             }
             // Get the number of sources 
-            fteik_solver_getNumberOfSources(&nsrc, &ierr);
-            fteik_solver_getNumberOfReceivers(&nrec, &ierr);
+            fteik_solver3d_getNumberOfSources(&nsrc, &ierr);
+            fteik_solver3d_getNumberOfReceivers(&nrec, &ierr);
             if (nrec > 0)
             {
                 nbytes = nrec*sizeof(double);
@@ -240,7 +242,7 @@ int nyGrid = ny; //150;
         {
             fprintf(stdout, "%s: Setting model...\n", __func__);
         }
-        fteik_solver_setVelocityModel64fF(ncell, vel, &ierr);
+        fteik_solver3d_setVelocityModel64f(ncell, vel, &ierr);
 #ifndef NDEBUG
         if (vel != NULL){free(vel);}
 #endif
@@ -280,7 +282,7 @@ int nyGrid = ny; //150;
             free(tt);
 #endif
             fprintf(stdout, "%s: Solving source %d with LSMF...\n", __func__, isrc+1); 
-            fteik_solver_solveSourceLSMF(isrc+1, &ierr);
+            fteik_solver3d_solveSourceLSM(isrc+1, &ierr);
             if (ierr != 0)
             {
                 fprintf(stderr, "%s: Error solving eikonal equation\n", __func__);
@@ -289,7 +291,7 @@ int nyGrid = ny; //150;
             // Get the travel times from the source to the receiver
             if (nrec > 0)
             {
-                fteik_solver_getTravelTimes64fF(nrec, ttr, &ierr);
+                fteik_solver3d_getTravelTimes64f(nrec, ttr, &ierr);
                 if (ierr != 0)
                 {
                     fprintf(stderr, "%s: Error getting travel times\n",
