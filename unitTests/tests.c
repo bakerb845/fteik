@@ -64,13 +64,13 @@ int test_graph3d(void)
     int *levelPtr, *levelPtrRef;
     int i, ierr, maxLevelSize, nLevels, maxLevelSizeRef, nLevelsRef, nwork, sweep;
     fprintf(stdout, "%s: Generating graph...\n", __func__);
-    fteik_graph3d_initializeF(nz, nx, ny, &ierr); 
+    fteik_graph3d_initialize(nz, nx, ny, &ierr); 
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error initilializing graph\n", __func__);
         return EXIT_FAILURE;
     }
-    fteik_graph3d_makeLevelStructuresF(&ierr);
+    fteik_graph3d_makeLevelStructures(&ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error making the level structures\n", __func__);
@@ -89,15 +89,15 @@ int test_graph3d(void)
     ijkv6 = (int *) calloc((size_t) (4*ngrd), sizeof(int));
     ijkv7 = (int *) calloc((size_t) (4*ngrd), sizeof(int));
     ijkv8 = (int *) calloc((size_t) (4*ngrd), sizeof(int));
-    fteik_graphd_getIJKVF(4*ngrd, 1, ijkv1, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 2, ijkv2, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 3, ijkv3, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 4, ijkv4, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 5, ijkv5, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 6, ijkv6, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 7, ijkv7, &ierr);
-    fteik_graphd_getIJKVF(4*ngrd, 8, ijkv8, &ierr);
-    fteik_graph3d_finalizeF();
+    fteik_graph3d_getIJKVF(4*ngrd, 1, ijkv1, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 2, ijkv2, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 3, ijkv3, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 4, ijkv4, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 5, ijkv5, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 6, ijkv6, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 7, ijkv7, &ierr);
+    fteik_graph3d_getIJKVF(4*ngrd, 8, ijkv8, &ierr);
+    fteik_graph3d_free();
 
     // Do the reference problem
     graph = fteik_graph_initialize(nz, nx, ny, &ierr);

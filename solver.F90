@@ -156,8 +156,8 @@ MODULE FTEIK_SOLVER64F
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
       USE FTEIK_CONSTANTS64F, ONLY : FALSE, zero
-      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_initializeF, &
-                                fteik_graph3d_makeLevelStructuresF
+      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_initialize, &
+                                fteik_graph3d_makeLevelStructures
       !USE FTEIK_GRAPH
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -170,13 +170,13 @@ MODULE FTEIK_SOLVER64F
          RETURN
       ENDIF
       ! Compute the graph
-      CALL fteik_graph3d_initializeF(nz, nx, ny, ierr)
+      CALL fteik_graph3d_initialize(nz, nx, ny, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver3d_computeGraph: Error initializing graph'
          ierr = 1
          RETURN
       ENDIF
-      CALL fteik_graph3d_makeLevelStructuresF(ierr)
+      CALL fteik_graph3d_makeLevelStructures(ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver3d_computeGraph: Error making level structures'
          ierr = 1
@@ -526,7 +526,7 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver3d_free()             &
       BIND(C, NAME='fteik_solver3d_free')
-      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_finalizeF
+      USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_free
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_free
       USE FTEIK_SOURCE64F, ONLY : fteik_source_free
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
@@ -536,6 +536,7 @@ MODULE FTEIK_SOLVER64F
       lhaveTimes = .FALSE.
       epsS2C = zero
       nsweep = 0
+      verbose = 0
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(lupd1)) DEALLOCATE(lupd1)
       IF (ALLOCATED(lupd2)) DEALLOCATE(lupd2)
@@ -561,7 +562,7 @@ MODULE FTEIK_SOLVER64F
 !     IF (ALLOCATED(ijkv6)) DEALLOCATE(ijkv6)
 !     IF (ALLOCATED(ijkv7)) DEALLOCATE(ijkv7)
 !     IF (ALLOCATED(ijkv8)) DEALLOCATE(ijkv8)
-      CALL fteik_graph3d_finalizeF()
+      CALL fteik_graph3d_free()
       CALL fteik_receiver_free()
       CALL fteik_source_free()
       CALL fteik_model_free()

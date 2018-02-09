@@ -182,17 +182,17 @@ void locate_locateEventMPIF(const int evnmbr, int *optIndx,
 //                            3D Graph Reordering                             //
 //----------------------------------------------------------------------------//
 /* Initializes the 3D graph structure. */
-void fteik_graph3d_initializeF(const int nzIn, const int nxIn, const int nyIn,
-                               int *ierr);
+void fteik_graph3d_initialize(const int nzIn, const int nxIn, const int nyIn,
+                              int *ierr);
 /* Makes the level structure */
-void fteik_graph3d_makeLevelStructuresF(int *ierr);
+void fteik_graph3d_makeLevelStructures(int *ierr);
 /* Frees memory on the 3D graph. */
-void fteik_graph3d_finalizeF(void);
+void fteik_graph3d_free(void);
 void fteik_graph3d_getLevelPointerF(const int nwork, int levelPtr[], int *ierr);
 int fteik_graph3d_getMaxLevelSize(int *ierr);
 int fteik_graph3d_getNumberOfLevels(int *ierr);
-void fteik_graphd_getIJKVF(const int nwork, const int sweep,
-                           int ijkv[], int *ierr);
+void fteik_graph3d_getIJKVF(const int nwork, const int sweep,
+                            int ijkv[], int *ierr);
 
 //----------------------------------------------------------------------------//
 

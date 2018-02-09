@@ -48,6 +48,14 @@ MODULE FTEIK_GRAPH3D
       INTEGER(C_INT32_T), INTENT(INOUT) :: a(n)
       END FUNCTION
    END INTERFACE
+
+   PUBLIC :: fteik_graph3d_initialize
+   PUBLIC :: fteik_graph3d_free 
+   PUBLIC :: fteik_graph3d_getMaxLevelSize
+   PUBLIC :: fteik_graph3d_getIJKVF
+   PUBLIC :: fteik_graph3d_getNumberOfLevels
+   PUBLIC :: fteik_graph3d_makeLevelStructures
+   PRIVATE :: fteik_graph3d_index2grid
    CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                   Begin the Code                                       !
@@ -61,8 +69,8 @@ MODULE FTEIK_GRAPH3D
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_graph3d_initializeF(nzIn, nxIn, nyIn, ierr) &
-      BIND(C, NAME='fteik_graph3d_initializeF')
+      SUBROUTINE fteik_graph3d_initialize(nzIn, nxIn, nyIn, ierr) &
+      BIND(C, NAME='fteik_graph3d_initialize')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn
@@ -88,8 +96,8 @@ MODULE FTEIK_GRAPH3D
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_graph3d_makeLevelStructuresF(ierr) &
-      BIND(C, NAME='fteik_graph3d_makeLevelStructuresF')
+      SUBROUTINE fteik_graph3d_makeLevelStructures(ierr) &
+      BIND(C, NAME='fteik_graph3d_makeLevelStructures')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -98,7 +106,7 @@ MODULE FTEIK_GRAPH3D
       INTEGER, ALLOCATABLE :: linit(:), work(:)
       ierr = 0
       IF (nz < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructuresF: Graph not initalized'
+         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Graph not initalized'
          ierr = 1
          RETURN
       ENDIF
@@ -151,7 +159,7 @@ MODULE FTEIK_GRAPH3D
          IF (np > 1) THEN
             ierr = sorting_sort32i_finter(np, work, SORT_ASCENDING)
             IF (ierr /= 0) THEN
-               WRITE(*,*) 'fteik_graph3d_makeLevelStructuresF: Sort failed'
+               WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Sort failed'
                EXIT
             ENDIF
          ENDIF
@@ -160,7 +168,7 @@ MODULE FTEIK_GRAPH3D
          !$OMP SIMD REDUCTION(+:ierr)
          DO np=levelPtr(level-1),levelPtr(level)-1
             node = np + 1 - levelPtr(level-1)
-            CALL fteik_graph3d_index2gridF(work(node), iz, ix, iy, ierrLoc)
+            CALL fteik_graph3d_index2grid(work(node), iz, ix, iy, ierrLoc)
             IF (ierrLoc /= 0) ierr = 1
             ijkv1(4*(np-1)+1) = iz
             ijkv1(4*(np-1)+2) = ix
@@ -168,21 +176,21 @@ MODULE FTEIK_GRAPH3D
             ijkv1(4*(np-1)+4) = work(node)
          ENDDO
          IF (ierr /= 0) THEN
-            WRITE(*,*) 'fteik_graph3d_index2gridF: Failed to convert grid to (iz,ix,iy)'
+            WRITE(*,*) 'fteik_graph3d_index2grid: Failed to convert grid to (iz,ix,iy)'
             EXIT
          ENDIF 
       ENDDO
       IF (MINVAL(linit) < 1 .OR. MAXVAL(linit) > 1) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructuresF: Algorithm failure', &
+         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Algorithm failure', &
          MINVAL(linit), MAXVAL(linit)
          ierr = 1
       ENDIF
       IF (MINVAL(ijkv1) < 1 .OR. MAXVAL(ijkv1) > ngrd) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructuresF: Failed to make ijkv1'
+         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Failed to make ijkv1'
          ierr = 1
       ENDIF
       IF (MINVAL(node2level) < 1 .OR. MAXVAL(node2level) > nLevels) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructuresF: Failed to map node2leve'
+         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Failed to map node2leve'
          ierr = 1
       ENDIF
       IF (ALLOCATED(linit)) DEALLOCATE(linit)
@@ -302,7 +310,7 @@ MODULE FTEIK_GRAPH3D
          ierr = 0
          DO j=1,nsort
             indx = levelPtr(il) - 1 + j
-            CALL fteik_graph3d_index2gridF(work(j), iz, ix, iy, ierrLoc)
+            CALL fteik_graph3d_index2grid(work(j), iz, ix, iy, ierrLoc)
             IF (ierrLoc /= 0) ierr = 1 
             ijkvOut(4*(indx-1)+1) = iz
             ijkvOut(4*(indx-1)+2) = ix
@@ -324,12 +332,12 @@ MODULE FTEIK_GRAPH3D
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_graph3d_finalizeF( ) &
-      BIND(C, NAME='fteik_graph3d_finalizeF')
+      SUBROUTINE fteik_graph3d_free()  &
+      BIND(C, NAME='fteik_graph3d_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
       IF (ngrd < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_finalizeF: Graph never intialized'
+         WRITE(*,*) 'fteik_graph3d_free: Graph never intialized'
          RETURN
       ENDIF
       nz = 0
@@ -351,26 +359,26 @@ MODULE FTEIK_GRAPH3D
       RETURN
       END SUBROUTINE
 
-      SUBROUTINE fteik_graphd_getIJKVF(nwork, sweep, ijkv, ierr) &
-      BIND(C, NAME='fteik_graphd_getIJKVF')
+      SUBROUTINE fteik_graph3d_getIJKVF(nwork, sweep, ijkv, ierr) &
+      BIND(C, NAME='fteik_graph3d_getIJKVF')
       INTEGER(C_INT), VALUE, INTENT(IN) :: nwork, sweep
       INTEGER(C_INT), INTENT(OUT) :: ijkv(nwork), ierr
       ierr = 0
       IF (sweep < 1 .OR. sweep > 8) THEN
-         WRITE(*,*) 'fteik_graphd_getIJKVF: Invalid sweep', sweep
+         WRITE(*,*) 'fteik_graph3d_getIJKVF: Invalid sweep', sweep
          ierr = 1
          RETURN
       ENDIF
       IF (nwork /= 4*ngrd) THEN
          IF (nwork < 4*ngrd) THEN
-            WRITE(*,*) 'fteik_graphd_getIJKVF: Insufficient space'
+            WRITE(*,*) 'fteik_graph3d_getIJKVF: Insufficient space'
             ierr = 1
             RETURN
          ENDIF
          ijkv(:) = 0
       ENDIF
       IF (.NOT.ALLOCATED(ijkv1)) THEN
-         WRITE(*,*) 'fteik_graphd_getIJKVF: ijkv not yet computed'
+         WRITE(*,*) 'fteik_graph3d_getIJKVF: ijkv not yet computed'
          ierr = 1
          RETURN
       ENDIF
@@ -393,7 +401,7 @@ MODULE FTEIK_GRAPH3D
       ierr = 0 
       fteik_graph3d_getMaxLevelSize = maxLevelSize
       IF (maxLevelSize < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_getNumberOfLevels: maxLevelSize not yet computed'
+         WRITE(*,*) 'fteik_graph3d_getMaxLevelSize: maxLevelSize not yet computed'
          ierr = 1 
       ENDIF
       RETURN
@@ -449,9 +457,8 @@ MODULE FTEIK_GRAPH3D
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      PURE SUBROUTINE fteik_graph3d_index2gridF(igrd, i, j, k, ierr) &
-      BIND(C, NAME='fteik_graph3d_index2gridF')
-      !$OMP DECLARE SIMD(fteik_graph3d_index2gridF) UNIFORM(ierr)
+      PURE SUBROUTINE fteik_graph3d_index2grid(igrd, i, j, k, ierr)
+      !$OMP DECLARE SIMD(fteik_graph3d_index2grid) UNIFORM(ierr)
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
       INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
