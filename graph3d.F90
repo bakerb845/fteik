@@ -37,6 +37,7 @@ MODULE FTEIK_GRAPH3D
    INTEGER(C_INT), PRIVATE, SAVE :: nx = 0 !< Number of x grid points.
    INTEGER(C_INT), PRIVATE, SAVE :: ny = 0 !< Number of y grid points.
    INTEGER(C_INT), PRIVATE, SAVE :: ngrd = 0 !< Number of grid points.
+   INTEGER(C_INT), PRIVATE, SAVE :: verbose = 0 !< Controls verbosity.
    INTEGER(C_INT32_T), PRIVATE, PARAMETER :: SORT_ASCENDING = 0
 
    INTERFACE
@@ -55,6 +56,7 @@ MODULE FTEIK_GRAPH3D
    PUBLIC :: fteik_graph3d_getIJKVF
    PUBLIC :: fteik_graph3d_getNumberOfLevels
    PUBLIC :: fteik_graph3d_makeLevelStructures
+   PUBLIC :: fteik_graph3d_setVerbosity
    PRIVATE :: fteik_graph3d_index2grid
    CONTAINS
 !----------------------------------------------------------------------------------------!
@@ -63,17 +65,18 @@ MODULE FTEIK_GRAPH3D
 !
 !>    @brief Initializes the level set graph structure.
 !>
-!>    @param[in] nzIn    Number of grid points in z.  This must be greater than 2.
-!>    @param[in] nxIn    Number of grid points in x.  This must be greater than 2.
-!>    @param[in] nyIn    Number of grid points in y.  This must be greater than 2.
+!>    @param[in] nzIn       Number of grid points in z.  This must be greater than 2.
+!>    @param[in] nxIn       Number of grid points in x.  This must be greater than 2.
+!>    @param[in] nyIn       Number of grid points in y.  This must be greater than 2.
+!>    @param[in] verboseIn  Controls the verbosity.  0 is quiet.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_graph3d_initialize(nzIn, nxIn, nyIn, ierr) &
+      SUBROUTINE fteik_graph3d_initialize(nzIn, nxIn, nyIn, verboseIn, ierr) &
       BIND(C, NAME='fteik_graph3d_initialize')
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (nzIn < 3 .OR. nxIn < 3 .OR. nyIn < 3) THEN
@@ -81,12 +84,27 @@ MODULE FTEIK_GRAPH3D
          ierr =-1
          RETURN
       ENDIF
+      CALL fteik_graph3d_setVerbosity(verboseIn)
       nz = nzIn
       nx = nxIn
       ny = nyIn
       ngrd = nz*nx*ny
       RETURN
       END SUBROUTINE  
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the verbosity on the module.
+!>
+!>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
+!>
+      SUBROUTINE fteik_graph3d_setVerbosity(verboseIn) &
+      BIND(C, NAME='fteik_graph3d_setVerbosity')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
+      verbose = verboseIn
+      RETURN
+      END 
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -336,7 +354,7 @@ MODULE FTEIK_GRAPH3D
       BIND(C, NAME='fteik_graph3d_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
-      IF (ngrd < 1) THEN
+      IF (ngrd < 1 .AND. verbose > 0) THEN
          WRITE(*,*) 'fteik_graph3d_free: Graph never intialized'
          RETURN
       ENDIF

@@ -183,7 +183,7 @@ void locate_locateEventMPIF(const int evnmbr, int *optIndx,
 //----------------------------------------------------------------------------//
 /* Initializes the 3D graph structure. */
 void fteik_graph3d_initialize(const int nzIn, const int nxIn, const int nyIn,
-                              int *ierr);
+                              const int verboseIn, int *ierr);
 /* Makes the level structure */
 void fteik_graph3d_makeLevelStructures(int *ierr);
 /* Frees memory on the 3D graph. */

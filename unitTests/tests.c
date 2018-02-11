@@ -64,7 +64,7 @@ int test_graph3d(void)
     int *levelPtr, *levelPtrRef;
     int i, ierr, maxLevelSize, nLevels, maxLevelSizeRef, nLevelsRef, nwork, sweep;
     fprintf(stdout, "%s: Generating graph...\n", __func__);
-    fteik_graph3d_initialize(nz, nx, ny, &ierr); 
+    fteik_graph3d_initialize(nz, nx, ny, 1, &ierr); 
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error initilializing graph\n", __func__);

@@ -170,7 +170,7 @@ MODULE FTEIK_SOLVER64F
          RETURN
       ENDIF
       ! Compute the graph
-      CALL fteik_graph3d_initialize(nz, nx, ny, ierr)
+      CALL fteik_graph3d_initialize(nz, nx, ny, verbose, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver3d_computeGraph: Error initializing graph'
          ierr = 1
