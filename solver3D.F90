@@ -1,5 +1,9 @@
 MODULE FTEIK_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : zero
+  USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
+                                 FTEIK_ZXY_ORDERING,     &
+                                 FTEIK_XYZ_ORDERING,     &
+                                 FTEIK_ZYX_ORDERING
   USE FTEIK_GRAPH3D, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, &
                             ijkv5, ijkv6, ijkv7, ijkv8, &
                             levelPtr, nLevels, maxLevelSize
@@ -43,6 +47,7 @@ MODULE FTEIK_SOLVER64F
   PUBLIC :: fteik_solver3d_free
   PUBLIC :: fteik_solver3d_setVelocityModel64f
   PUBLIC :: fteik_solver3d_setSources64f
+  PUBLIC :: fteik_solver3d_getTravelTimeField64f
   PUBLIC :: fteik_solver3d_getTravelTimes64f
   PUBLIC :: fteik_solver3d_getNumberOfSources
   PUBLIC :: fteik_solver3d_getNumberOfReceivers
@@ -710,6 +715,80 @@ MODULE FTEIK_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Returns the travel time field.
+!>
+!>    @param[in] ngin    Number of input grid points.  This must equal [nz x nx x ny].
+!>    @param[in] order   Desired ordering of output. \n
+!>                       If order == FTEIK_NATURAL_ORDERING or FTEIK_ZXY_ORDERING then
+!>                       ttimes will be [nz x nx ny] with first leading dimension nz
+!>                       and second leading dimension nx. \n
+!>                       If order == FTEIK_XYZ_ORDERING then ttimes will be [nx x ny x nz]
+!>                       with first leading dimension nx and second leading
+!>                       dimension ny. \n
+!>                       If order == FTEIK_ZYX_ORDERING Then ttimes will be [nz x ny x nx]
+!>                       with first leading dimension nz and second leading 
+!>                       dimension ny. \n
+!>
+!>    @param[out] ttout  Travel time field at the grid points.  This is a [nz x nx x ny]
+!>                       vector.  The ordering is defined by order.
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver3d_getTravelTimeField64f(ngin, order, ttout, ierr) &
+      BIND(C, NAME='fteik_solver3d_getTravelTimeField64f')
+      USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz, nzx
+      USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ngin, order
+      REAL(C_DOUBLE), INTENT(OUT) :: ttout(ngin)
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      INTEGER indx, ix, iy, iz, jndx
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN 
+         WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: Travel times not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ngin /= ngrd) THEN 
+         WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: No receivers'
+         RETURN
+      ENDIF
+      IF (order == FTEIK_XYZ_ORDERING) THEN
+         DO iz=1,nz
+            DO iy=1,ny
+               !$OMP SIMD
+               DO ix=1,nx
+                  indx = (iy - 1)*nzx + (ix - 1)*nz + iz 
+                  !indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
+                  jndx = (iz - 1)*nx*ny + (iy - 1)*nx + ix 
+                  ttout(jndx) = ttimes(indx)
+               ENDDO
+            ENDDO
+         ENDDO
+      ELSEIF (order == FTEIK_ZYX_ORDERING) THEN
+         DO iz=1,nz
+            DO iy=1,ny
+               !$OMP SIMD
+               DO ix=1,nx
+                  indx = (iy - 1)*nzx + (ix - 1)*nz + iz  
+                  !indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
+                  jndx = (ix - 1)*nz*ny + (iy - 1)*nz + iz
+                  ttout(jndx) = ttimes(indx)
+               ENDDO
+            ENDDO
+         ENDDO
+      ELSE
+         IF (order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING) THEN
+            WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: Defaulting to natural order'
+         ENDIF
+         ttout(:) = ttimes(:)
+      ENDIF
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Extracts the travel times at the receivers.
 !>
 !>    @param[in] nrec   Number of receivers.
@@ -911,15 +990,18 @@ MODULE FTEIK_SOLVER64F
          CALL fteik_evaluateSweep7LS64fF(FALSE, ttimes, ierr)
          CALL fteik_evaluateSweep8LS64fF(FALSE, ttimes, ierr)
       ENDDO 
-      CALL CPU_TIME(t1)
-print *, 'solver time:', t1 - t0 
-print *, minval(ttimes), maxval(ttimes)
+      IF (verbose > 2) THEN
+         CALL CPU_TIME(t1)
+         WRITE(*,902) t1 - t0 
+         !print *, minval(ttimes), maxval(ttimes)
+      ENDIF
       lhaveTimes = .TRUE.
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = .FALSE.
       ENDIF
+  902 FORMAT(' fteik_solver3d_solveSourceLSM: Solver time in seconds=', F14.8)
       RETURN
       END
 !----------------------------------------------------------------------------------------!

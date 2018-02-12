@@ -25,10 +25,26 @@
          LOGICAL(C_BOOL), PUBLIC, PARAMETER :: TRUE = .TRUE.
          !> False
          LOGICAL(C_BOOL), PUBLIC, PARAMETER :: FALSE = .FALSE.
+         !> Natural solver column major ordering -> z, x, y in 3D or z, x  in 2D
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_NATURAL_ORDERING = 0
+         !> Natural solver column major ordering -> z, x, y
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_ZXY_ORDERING = 0
+         !> Natural solver column major ordering -> z, x in 2D 
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_ZX_ORDERING = 0 
+         !> Column major ordering -> x, y, z
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_XYZ_ORDERING = 1
+         !> Column major ordering -> x, z
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_XZ_ORDERING = 1
+         !> Column major ordering -> z, y, x  
+         INTEGER(C_INT), PUBLIC, PARAMETER :: FTEIK_ZYX_ORDERING = 2
       END MODULE !FTEIK_CONSTANTS64
 
       MODULE FTEIK_CONSTANTS32F
          USE ISO_C_BINDING
+         USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING,  &
+                                        FTEIK_ZXY_ORDERING,      &
+                                        FTEIK_ZX_ORDERING,       &
+                                        FTEIK_ZYX_ORDERING
          IMPLICIT NONE 
          !> Default large value travel times will be set to.
          REAL(C_FLOAT), PUBLIC, PARAMETER :: FTEIK_HUGE = 99999.0

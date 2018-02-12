@@ -102,6 +102,10 @@ void fteik_solver3d_setSources64f(const int nsrc,
                                   const double ysrc[],
                                   int *ierr);
 void fteik_solver3d_getTravelTimes64f(const int nrec, double ttr[], int *ierr);
+void fteik_solver3d_getTravelTimeField64f(const int ngrd,
+                                          const int order,
+                                          double tt[],
+                                          int *ierr);
 void fteik_solver3d_getNumberOfSources(int *nsrc, int *ierr);
 void fteik_solver3d_getNumberOfReceivers(int *nrec, int *ierr);
 void fteik_solver3d_setReceivers64f(const int nrec,
@@ -128,7 +132,9 @@ void fteik_solver2d_setReceivers64f(const int nrec,
 void fteik_solver2d_solveSourceLSM(const int isrc, int *ierr);
 void fteik_solver2d_solveSourceFSM(const int isrc, int *ierr);
 void fteik_solver2d_getTravelTimeField64f(const int ngin,
-                                          double ttout[], int *ierr);
+                                          const int order,
+                                          double ttout[],
+                                          int *ierr);
 void fteik_solver2d_setSources64f(const int nsrc,
                                   const double zsrc[],
                                   const double xsrc[],

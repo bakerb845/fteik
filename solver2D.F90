@@ -1,5 +1,8 @@
 MODULE FTEIK2D_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : zero
+  USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, & 
+                                 FTEIK_ZX_ORDERING, &
+                                 FTEIK_XZ_ORDERING
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
@@ -957,6 +960,11 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>    @brief Returns the travel time field.
 !>
 !>    @param[in] ngin    Number of input grid points.  This must equal [nz x nx].
+!>    @param[in] order   Desired ordering of output. \n
+!>                       If order == FTEIK_NATURAL_ORDERING or FTEIK_ZX_ORDERING then
+!>                       ttimes will be [nz x nx] with leading dimension nz. \n
+!>                       If order == FTEIK_XZ_ORDERING then ttimes will be [nx x nz]
+!>                       with leading dimension nx.
 !>
 !>    @param[out] ttout  Travel time field at the grid points.  This is a [nz x nx]
 !>                       vector with leading dimension nz.
@@ -964,13 +972,14 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_getTravelTimeField64f(ngin, ttout, ierr) &
+      SUBROUTINE fteik_solver2d_getTravelTimeField64f(ngin, order, ttout, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimeField64f')
-      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE FTEIK_MODEL64F, ONLY : ngrd, nx, nz
       USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: ngin
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ngin, order
       REAL(C_DOUBLE), INTENT(OUT) :: ttout(ngin)
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) indx, ix, iz, jndx
       ierr = 0
       IF (.NOT.lhaveTimes) THEN 
          WRITE(*,*) 'fteik_solver2d_getTravelTimeField64f: Travel times not yet computed'
@@ -981,7 +990,21 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
          WRITE(*,*) 'fteik_solver2d_getTravelTimeField64f: No receivers'
          RETURN
       ENDIF
-      ttout(:) = ttimes(:)
+      IF (order == FTEIK_XZ_ORDERING) THEN
+         DO iz=1,nz
+            !$OMP SIMD
+            DO ix=1,nx
+               indx = (ix - 1)*nz + iz
+               jndx = (iz - 1)*nx + ix
+               ttout(jndx) = ttimes(indx)
+            ENDDO
+         ENDDO
+      ELSE
+         IF (order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZX_ORDERING) THEN
+            WRITE(*,*) 'fteik_solver2d_getTravelTimeField64f: Defaulting to natural order'
+         ENDIF
+         ttout(:) = ttimes(:)
+      ENDIF
       RETURN
       END
 !                                                                                        !
