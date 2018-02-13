@@ -45,13 +45,12 @@ int64_t h5io_createFileF(const char *fname)
 //============================================================================//
 int64_t h5io_createGroup_finter(const int64_t *fid, const char *groupName)
 {
-    const char *fcnm = "h5io_createGroup_finter\0";
     hid_t fileID, groupID;
     int64_t group;
     fileID = (hid_t) *fid;
     if (H5Lexists(fileID, groupName, H5P_DEFAULT) > 0)
     {
-        printf("%s: Group %s already exists\n", fcnm, groupName);
+        fprintf(stderr, "%s: Group %s already exists\n", __func__, groupName);
         groupID = H5Gopen2(fileID, groupName, H5P_DEFAULT);
     }
     else
@@ -274,7 +273,6 @@ int h5io_writeArray32i(const hid_t fileID, const char *dataName,
 int h5io_writeArray32f(const hid_t fileID, const char *dataName,
                        const int n, const float *__restrict__ x)
 {
-    const char *fcnm = "h5io_writeArray32f\0";
     char *citem;
     int ierr;
     hsize_t dims[1];
@@ -284,8 +282,8 @@ int h5io_writeArray32f(const hid_t fileID, const char *dataName,
     ierr = 0;
     if (n < 1 || x == NULL)
     {
-        if (n < 1){printf("%s: Error no points to write\n", fcnm);}
-        if (x == NULL){printf("%s: Error x is NULL\n", fcnm);}
+        if (n < 1){fprintf(stderr, "%s: Error no points to write\n", __func__);}
+        if (x == NULL){fprintf(stderr, "%s: Error x is NULL\n", __func__);}
         return -1;
     }
     // Copy the data name
@@ -304,7 +302,7 @@ int h5io_writeArray32f(const hid_t fileID, const char *dataName,
                       H5S_ALL, H5P_DEFAULT, x);
     if (status != 0)
     {
-        printf("%s: Failed to write data\n", fcnm);
+        fprintf(stderr, "%s: Failed to write data\n", __func__);
         ierr =-1;
     }
     // Free H5 resources
@@ -312,7 +310,7 @@ int h5io_writeArray32f(const hid_t fileID, const char *dataName,
     status += H5Dclose(dataSet);
     if (status != 0)
     {
-        printf("%s: Failed to close dataset\n", fcnm);
+        fprintf(stderr, "%s: Failed to close dataset\n", __func__);
         ierr =-1;
     }
     return ierr;
@@ -344,7 +342,6 @@ int h5io_writeAttribute64f(const hid_t dataSet, const char *attributeName,
 int h5io_readAttribute32i(const hid_t dataSet, const char *attributeName,
                           const int nwork, int *n, int *__restrict__ x)
 {
-    const char *fcnm = "h5io_readAttribute32i\0";
     char *citem;
     hid_t aspace, attr;
     herr_t status;
@@ -359,7 +356,7 @@ int h5io_readAttribute32i(const hid_t dataSet, const char *attributeName,
     rank = H5Sget_simple_extent_ndims(aspace);
     if (rank != 1)
     {
-        printf("%s: Only rank 1 attributes done\n", fcnm);
+        printf("%s: Only rank 1 attributes done\n", __func__);
         return -1;
     }
     H5Sget_simple_extent_dims(aspace, dims, NULL);
@@ -372,7 +369,7 @@ int h5io_readAttribute32i(const hid_t dataSet, const char *attributeName,
     }
     if (*n > nwork)
     {
-        printf("%s: Insufficient space in x\n", fcnm);
+        printf("%s: Insufficient space in x\n", __func__);
         H5Sclose(aspace);
         H5Aclose(attr);
         return -1;
@@ -381,7 +378,7 @@ int h5io_readAttribute32i(const hid_t dataSet, const char *attributeName,
     status = H5Aread(attr, H5T_NATIVE_INT, x);
     if (status != 0)
     {
-        printf("%s: Faile dto read attribute\n", fcnm);
+        fprintf(stderr, "%s: Failed to read attribute\n", __func__);
         ierr = 1;
     } 
     // close it up
@@ -409,6 +406,10 @@ int h5io_writeAttribute32i(const hid_t dataSet, const char *attributeName,
     attribute = H5Acreate2(dataSet, citem, H5T_NATIVE_INT,
                            dataSpace, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Awrite(attribute, H5T_NATIVE_INT, x);
+    if (status < 0)
+    {
+        fprintf(stderr, "%s: Failed to write attribute\n", __func__);
+    }
     status = H5Aclose(attribute);
     status = H5Sclose(dataSpace);
     free(citem);
@@ -418,7 +419,6 @@ int h5io_writeAttribute32i(const hid_t dataSet, const char *attributeName,
 int h5io_writeArray64f(const hid_t fileID, const char *dataName,
                        const int n, const double *__restrict__ x)
 {
-    const char *fcnm = "h5io_writeArray64f\0";
     char *citem;
     int ierr;
     hsize_t dims[1];
@@ -428,8 +428,8 @@ int h5io_writeArray64f(const hid_t fileID, const char *dataName,
     ierr = 0;
     if (n < 1 || x == NULL)
     {
-        if (n < 1){printf("%s: Error no points to write\n", fcnm);}
-        if (x == NULL){printf("%s: Error x is nULL\n", fcnm);}
+        if (n < 1){printf("%s: Error no points to write\n", __func__);}
+        if (x == NULL){printf("%s: Error x is nULL\n", __func__);}
         return -1;
     }
     // Copy the data name
@@ -448,7 +448,7 @@ int h5io_writeArray64f(const hid_t fileID, const char *dataName,
                       H5S_ALL, H5P_DEFAULT, x);
     if (status != 0)
     {
-        printf("%s: Failed to write data\n", fcnm);
+        printf("%s: Failed to write data\n", __func__);
         ierr =-1;
     }
     // Free H5 resources
@@ -456,7 +456,7 @@ int h5io_writeArray64f(const hid_t fileID, const char *dataName,
     status += H5Dclose(dataSet);
     if (status != 0)
     {
-        printf("%s: Failed to close dataset\n", fcnm);
+        printf("%s: Failed to close dataset\n", __func__);
         ierr =-1;
     }
     return ierr;
@@ -465,7 +465,6 @@ int h5io_writeArray64f(const hid_t fileID, const char *dataName,
 int h5io_readArray64f(const hid_t fileID, const char *dataName, 
                       const int nwork, int *n, double *__restrict__ x)
 {
-    const char *fcnm = "h5io_readArray64f\0";
     char *citem;
     int i, ierr, nw, rank;
     hid_t dataSet, dataSpace, memSpace;
@@ -474,7 +473,7 @@ int h5io_readArray64f(const hid_t fileID, const char *dataName,
     ierr = 0;
     if (H5Lexists(fileID, dataName, H5P_DEFAULT) < 1)
     {
-        printf("%s: Dataset %s does not exist\n", fcnm, dataName);
+        printf("%s: Dataset %s does not exist\n", __func__, dataName);
         return -1; 
     }
     // Open the dataset
@@ -501,10 +500,10 @@ int h5io_readArray64f(const hid_t fileID, const char *dataName,
     {
         if (nw > nwork)
         {
-            printf("%s: Insufficient workspace %d - require %d\n",
-                   fcnm, nwork, nw);
+            fprintf(stderr, "%s: Insufficient workspace %d - require %d\n",
+                     __func__, nwork, nw);
         }
-        if (x == NULL){printf("%s: Error x is NULL\n", fcnm);}
+        if (x == NULL){fprintf(stderr, "%s: Error x is NULL\n", __func__);}
         ierr = 1;
         goto EXIT1;
     }
@@ -514,7 +513,7 @@ int h5io_readArray64f(const hid_t fileID, const char *dataName,
                      dataSpace, H5P_DEFAULT, x);
     if (status != 0)
     {
-        printf("%s: Failed to read dataset %s\n", fcnm, dataName);
+        fprintf(stderr, "%s: Failed to read dataset %s\n", __func__, dataName);
         ierr = 1;
     }
     H5Sclose(memSpace);
@@ -528,7 +527,6 @@ EXIT1:;
 int h5io_readArray32i(const hid_t fileID, const char *dataName, 
                       const int nwork, int *n, int *__restrict__ x)
 {
-    const char *fcnm = "h5io_readArray32i\0";
     char *citem;
     int i, ierr, nw, rank;
     hid_t dataSet, dataSpace, memSpace;
@@ -537,7 +535,7 @@ int h5io_readArray32i(const hid_t fileID, const char *dataName,
     ierr = 0;
     if (H5Lexists(fileID, dataName, H5P_DEFAULT) < 1)
     {
-        printf("%s: Dataset %s does not exist\n", fcnm, dataName);
+        printf("%s: Dataset %s does not exist\n", __func__, dataName);
         return -1;
     }
     // Open the dataset
@@ -564,10 +562,10 @@ int h5io_readArray32i(const hid_t fileID, const char *dataName,
     {
         if (nw > nwork)
         {
-            printf("%s: Insufficient workspace %d - require %d\n",
-                   fcnm, nwork, nw);
+            fprintf(stderr, "%s: Insufficient workspace %d - require %d\n",
+                    __func__, nwork, nw);
         }
-        if (x == NULL){printf("%s: Error x is NULL\n", fcnm);}
+        if (x == NULL){fprintf(stderr, "%s: Error x is NULL\n", __func__);}
         ierr = 1;
         goto EXIT1;
     }
@@ -577,7 +575,7 @@ int h5io_readArray32i(const hid_t fileID, const char *dataName,
                      dataSpace, H5P_DEFAULT, x);
     if (status != 0)
     {
-        printf("%s: Failed to read dataset %s\n", fcnm, dataName);
+        fprintf(stderr, "%s: Failed to read dataset %s\n", __func__, dataName);
         ierr = 1;
     }
     H5Sclose(memSpace);

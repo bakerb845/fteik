@@ -19,7 +19,7 @@
 #define GEOMETRY2D_TYPE "ORIGIN_DXDY"
 #define CHUNK 256
 
-static char *strdup(const char *string)
+static char *strdupPrivate(const char *string)
 {
     char *copy;
     size_t lenos;
@@ -199,7 +199,7 @@ int fteik_xdmfGrid_add(const char *h5flName, const char *dataSet,
     bool *lc;
     enum fteikDataType_enum *precision;
     int i;
-    temp = strdup(h5flName);
+    temp = strdupPrivate(h5flName);
     h5b = basename(temp);
     if (xdmf->nDataSets >= xdmf->mDataSets)
     {
@@ -213,8 +213,8 @@ int fteik_xdmfGrid_add(const char *h5flName, const char *dataSet,
         {
             precision[i] = prec;
             lc[i]        = xdmf->lcell[i];
-            work1[i]     = strdup(xdmf->h5flNames[i]);
-            work2[i]     = strdup(xdmf->dataSets[i]);
+            work1[i]     = strdupPrivate(xdmf->h5flNames[i]);
+            work2[i]     = strdupPrivate(xdmf->dataSets[i]);
             free(xdmf->h5flNames[i]);
             free(xdmf->dataSets[i]);
         }
@@ -231,8 +231,8 @@ int fteik_xdmfGrid_add(const char *h5flName, const char *dataSet,
     i = xdmf->nDataSets;
     xdmf->precision[i] = prec;
     xdmf->lcell[i] = lcell;
-    xdmf->h5flNames[i] = strdup(h5b);
-    xdmf->dataSets[i]  = strdup(dataSet);
+    xdmf->h5flNames[i] = strdupPrivate(h5b);
+    xdmf->dataSets[i]  = strdupPrivate(dataSet);
     xdmf->nDataSets = xdmf->nDataSets + 1;
     free(temp);
     return 0;
