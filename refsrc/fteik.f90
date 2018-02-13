@@ -122,6 +122,14 @@ subroutine FTeik(vel,tt, &
 real*8 tbeg, tend
 integer lsweep
 print *, pres
+   t0c = 0.d0
+   tauv = 0.d0
+   taue = 0.d0
+   taun = 0.d0
+   tauen = 0.d0
+   taunv = 0.d0
+   tauev = 0.d0
+   taunve = 0.d0
 !
 !  Check grid size
 !_________________

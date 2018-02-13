@@ -17,11 +17,14 @@ module fteik2d
 contains
   subroutine solver2d_c(slow, tt, nz, nx, zsrc, xsrc, dz, dx, n_sweep) &
   BIND(C, name='solver2d_c')
+  USE ISO_C_BINDING
   implicit none
-  real(kind = 8), dimension(nz-1,nx-1), intent(in) :: slow
-  real(kind = 8), dimension(nz,nx), intent(out) :: tt
-  integer(kind = 4), value, intent(in) :: nz, nx, n_sweep
-  real(kind = 8), value, intent(in) :: zsrc, xsrc, dz, dx
+  !real(kind = 8), dimension(nz-1,nx-1), intent(in) :: slow
+  real(c_double), dimension(:), intent(in) :: slow
+  !real(kind = 8), dimension(nz,nx), intent(out) :: tt
+  real(c_double), dimension(:), intent(out) :: tt
+  integer(c_int), value, intent(in) :: nz, nx, n_sweep
+  real(c_double), value, intent(in) :: zsrc, xsrc, dz, dx
   call solver2d(slow, tt, nz, nx, zsrc, xsrc, dz, dx, n_sweep)
   end
 
