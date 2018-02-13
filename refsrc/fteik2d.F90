@@ -486,8 +486,6 @@ print *, 'legacy p4:',minval(tt), maxval(tt)
     integer(kind = 4) :: k
 #ifdef _OPENMP
     if ( present(n_threads) ) call omp_set_num_threads(n_threads)
-#else
-    n_threads = 1
 #endif
 
     !$omp parallel default(shared)
@@ -592,8 +590,6 @@ print *, 'legacy p4:',minval(tt), maxval(tt)
 
 #ifdef _OPENMP
     if ( present(n_threads) ) call omp_set_num_threads(n_threads)
-#else
-    n_threads = 1 
 #endif
 
     ! Switch sources and stations to minimize calls to eikonals
