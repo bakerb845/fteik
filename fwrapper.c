@@ -39,18 +39,17 @@ void locate_initializeMPI(const int root, const MPI_Comm comm,
     return;
 }
 #endif
-void locate_setObservation64f(const int evnmbr, const int nttimes,
-                              const bool lhaveOT, const double t0In,
-                              const int *__restrict__ obs2tf,
-                              const double *__restrict__ pickTimes,
-                              const double *__restrict__ wts, int *ierr)
+void locate_setObservation64fC(const int evnmbr, const int nttimes,
+                               const bool lhaveOT, const double t0In,
+                               const int *__restrict__ obs2tf,
+                               const double *__restrict__ pickTimes,
+                               const double *__restrict__ wts, int *ierr)
 {
     int *obs2tfF = (int *) calloc((size_t) nttimes, sizeof(int));
     int i;
     for (i=0; i<nttimes; i++){obs2tfF[i] = obs2tf[i] + 1;} 
-    locate_setObservation64fF(evnmbr+1, nttimes, lhaveOT, t0In, 
-                              obs2tfF, pickTimes, wts, ierr); 
+    locate_setObservation64f(evnmbr+1, nttimes, lhaveOT, t0In, 
+                             obs2tfF, pickTimes, wts, ierr); 
     free(obs2tfF);
     return; 
 }
-

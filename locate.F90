@@ -72,7 +72,14 @@ MODULE FTEIK_LOCATE
 #if defined(FTEIK_FORTRAN_USE_MPI)
   INTEGER, PRIVATE :: mpierr
 #endif
+  PUBLIC :: locate_initialize
+  PUBLIC :: locate_finalize
+  PUBLIC :: locate_setTravelTimeField64f
+  PUBLIC :: locate_setTravelTimeField32f
+  PUBLIC :: locate_setObservation64f
+  PUBLIC :: locate_setNumberOfEvents
 
+  PRIVATE :: locate_computeL2ObjectiveFunction32f
   CONTAINS
 
 !     SUBROUTINE locate_locateF( ) BIND(C, NAME='locate_locateF')
@@ -105,7 +112,7 @@ MODULE FTEIK_LOCATE
       INTEGER(C_INT), INTENT(OUT) :: optIndx
       optindx = 0
       ! Compute the objective function and potentially the origin time
-      CALL locate_computeL2ObjectiveFunction32fF(evnmbr)
+      CALL locate_computeL2ObjectiveFunction32f(evnmbr)
       ! Find the optimal index (smallest value in \f$ L_2 \f$ objective function)
       optindx = MINLOC(objWork, 1)
       t0Opt  = DBLE(t0Work(optindx)) + tepoch(evnmbr)
@@ -127,8 +134,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_initializeF(nEventsIn, ntfIn, ngrdIn, ierr) &
-      BIND(C, NAME='locate_initializeF')
+      SUBROUTINE locate_initialize(nEventsIn, ntfIn, ngrdIn, ierr) &
+      BIND(C, NAME='locate_initialize')
       USE FTEIK_CONSTANTS64F, ONLY : FALSE, TRUE
       USE FTEIK_CONSTANTS32F, ONLY : zero
       USE FTEIK_MEMORY
@@ -136,14 +143,14 @@ MODULE FTEIK_LOCATE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nEventsIn, ntfIn, ngrdIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
 
-      CALL locate_finalizeF()
-      CALL locate_setNumberOfEventsF(nEventsIn, ierr)
+      CALL locate_finalize()
+      CALL locate_setNumberOfEvents(nEventsIn, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,900)
  900     FORMAT('locate_initializeF: Failed to set number of events')
          RETURN
       ENDIF
-      CALL locate_setNumberOfTravelTimeFieldsF(ntfIn, ierr)
+      CALL locate_setNumberOfTravelTimeFields(ntfIn, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,905)
  905     FORMAT('locate_initializeF: Failed to set number of travel time fields')
@@ -205,8 +212,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_finalizeF( ) &
-      BIND(C, NAME='locate_finalizeF')
+      SUBROUTINE locate_finalize( ) &
+      BIND(C, NAME='locate_finalize')
       USE FTEIK_MEMORY
       USE ISO_C_BINDING
       IF (ALLOCATED(tepoch))      DEALLOCATE(tepoch)
@@ -259,8 +266,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_setTravelTimeField64fF(ngrdIn, itf, ttIn, ierr) &
-      BIND(C, NAME='locate_setTravelTimeField64fF')
+      SUBROUTINE locate_setTravelTimeField64f(ngrdIn, itf, ttIn, ierr) &
+      BIND(C, NAME='locate_setTravelTimeField64f')
 #if defined(FTEIK_FORTRAN_USE_INTEL)
       USE IPPS_MODULE, ONLY : ippsConvert_64f32f
 #endif
@@ -284,13 +291,13 @@ MODULE FTEIK_LOCATE
       ENDIF
       IF (itf < 0 .OR. itf > ntf) THEN
          WRITE(*,900) itf
- 900     FORMAT('locate_setTravelTimeField64fF: Field number=',I4,' must be in [1,',I3']')
+ 900     FORMAT('locate_setTravelTimeField64f: Field number=',I4,' must be in [1,',I3']')
          ierr = 1
          RETURN
       ENDIF
       IF (ngrdIn /= ngrd) THEN
          WRITE(*,905) ngrdIn, ngrd
- 905     FORMAT('locate_setTravelTimeField64fF: ngrdIn=',I8,' not equal ngrd=', I8)
+ 905     FORMAT('locate_setTravelTimeField64f: ngrdIn=',I8,' not equal ngrd=', I8)
          ierr = 1
          RETURN
       ENDIF
@@ -300,7 +307,7 @@ MODULE FTEIK_LOCATE
       ierr = ippsConvert_64f32f(ttIn, ttFields(i1:i2), ngrd)
       IF (ierr /= 0) THEN
          WRITE(*,910) itf
-  910    FORMAT('locate_setTravelTimeField64fF: Failed to travel time field=', I4)
+  910    FORMAT('locate_setTravelTimeField64f: Failed to travel time field=', I4)
       ENDIF
 #else
       ttptr => ttFields(i1:i2)
@@ -329,8 +336,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_setTravelTimeField32fF(ngrdIn, itf, ttIn, ierr) &
-      BIND(C, NAME='locate_setTravelTimeField32fF')
+      SUBROUTINE locate_setTravelTimeField32f(ngrdIn, itf, ttIn, ierr) &
+      BIND(C, NAME='locate_setTravelTimeField32f')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngrdIn, itf
       REAL(C_FLOAT), INTENT(IN) :: ttIn(ngrdIn)
@@ -339,19 +346,19 @@ MODULE FTEIK_LOCATE
       INTEGER(C_INT) i1, i2, igrd
       ierr = 0 
       IF (.NOT.linit) THEN
-         WRITE(*,"('locate_setTravelTimeField32fF: Locator not initialized',A)")
+         WRITE(*,"('locate_setTravelTimeField32f: Locator not initialized',A)")
          ierr = 1 
          RETURN
       ENDIF
       IF (itf < 0 .OR. itf > ntf) THEN
          WRITE(*,900) itf 
- 900     FORMAT('locate_setTravelTimeField32fF: Field number=',I4,' must be in [1,',I3']')
+ 900     FORMAT('locate_setTravelTimeField32f: Field number=',I4,' must be in [1,',I3']')
          ierr = 1 
          RETURN
       ENDIF
       IF (ngrdIn /= ngrd) THEN
          WRITE(*,905) ngrdIn, ngrd
- 905     FORMAT('locate_setTravelTimeField32fF: ngrdIn=',I8,'not equal ngrd=', I8) 
+ 905     FORMAT('locate_setTravelTimeField32f: ngrdIn=',I8,'not equal ngrd=', I8) 
          ierr = 1 
          RETURN
       ENDIF
@@ -371,7 +378,7 @@ MODULE FTEIK_LOCATE
 !>    @brief This is a convenience routine for setting all observations in a catalog.
 !>
 !>
-      SUBROUTINE locate_setObservations64fF(nEventsIn )
+      SUBROUTINE locate_setObservations64f(nEventsIn )
       INTEGER(C_INT), INTENT(IN) :: nEventsIn
       RETURN
       END
@@ -399,10 +406,10 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_setObservation64fF(evnmbr, nttimes, lhaveOTin, &
-                                           t0In, obs2tf,               &
-                                           pickTimes, wts, ierr)       &
-      BIND(C, NAME='locate_setObservation64fF')
+      SUBROUTINE locate_setObservation64f(evnmbr, nttimes, lhaveOTin, &
+                                          t0In, obs2tf,               &
+                                          pickTimes, wts, ierr)       &
+      BIND(C, NAME='locate_setObservation64f')
       USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE FTEIK_CONSTANTS32F, ONLY : zero 
       USE ISO_C_BINDING
@@ -415,30 +422,30 @@ MODULE FTEIK_LOCATE
       INTEGER(C_INT) i, indx, k1, k2
       ierr = 0 
       IF (.NOT.linit) THEN
-         WRITE(*,"('locate_setObservation64fF: Locator not initialized',A)")
+         WRITE(*,"('locate_setObservation64f: Locator not initialized',A)")
          ierr = 1 
          RETURN
       ENDIF
       IF (nttimes < 1 .OR. nttimes > ntf) THEN
          WRITE(*,900) nttimes, ntf
-  900    FORMAT('locate_setObservation64fF: nttimes=',I4,' must be in [1,',I3']')
+  900    FORMAT('locate_setObservation64f: nttimes=',I4,' must be in [1,',I3']')
          ierr = 1
          RETURN
       ENDIF
       IF (MINVAL(obs2tf) < 1) THEN
-         WRITE(*,"('locate_setObservation64fF: All values in obs2tf must be positive',A)")
+         WRITE(*,"('locate_setObservation64f: All values in obs2tf must be positive',A)")
          ierr = 1
          RETURN
       ENDIF
       IF (MAXVAL(obs2tf) > ntf) THEN
          WRITE(*,905) ntf
-  905    FORMAT('locate_setObservation64fF: All values in obs2tf must be <',I4)
+  905    FORMAT('locate_setObservation64f: All values in obs2tf must be <',I4)
          ierr = 1
          RETURN
       ENDIF
       IF (evnmbr < 1 .OR. evnmbr > nEvents) THEN
          WRITE(*,910) evnmbr, nEvents
-  910    FORMAT('locate_setObservation64fF: Event number=',I5,' must be in range [1,',I5)
+  910    FORMAT('locate_setObservation64f: Event number=',I5,' must be in range [1,',I5)
          ierr = 1
          RETURN
       ENDIF
@@ -479,8 +486,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_setNumberOfEventsF(nEventsIn, ierr) &
-      BIND(C, NAME='locate_setNumberOfEventsF')
+      SUBROUTINE locate_setNumberOfEvents(nEventsIn, ierr) &
+      BIND(C, NAME='locate_setNumberOfEvents')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nEventsIn
@@ -509,8 +516,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>                        
-      SUBROUTINE locate_setNumberOfTravelTimeFieldsF(ntfIn, ierr) &
-      BIND(C, NAME='locate_setNumberOfTravelTimeFieldsF')
+      SUBROUTINE locate_setNumberOfTravelTimeFields(ntfIn, ierr) &
+      BIND(C, NAME='locate_setNumberOfTravelTimeFields')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ntfIn
@@ -519,7 +526,7 @@ MODULE FTEIK_LOCATE
       ierr = 0 
       IF (ntfIn < 1) THEN
          WRITE(*,900) ntfIn
-  900    FORMAT('locate_setNumberOfTravelTimeFieldsF: ntf=', I4,' must be positive')
+  900    FORMAT('locate_setNumberOfTravelTimeFields: ntf=', I4,' must be positive')
          ierr = 1 
          RETURN
       ENDIF
@@ -588,8 +595,7 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE locate_computeL2ObjectiveFunction32fF(evnmbr) &
-      BIND(C, NAME='locate_computeL2ObjectiveFunction32fF')
+      SUBROUTINE locate_computeL2ObjectiveFunction32f(evnmbr)
       USE FTEIK_CONSTANTS32F, ONLY : half, one, sqrtHalf, zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -821,7 +827,7 @@ enddo
             grdPtr(nprocs+1) = ngrdTemp + 1
          ENDIF
          ngrdLoc = grdPtr(mylocatorID+2) - grdPtr(mylocatorID+1)
-         CALL locate_initializeF(nEventsTemp, ntfTemp, ngrdLoc, ierrLoc)
+         CALL locate_initialize(nEventsTemp, ntfTemp, ngrdLoc, ierrLoc)
          IF (ierrLoc /= 0) THEN
             WRITE(*,900) myid 
   900       FORMAT('locate_initializeMPIF: Error initializing on process ', I4)
@@ -922,7 +928,7 @@ enddo
          RETURN
       ENDIF
       ! And set it
-      CALL locate_setTravelTimeField64fF(ngrd, itf, work, ierr)
+      CALL locate_setTravelTimeField64f(ngrd, itf, work, ierr)
       IF (ierr /= 0) THEN
          WRITE(*,905) mylocatorID
   905    FORMAT('locate_setTravelTimeField64fMPIF: Error on rank', I4)

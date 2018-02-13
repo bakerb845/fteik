@@ -26,9 +26,11 @@ SET(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 SET(ORIGINAL_SRC refsrc/fteik.f90 refsrc/fteik2d.F90 refsrc/lay2vel.f90)
 SET(UTILS_SRC h5io.c h5io.F90 io.c memory.F90 os.c xdmf.c)# xdmfOri.c)
 # Order matters here
-SET(F90_SRC constants.F90 ipps.F90 model.F90 source.F90 receiver.F90 localSolver.F90 solver3D.F90 solver2D.F90 locate.F90)
+SET(F90_SRC constants.F90 ipps.F90 model.F90 source.F90
+            receiver.F90 localSolver.F90
+            solver3D.F90 solver2D.F90 locate.F90)
 SET(NEW_SRC fwrapper.c sort.c ${F90_SRC} modules.F90 graph3d.F90
-            autoCode.f90 fteik_utils.F90 solveEikonal.F90)
+            autoCode.f90 fteik_utils.F90 solveEikonal.F90 analytic.F90)
 IF (FTEIK_USE_H5)
   SET(NEW_SRC ${NEW_SRC} h5io_utils.c)
 ENDIF (FTEIK_USE_H5)

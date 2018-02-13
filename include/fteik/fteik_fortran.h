@@ -161,28 +161,23 @@ void fteik_solver2d_free(void);
 //----------------------------------------------------------------------------//
 //                             Locator Module                                 //
 //----------------------------------------------------------------------------//
-void locate_initializeF(const int nEventsIn, const int ntfIn, const int ngrdIn,
-                        int *ierr);
-void locate_setTravelTimeField64fF(const int ngrdIn, const int itf,
-                                   const double *__restrict__ ttIn,
-                                   int *ierr);
-void locate_setTravelTimeField32fF(const int ngrdIn, const int itf,
-                                   const double *__restrict__ ttIn,
-                                   int *ierr);
-void locate_finalizeF(void);
-void locate_setObservation64fF(const int evnmbr, const int nttimes,
-                               const bool lhaveOT, const double t0In,
-                               const int *__restrict__ obs2tf,
-                               const double *__restrict__  pickTimes,
-                               const double *__restrict__  wts,
-                               int *ierr);
-void locate_locateEventF(const int evnmbr, int *optindx,
-                         double *t0Opt, double *objOpt);
+void locate_initialize(const int nEventsIn, const int ntfIn, const int ngrdIn,
+                       int *ierr);
+void locate_setTravelTimeField64f(const int ngrdIn, const int itf,
+                                  const double ttIn[],
+                                  int *ierr);
+void locate_setTravelTimeField32f(const int ngrdIn, const int itf,
+                                  const double ttIn[],
+                                  int *ierr);
+void locate_finalize(void);
 void locate_setObservation64f(const int evnmbr, const int nttimes,
                               const bool lhaveOT, const double t0In,
-                              const int *__restrict__ obs2tf,
-                              const double *__restrict__ pickTimes,
-                              const double *__restrict__ wts, int *ierr);
+                              const int obs2tf[],
+                              const double pickTimes[],
+                              const double wts[],
+                              int *ierr);
+void locate_locateEventF(const int evnmbr, int *optindx,
+                         double *t0Opt, double *objOpt);
 #ifdef FTEIK_USE_MPI
 void locate_initializeMPI(const int root, const MPI_Comm comm,
                           const int nEventsIn, const int ntfIn,
@@ -194,8 +189,8 @@ void locate_setTravelTimeField64fMPIF(const int root, const int ngrd,
                                       const int itf,
                                       const double *__restrict__ tt,
                                       int *ierr);
-void locate_locateEventF(const int evnmbr, int *optindx,
-                         double *t0Opt, double *objOpt);
+void locate_locateEvent(const int evnmbr, int *optindx,
+                        double *t0Opt, double *objOpt);
 void locate_locateEventMPIF(const int evnmbr, int *optIndx,
                             double *t0Opt, double *objOpt);
 

@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
             if (i == nrec - 1){slowUse = slowConstS;}
             t = sqrt(diffz*diffz + diffx*diffx + diffy*diffy)*slowUse;
             tobs[isrc*nrec+i] = t + tori[isrc];
-            obs2tf[isrc*nrec+i] = i;
+            obs2tf[isrc*nrec+i] = i + 1; // Fortran indexing
             wts[isrc*nrec+i] = 1.0;
         }
     }
@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
     // Set the observed travel times
     if (myid == master){printf("Setting observed travel times...\n");}
     t0 = clock();
-    locate_setObservation64f(0, nrec,  false, 0.0,
-                             obs2tf, tobs, wts, &ierr); 
+    locate_setObservation64f(1, nrec,  false, 0.0,
+                              obs2tf, tobs, wts, &ierr); 
     if (ierr != 0)
     {
         printf("Failed to set observations");
@@ -159,13 +159,14 @@ int optIndx;
 #ifdef FTEIK_USE_MPI
     locate_locateEventMPIF(1, &optIndx, &t0Opt, &objOpt);
 #else
-    locate_locateEventF(1, &optIndx, &t0Opt, &objOpt);
+    locate_locateEvent(1, &optIndx, &t0Opt, &objOpt);
 #endif
     t1 = clock();
 if (myid == master)
 {
 printf("optindex, t0, obj: %d %e %e\n", optIndx, t0Opt, objOpt);
-printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz*nx) + 1);
+int indxOpt =  fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz*nx) + 1;
+printf("True index: %d\n", indxOpt);
 }
     if (myid == master)
     {
@@ -173,7 +174,7 @@ printf("True index: %d\n", fteik_model_grid2index(zsi[0], xsi[0], ysi[0], nz, nz
     }
     // Free memory
     if (myid == master){printf("Finalizing solver...\n");}
-    locate_finalizeF();
+    locate_finalize();
 printf("back\n");
     if (myid == master){printf("Freeing memory...\n");}
     free(obs2tf);

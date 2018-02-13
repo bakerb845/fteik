@@ -731,8 +731,8 @@ MODULE FTEIK_SOLVER64F
 !>                       with first leading dimension nz and second leading 
 !>                       dimension ny. \n
 !>
-!>    @param[out] ttout  Travel time field at the grid points.  This is a [nz x nx x ny]
-!>                       vector.  The ordering is defined by order.
+!>    @param[out] ttout  Travel time field (seconds) at the grid points.  This is 
+!>                       a [nz x nx x ny] vector.  The ordering is defined by order.
 !>    @param[out] ierr   0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
@@ -769,10 +769,10 @@ MODULE FTEIK_SOLVER64F
             ENDDO
          ENDDO
       ELSEIF (order == FTEIK_ZYX_ORDERING) THEN
-         DO iz=1,nz
+         DO ix=1,nx
             DO iy=1,ny
                !$OMP SIMD
-               DO ix=1,nx
+               DO iz=1,nz
                   indx = (iy - 1)*nzx + (ix - 1)*nz + iz  
                   !indx = fteik_model_grid2indexF(iz, ix, iy, nz, nzx)
                   jndx = (ix - 1)*nz*ny + (iy - 1)*nz + iz

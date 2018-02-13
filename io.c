@@ -172,7 +172,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     int zDown, rightHanded;
     hsize_t dims[3];
     herr_t status;
-    int i, ierr, nCell, nx, ny, nz, rank;
+    int i, ierr, nCell, rank;
     double *vin, *v8, vmin, vmax;
     float *v4;
     int32_t *vi4;

@@ -15,7 +15,6 @@ from numpy import reshape
 from numpy import float64
 from numpy import ascontiguousarray 
 from numpy import linspace
-#from cffi import FFI
 import os
 
 class fteik2d:
@@ -537,9 +536,9 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    nx = 101
-    ny = 101
-    nz = 51 
+    nx = 51
+    ny = 51
+    nz = 51
     dx = 10.0
     dy = 10.0
     dz = 10.0
@@ -560,7 +559,7 @@ if __name__ == "__main__":
     ttimes = fteik3d.getTravelTimeField()
     fteik3d.free()
 
-    #"""
+    """
     print(ttimes.shape)
     xindx = int(xsrc/dx)
     yindx = int(ysrc/dy)
@@ -594,4 +593,4 @@ if __name__ == "__main__":
     plt.ylabel('Y-Offset (m)')
     plt.colorbar()
     plt.show()
-    #"""
+    """
