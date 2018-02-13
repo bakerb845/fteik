@@ -95,7 +95,7 @@ MODULE FTEIK_SOLVER64F
                                               verboseIn, ierr)     &
                  BIND(C, NAME='fteik_solver3d_initialize64f')
       USE ISO_C_BINDING
-      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometry, ngrd
+      USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry, ngrd
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
@@ -106,11 +106,11 @@ MODULE FTEIK_SOLVER64F
       WRITE(*,*) 'fteik_solver3d_initialize64f: Initializing...'
       CALL fteik_solver3d_free()
       CALL fteik_solver3d_setVerobosity(verboseIn)
-      CALL fteik_model_intializeGeometry(lis3d,            &
-                                         nzIn, nxIn, nyIn, &
-                                         dzIn, dxIn, dyIn, &
-                                         z0In, x0In, y0In, &
-                                         ierr)
+      CALL fteik_model_initializeGeometry(lis3d,            &
+                                          nzIn, nxIn, nyIn, &
+                                          z0In, x0In, y0In, &
+                                          dzIn, dxIn, dyIn, &
+                                          ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver3d_initialize64f: Error setting grid geometry'
          RETURN

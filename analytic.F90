@@ -1,9 +1,12 @@
 MODULE FTEIK_ANALYTIC64F
+  USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry
+  USE FTEIK_MODEL64F, ONLY : fteik_model_free
   USE ISO_C_BINDING
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
                                  FTEIK_ZXY_ORDERING,     &    
                                  FTEIK_XYZ_ORDERING,     &    
-                                 FTEIK_ZYX_ORDERING
+                                 FTEIK_ZYX_ORDERING,     &
+                                 TRUE, FALSE
   IMPLICIT NONE
   INTEGER(C_INT), PROTECTED, SAVE :: nx = 0    !< Number of grid points in x.
   INTEGER(C_INT), PROTECTED, SAVE :: ny = 0    !< Number of grid points in y.
@@ -22,6 +25,7 @@ MODULE FTEIK_ANALYTIC64F
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
 
   INTEGER(C_INT), PROTECTED, SAVE :: nrec !< Number of receivers.
+  INTEGER(C_INT), PROTECTED, SAVE :: verbose !< Verbosity.
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: xrec(:) !< Receiver positions (m) in x.
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: yrec(:) !< Receiver positions (m) in y.
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zrec(:) !< Receiver positions (m) in z. 
@@ -43,18 +47,22 @@ MODULE FTEIK_ANALYTIC64F
   !> Flag indicating the module is initialized.
   LOGICAL, PRIVATE, SAVE :: linit = .FALSE.
   !-----------------------------Label the Subroutines/Functions--------------------------!
-  PUBLIC :: fteik_analytic_initialize 
+  PUBLIC :: fteik_analytic_initialize64f
   PUBLIC :: fteik_analytic_free
+  PUBLIC :: fteik_analytic_setVerobosity
   PUBLIC :: fteik_analytic_setReceivers64f
-  PUBLIC :: fteik_analytic_setConstantVelocity
-  PUBLIC :: fteik_analytic_setVelocityGradient 
+  PUBLIC :: fteik_analytic_setVelocityConstant64f
+  PUBLIC :: fteik_analytic_setVelocityGradient64f
   PUBLIC :: fteik_analytic_computeInGradientVelocityField
   PUBLIC :: fteik_analytic_computeInConstantVelocityField
-  PUBLIC :: fteik_analytic_getTravelTimeField 
+  PUBLIC :: fteik_analytic_getTravelTimeField64f
   PRIVATE :: fteik_analytic_setOrigin
   PRIVATE :: initializeGradientVars
   PRIVATE :: ttimeInConstantVelocity
   PRIVATE :: acoshArg
+
+  PRIVATE :: fteik_model_initializeGeometry
+  PRIVATE :: fteik_model_free
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the code                                     !
@@ -63,39 +71,42 @@ MODULE FTEIK_ANALYTIC64F
 !>           is oriented so that +x is right (east), +y is away (north), and +z is
 !>           down.
 !> 
-!>    @param[in] nxIn    Number of x grid points in model.  This must be positive.
-!>    @param[in] nyIn    Number of y grid points in model.  This must be positive.
-!>    @param[in] nzIn    Number of z grid points in model.  This must be positive.
-!>    @param[in] dxIn    Grid spacing in x (meters).  This must be positive.
-!>    @param[in] dyIn    Grid spacing in y (meters).  This must be positive.
-!>    @param[in] dzIn    Grid spacing in z (meters).  This must be positive.
-!>    @param[in] x0In    x origin (meters).
-!>    @param[in] y0In    y origin (meters).
-!>    @param[in] z0In    z origin (meters).
+!>    @param[in] nzIn       Number of z grid points in model.  This must be positive.
+!>    @param[in] nxIn       Number of x grid points in model.  This must be positive.
+!>    @param[in] nyIn       Number of y grid points in model.  This must be positive.
+!>    @param[in] dzIn       Grid spacing in z (meters).  This must be positive.
+!>    @param[in] dxIn       Grid spacing in x (meters).  This must be positive.
+!>    @param[in] dyIn       Grid spacing in y (meters).  This must be positive.
+!>    @param[in] z0In       z origin (meters).
+!>    @param[in] x0In       x origin (meters).
+!>    @param[in] y0In       y origin (meters).
+!>    @param[in] verboseIn  Controls verbosity. Less than 1 is quiet.
 !>
 !>    @param[out] ierr   0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_analytic_initialize(nxIn, nyIn, nzIn, &
-                                           dxIn, dyIn, dzIn, &
-                                           x0In, y0In, z0In, &
-                                           ierr)             &
-      BIND(C, NAME='fteik_analytic_initialize')
+      SUBROUTINE fteik_analytic_initialize64f(nzIn, nxIn, nyIn, &
+                                              z0In, x0In, y0In, &
+                                              dzIn, dxIn, dyIn, &
+                                              verboseIn, ierr)  &
+      BIND(C, NAME='fteik_analytic_initialize64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nyIn, nzIn
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nyIn, nzIn, verboseIn
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn, x0In, y0In, z0In
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      LOGICAL(C_BOOL) lis3d
       ierr = 0
+      CALL fteik_analytic_setVerobosity(verboseIn)
       IF (nxIn < 1 .OR. nyIn < 1 .OR. nzIn < 1) THEN
-         WRITE(*,*) 'fteik_analytic_initialize: Invalid number of grid points', &
+         WRITE(*,*) 'fteik_analytic_initialize64f: Invalid number of grid points', &
                     nxIn, nyIn, nzIn
          ierr = 1
          RETURN
       ENDIF
       IF (dxIn <= 0.d0 .OR. dyIn <= 0.d0 .OR. dzIn <= 0.d0) THEN
-         WRITE(*,*) 'fteik_analytic_initialize: Grid spacing must be positive', &
+         WRITE(*,*) 'fteik_analytic_initialize64f: Grid spacing must be positive', &
                     dxIn, dyIn, dzIn
          ierr = 1
          RETURN
@@ -108,6 +119,13 @@ MODULE FTEIK_ANALYTIC64F
       dx = dxIn
       dy = dyin
       dz = dzIn 
+      lis3d = TRUE
+      IF (nyIn < 2) lis3d = FALSE
+      CALL fteik_model_initializeGeometry(lis3d,      &
+                                          nz, nx, ny, &
+                                          z0, x0, y0, &
+                                          dz, dx, dy, &
+                                          ierr)
       CALL fteik_analytic_setOrigin(x0In, y0In, z0In, ierr)
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(work))   DEALLOCATE(work)
@@ -125,6 +143,20 @@ MODULE FTEIK_ANALYTIC64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Sets the verbosity on the module.
+!>
+!>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
+!>
+      SUBROUTINE fteik_analytic_setVerobosity(verboseIn) &
+      BIND(C, NAME='fteik_analytic_setVerbosity')
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
+      verbose = verboseIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Releases memory on the analytic travel time module. 
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
@@ -133,6 +165,7 @@ MODULE FTEIK_ANALYTIC64F
       BIND(C, NAME='fteik_analytic_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
+      CALL fteik_model_free()
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(work))   DEALLOCATE(work)
       IF (ALLOCATED(work))   DEALLOCATE(work)
@@ -146,6 +179,7 @@ MODULE FTEIK_ANALYTIC64F
       ny = 0
       nz = 0
       ngrd = 0
+      verbose = 0
       dx = 0.d0
       dy = 0.d0
       dz = 0.d0
@@ -164,16 +198,16 @@ MODULE FTEIK_ANALYTIC64F
 !>    @brief Sets receivers at which to compute travel times.
 !>
 !>    @param[in] nrecIn   Number of receivers.
+!>    @param[in] zrecIn   z positions of receivers.  This is an array of
+!>                        dimension [nrecIn].
 !>    @param[in] xrecIn   x positions of receivers.  This is an array of
 !>                        dimension [nrecIn].
 !>    @param[in] yrecIn   y positions of receivers.  This is an array of
 !>                        dimension [nrecIn].
-!>    @param[in] zrecIn   x positions of receivers.  This is an array of
-!>                        dimension [nrecIn].
 !>
 !>    @param[out] ierr    0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_setReceivers64f(nrecIn, xrecIn, yrecIn, zrecIn, ierr) &
+      SUBROUTINE fteik_analytic_setReceivers64f(nrecIn, zrecIn, xrecIn, yrecIn, ierr) &
       BIND(C, NAME='fteik_analytic_setReceivers64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -228,15 +262,15 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[out] ierr      0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_setConstantVelocity(vconstIn, ierr) &
-      BIND(C, NAME='fteik_anlytic_setConstantVelocity')
+      SUBROUTINE fteik_analytic_setVelocityConstant64f(vconstIn, ierr) &
+      BIND(C, NAME='fteik_analytic_setVelocityConstant64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: vconstIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (vconstIn <= 0.d0) THEN
-         WRITE(*,*) 'fteik_analytic_setConstantVelocity: Velocity must be postiive', &
+         WRITE(*,*) 'fteik_analytic_setVelocityConstant64f: Velocity must be postiive', &
                     vconstIn
          ierr = 1
          RETURN
@@ -280,8 +314,8 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_setVelocityGradient(v0, v1, ierr) &
-      BIND(C, NAME='fteik_analytic_setVelocityGradient')
+      SUBROUTINE fteik_analytic_setVelocityGradient64f(v0, v1, ierr) &
+      BIND(C, NAME='fteik_analytic_setVelocityGradient64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: v0, v1
@@ -290,12 +324,12 @@ MODULE FTEIK_ANALYTIC64F
       vtop = vconst
       vbottom = vconst
       IF (v0 <= 0.d0) THEN
-         WRITE(*,*) 'fteik_analytic_setVelocityGradient: Error v0 must be positive'
+         WRITE(*,*) 'fteik_analytic_setVelocityGradient64f: Error v0 must be positive'
          ierr = 1
          RETURN
       ENDIF
       IF (nz < 2) THEN
-         WRITE(*,*) 'fteik_analytic_setVelocityGradient: At least 2 points required in z'
+         WRITE(*,*) 'fteik_analytic_setVelocityGradient64f: 2 points required in z'
          ierr = 1
          RETURN
       ENDIF
@@ -471,8 +505,8 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_analytic_getTravelTimeField(ngin, order, ttout, ierr) &
-      BIND(C, NAME='fteik_analytic_getTravelTimeField')
+      SUBROUTINE fteik_analytic_getTravelTimeField64f(ngin, order, ttout, ierr) &
+      BIND(C, NAME='fteik_analytic_getTravelTimeField64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngin, order
@@ -481,12 +515,12 @@ MODULE FTEIK_ANALYTIC64F
       INTEGER(C_INT) indx, ix, iy, iz, jndx
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_analytic_getTravelTimeField: ttimes not initialized'
+         WRITE(*,*) 'fteik_analytic_getTravelTimeField64f: ttimes not initialized'
          ierr = 1
          RETURN
       ENDIF
       IF (ngin < ngrd) THEN
-         WRITE(*,*) 'fteik_analytic_getTravelTimeField: Insufficient space to store field'
+         WRITE(*,*) 'fteik_analytic_getTravelTimeField64f: Insufficient space'
          ierr = 1
          RETURN
       ENDIF

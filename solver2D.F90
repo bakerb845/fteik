@@ -3,6 +3,16 @@ MODULE FTEIK2D_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, & 
                                  FTEIK_ZX_ORDERING, &
                                  FTEIK_XZ_ORDERING
+  USE FTEIK_MEMORY, ONLY : padLength64F
+  USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry, &
+                             fteik_model_setVelocityModel64f, &
+                             fteik_model_free
+  USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getNumberOfReceivers, &
+                                fteik_receiver_getTravelTimes64f,    &
+                                fteik_receiver_initialize64f,        &
+                                fteik_receiver_free
+  USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
+                              fteik_source_free
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
@@ -55,6 +65,17 @@ MODULE FTEIK2D_SOLVER64F
   PRIVATE :: fteik_localSolver2d_tAna64fF
   PRIVATE :: fteik_localSolver2d_tAnaD64fF
   PRIVATE :: fteik_localSolver2d_initialize64f
+
+  PRIVATE :: padLength64F
+  PRIVATE :: fteik_model_initializeGeometry
+  PRIVATE :: fteik_model_setVelocityModel64f
+  PRIVATE :: fteik_model_free
+  PRIVATE :: fteik_receiver_initialize64f
+  PRIVATE :: fteik_receiver_getNumberOfReceivers
+  PRIVATE :: fteik_receiver_getTravelTimes64f
+  PRIVATE :: fteik_receiver_free
+  PRIVATE :: fteik_source_initialize64f
+  PRIVATE :: fteik_source_free
   CONTAINS
   !--------------------------------------------------------------------------------------!
   !                                      Begin the Code                                  !
@@ -66,8 +87,7 @@ MODULE FTEIK2D_SOLVER64F
                                               verboseIn, ierr)  &
                  BIND(C, NAME='fteik_solver2d_initialize64f')
       USE ISO_C_BINDING
-      USE FTEIK_MEMORY, ONLY : padLength64F
-      USE FTEIK_MODEL64F, ONLY : fteik_model_intializeGeometry, ngrd
+      USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_CONSTANTS64F, ONLY : one, zero, FALSE
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
@@ -76,14 +96,17 @@ MODULE FTEIK2D_SOLVER64F
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nzIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT), PARAMETER :: nyIn = 1
+      REAL(C_DOUBLE), PARAMETER :: y0In = zero
+      REAL(C_DOUBLE), PARAMETER :: dyIn = one
       IF (verboseIn > 0) WRITE(*,*) 'fteik_solver_initialize64f: Initializing...'
       CALL fteik_solver2d_free()
       CALL fteik_solver2d_setVerobosity(verboseIn)
-      CALL fteik_model_intializeGeometry(lis3d,            &
-                                         nzIn, nxIn, 1,    &
-                                         dzIn, dxIn, one,  &
-                                         z0In, x0In, zero, &
-                                         ierr)
+      CALL fteik_model_initializeGeometry(lis3d,            &
+                                          nzIn, nxIn, nyIn, &
+                                          z0In, x0In, y0In, &
+                                          dzIn, dxIn, dyIn,  &
+                                          ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_solver2d_initialize64f: Error setting grid geometry'
          RETURN
@@ -138,9 +161,6 @@ MODULE FTEIK2D_SOLVER64F
 !>
       SUBROUTINE fteik_solver2d_free()   &
       BIND(C, NAME='fteik_solver2d_free')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_free
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_free
-      USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -171,7 +191,6 @@ MODULE FTEIK2D_SOLVER64F
 !>
       SUBROUTINE fteik_solver2d_getNumberOfReceivers(nrec, ierr) &
       BIND(C, NAME='fteik_solver2d_getNumberOfReceivers')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getNumberOfReceivers
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(OUT) :: nrec, ierr
       ierr = 0 
@@ -1022,7 +1041,6 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
       SUBROUTINE fteik_solver2d_getTravelTimes64f(nrec, ttr, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimes64f')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64f
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -1331,7 +1349,6 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       SUBROUTINE fteik_solver2d_setReceivers64f(nrec, zrec, xrec, ierr) &
       BIND(C, NAME='fteik_solver2d_setReceivers64f')
       USE FTEIK_MODEL64F, ONLY : y0
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
@@ -1367,7 +1384,6 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       SUBROUTINE fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, ierr) &
       BIND(C, NAME='fteik_solver2d_setSources64f')
       USE FTEIK_MODEL64F, ONLY : y0
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
@@ -1513,7 +1529,6 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !>
       SUBROUTINE fteik_solver2d_setVelocityModel64f(ncell, vel, ierr) &
       BIND(C, NAME='fteik_solver2d_setVelocityModel64f')
-      USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncell

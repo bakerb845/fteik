@@ -35,7 +35,7 @@ MODULE FTEIK_MODEL64F
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lis3dModel !< If true then the model is 3D.
                                                  !< Otherwise, it is 2D. 
   ! Label the routines
-  PUBLIC :: fteik_model_intializeGeometry
+  PUBLIC :: fteik_model_initializeGeometry
   PUBLIC :: fteik_model_setVelocityModel64f
   PUBLIC :: fteik_model_setVelocityModel32f
   PUBLIC :: fteik_model_getVelocityModel64f
@@ -80,11 +80,11 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE fteik_model_intializeGeometry(lis3d,         &
-                                               nz, nx, ny,    &
-                                               dz, dx, dy,    &
-                                               z0, x0, y0,    &
-                                               ierr)          &
+      SUBROUTINE fteik_model_initializeGeometry(lis3d,         &
+                                                nz, nx, ny,    &
+                                                z0, x0, y0,    &
+                                                dz, dx, dy,    &
+                                                ierr)          &
                  BIND(C, NAME='fteik_model_initializeGeometry')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nz, nx, ny
