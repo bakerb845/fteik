@@ -303,8 +303,7 @@ MODULE FTEIK2D_SOLVER64F
 !>
       PURE SUBROUTINE fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx, &
                                                           i1, i2,               &
-                                                          lupd, slow, sloc)     &
-      BIND(C, NAME='fteik_solver2d_prefetchSlowness64fF')
+                                                          lupd, slow, sloc)
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
       IMPLICIT NONE
