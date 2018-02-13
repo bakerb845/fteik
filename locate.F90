@@ -78,6 +78,7 @@ MODULE FTEIK_LOCATE
   PUBLIC :: locate_setTravelTimeField32f
   PUBLIC :: locate_setObservation64f
   PUBLIC :: locate_setNumberOfEvents
+  PUBLIC :: locate_locateEvent
 
   PRIVATE :: locate_computeL2ObjectiveFunction32f
   CONTAINS
@@ -104,8 +105,8 @@ MODULE FTEIK_LOCATE
 !>
 !>    @copyright MIT
 !>
-      SUBROUTINE locate_locateEventF(evnmbr, optIndx, t0Opt, objOpt) &
-      BIND(C, NAME='locate_locateEventF')
+      SUBROUTINE locate_locateEvent(evnmbr, optIndx, t0Opt, objOpt) &
+      BIND(C, NAME='locate_locateEvent')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr
       REAL(C_DOUBLE), INTENT(OUT) :: t0Opt, objOpt
@@ -969,8 +970,8 @@ enddo
       t0Work1(:) = zero
       optIndx1(:) = 0
       ! Locate the event on each processes's grid
-      CALL locate_locateEventF(evnmbr, optIndx1(mylocatorID+1), &
-                               t0Work1(mylocatorID+1), objWork1(mylocatorID+1))
+      CALL locate_locateEvent(evnmbr, optIndx1(mylocatorID+1), &
+                              t0Work1(mylocatorID+1), objWork1(mylocatorID+1))
       ! Reduce the results onto the master 
       CALL MPI_Reduce(objWork1, objWork2, nprocs, MPI_DOUBLE, MPI_SUM,  &
                       master, locatorComm, mpierr)

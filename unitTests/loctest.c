@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 #ifdef FTEIK_USE_MPI
     locate_initializeMPI(master, MPI_COMM_WORLD, nsrc, nrec, ngrd, &ierr); 
 #else
-    locate_initializeF(nsrc, nrec, ngrd, &ierr);
+    locate_initialize(nsrc, nrec, ngrd, &ierr);
 #endif
     if (ierr != 0)
     {
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 #ifdef FTEIK_USE_MPI
         locate_setTravelTimeField64fMPIF(master, ngrd, irec+1, ttimes, &ierr);
 #else 
-        locate_setTravelTimeField64fF(ngrd, irec+1, ttimes, &ierr);
+        locate_setTravelTimeField64f(ngrd, irec+1, ttimes, &ierr);
 #endif
         if (ierr != 0)
         {
