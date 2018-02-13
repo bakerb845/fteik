@@ -122,7 +122,9 @@ fteik_xdmf_writeVelocityModel(5, "debug.h5", "debugModel", false,
 
     memset(&xdmf, 0, sizeof(struct xdmf_struct));
     memset(&solver, 0, sizeof(struct fteikSolver_struct));
+#ifdef _OPENMP
 omp_set_num_threads(1);
+#endif
 //graph_testGrd2ijk(34, 10, 21);
     // Compute an analytic solution in a constant velocity model
 /*
@@ -235,7 +237,9 @@ float eps4 = eps;
 double *tori = (double *) calloc((size_t) (nx*ny*nz), sizeof(double));
 t0=clock();
 int ldo = 0;
+#ifdef _OPENMP
 omp_set_num_threads(1);
+#endif
 if (ldo == 0)
 {
 fteik_(vel, tori,
