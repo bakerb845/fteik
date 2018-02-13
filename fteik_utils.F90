@@ -679,7 +679,7 @@ print *, maxLevelSize
                                  ijkv5, ijkv6, ijkv7, ijkv8, &
                                  levelPtr, ngrd, nLevels, lhaveGrid
       USE ISO_C_BINDING
-      INTEGER(C_INT), INTENT(IN), VALUE :: sweep, nLevelsIn
+      INTEGER(C_INT), INTENT(IN), VALUE :: ngrd4, sweep, nLevelsIn
       INTEGER(C_INT), INTENT(OUT) :: levelPtrOut(nLevelsIn+1), ijkvOut(ngrd4), ierr
       ierr = 0
       IF (.NOT.lhaveGrid) THEN
