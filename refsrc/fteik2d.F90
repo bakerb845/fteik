@@ -484,8 +484,9 @@ print *, 'legacy p4:',minval(tt), maxval(tt)
     real(kind = 8), intent(in) :: slow(nz,nx), zs(nsrc), xs(nsrc), dz, dx
     real(kind = 8), intent(out) :: tt(nz, nx, nsrc)
     integer(kind = 4) :: k
-
+#ifdef _OPENMP
     if ( present(n_threads) ) call omp_set_num_threads(n_threads)
+#endif
 
     !$omp parallel default(shared)
     !$omp do schedule(runtime)
