@@ -423,8 +423,7 @@ MODULE FTEIK2D_SOLVER64F
 !>
       PURE SUBROUTINE fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx, &
                                                              i1, i2,               &
-                                                             lupd, tt, ttvec)      &
-      BIND(C, NAME='fteik_solver2d_prefetchTravelTimes64fF')
+                                                             lupd, tt, ttvec)
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
       USE ISO_C_BINDING
       IMPLICIT NONE
