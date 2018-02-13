@@ -186,11 +186,13 @@ MODULE FTEIK_SOURCE64F
                WRITE(*,902) ABS(zsrc(isrc) - zsrcIn(isrc)), &
                             ABS(xsrc(isrc) - xsrcIn(isrc)), &
                             ABS(ysrc(isrc) - ysrcIn(isrc))
+               WRITE(*,903) zsiv(isrc), xsiv(isrc), ysiv(isrc) 
             ELSE
                WRITE(*,910) zsrcIn(isrc), xsrcIn(isrc)
                WRITE(*,911) zsrc(isrc), xsrc(isrc)
                WRITE(*,912) ABS(zsrc(isrc) - zsrcIn(isrc)), &
                             ABS(xsrc(isrc) - xsrcIn(isrc))
+               WRITE(*,913) zsiv(isrc), xsiv(isrc)
             ENDIF
          ENDIF
          WRITE(*,*)
@@ -202,12 +204,14 @@ MODULE FTEIK_SOURCE64F
              3F12.2, ' (m)')
   902 FORMAT(' fteik_source_initialize64f: Source translation: (dz,dx,dy)=', &
              3F12.2, ' (m)')
+  903 FORMAT(' fteik_source_initialize64f: Source grid point: (iz,ix,iy)=', 3I6) 
   910 FORMAT(' fteik_source_initialize64f: Original source coordinates (z,x)=', &
              2F12.2, ' (m)')
   911 FORMAT(' fteik_source_initialize64f: Grid source coordinates (z,x)=', &
              2F12.2, ' (m)')
   912 FORMAT(' fteik_source_initialize64f: Source translation: (dz,dx)=', &
              2F12.2, ' (m)')
+  913 FORMAT(' fteik_source_initialize64f: Source grid point: (iz,ix)=', 2I6)
       RETURN
       END SUBROUTINE
 !                                                                                        !

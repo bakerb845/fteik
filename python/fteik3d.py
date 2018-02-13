@@ -84,6 +84,7 @@ class fteik3d:
         self.ny = 0
         self.nz = 0
         self.nsrc = 0
+        self.nrec = 0
         self.fteik3d = lib
         return
 
@@ -102,6 +103,7 @@ class fteik3d:
         self.ny = 0
         self.nz = 0
         self.nsrc = 0
+        self.nrec = 0
         self.linit = False
         self.fteik3d.fteik_solver3d_free()
         return
@@ -251,6 +253,28 @@ class fteik3d:
         ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
         return ttimes
 
+    def getTravelTimes(self):
+        """
+        Gets the travel times at the receivers.
+
+        Results
+        ttr : array_like
+           On successful exit this is the travel times (seconds) from the source
+           to the receiver.
+        """ 
+        nrec = self.nrec
+        if (nrec < 1):
+            print("No receiver locations set")
+            return None
+        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.fteik3d.fteik_solver3d_getTravelTimes64f(nrec, ttrPointer, ierr)
+        if (ierr.value != 0):
+            print("Error getting travel times")
+            return None
+        return ttr
+
     def setSources(self, xsrc, ysrc, zsrc):
         """
         Sets the source locations on model.
@@ -270,7 +294,7 @@ class fteik3d:
         xsrc = ascontiguousarray(xsrc, float64)
         ysrc = ascontiguousarray(ysrc, float64)
         zsrc = ascontiguousarray(zsrc, float64)
-        nsrc = len(xsrc)
+        nsrc = min(len(xsrc), len(ysrc), len(zsrc))
         if (len(xsrc) != len(zsrc)):
             print("Inconsistent array lengths")
         xsrcPointer = xsrc.ctypes.data_as(POINTER(c_double))
@@ -284,6 +308,44 @@ class fteik3d:
                                                   ierr)
         if (ierr.value != 0):
             print("Error setting sources")
+            return -1
         self.nsrc = nsrc
+        return 0
+
+    def setReceivers(self, xrec, yrec, zrec):
+        """
+        Sets the receiver positions.
+
+        Input
+        xrec : array_like
+          x receiver locations (meters).
+        yrec : array_like
+          y receiver locations (meters).
+        zrec : array_like
+          z receiver locations (meters).
+
+        Returns
+        ierr : int 
+           0 indicates success.
+        """
+        xrec = ascontiguousarray(xrec, float64)
+        yrec = ascontiguousarray(yrec, float64)
+        zrec = ascontiguousarray(zrec, float64)
+        nrec = min(len(xrec), len(yrec), len(zrec))
+        if (len(xrec) != len(zrec)):
+            print("Inconsistent array lengths")
+        xrecPointer = xrec.ctypes.data_as(POINTER(c_double))
+        yrecPointer = yrec.ctypes.data_as(POINTER(c_double))
+        zrecPointer = zrec.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.fteik3d.fteik_solver3d_setReceivers64f(nrec,
+                                                    zrecPointer,
+                                                    xrecPointer,
+                                                    yrecPointer,
+                                                    ierr)
+        if (ierr.value != 0):
+            print("Error setting receivers")
+            return -1
+        self.nrec = nrec
         return 0
 

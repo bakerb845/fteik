@@ -262,6 +262,8 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[out] ierr      0 indicates success.
 !>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       SUBROUTINE fteik_analytic_setVelocityConstant64f(vconstIn, ierr) &
       BIND(C, NAME='fteik_analytic_setVelocityConstant64f')
       USE ISO_C_BINDING
@@ -290,6 +292,8 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
       SUBROUTINE fteik_analytic_setOrigin(x0In, y0In, z0In, ierr)
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -313,6 +317,8 @@ MODULE FTEIK_ANALYTIC64F
 !>                      is closer to the center of the earth.
 !>
 !>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
 !>
       SUBROUTINE fteik_analytic_setVelocityGradient64f(v0, v1, ierr) &
       BIND(C, NAME='fteik_analytic_setVelocityGradient64f')

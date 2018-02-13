@@ -76,6 +76,7 @@ class fteik2d:
         self.nx = 0
         self.nz = 0
         self.nsrc = 0
+        self.nrec = 0
         self.fteik2d = lib
         return
 
@@ -96,6 +97,7 @@ class fteik2d:
         self.nx = 0
         self.nz = 0
         self.nsrc = 0
+        self.nrec = 0
         self.fteik2d.fteik_solver2d_free()
         return
 
@@ -234,6 +236,28 @@ class fteik2d:
         ttimes = reshape(ttimes, [self.nz, self.nx], order='F')
         return ttimes
 
+    def getTravelTimes(self):
+        """
+        Gets the travel times at the receivers.
+
+        Results
+        ttr : array_like
+           On successful exit this is the travel times (seconds) from the source
+           to the receiver.
+        """ 
+        nrec = self.nrec
+        if (nrec < 1): 
+            print("No receiver locations set")
+            return None
+        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.fteik2d.fteik_solver2d_getTravelTimes64f(nrec, ttrPointer, ierr)
+        if (ierr.value != 0): 
+            print("Error getting travel times")
+            return None
+        return ttr
+
     def setSources(self, xsrc, zsrc):
         """
         Sets the source locations on model.
@@ -266,6 +290,33 @@ class fteik2d:
 
     def setReceivers(self, xrec, zrec):
         """
-        Sets the receiver positions in the 2D model.
+        Sets the receiver positions.
+
+        Input
+        xrec : array_like
+          x receiver locations (meters).
+        zrec : array_like
+          z receiver locations (meters).
+
+        Returns
+        ierr : int 
+           0 indicates success.
         """
-        return
+        xrec = ascontiguousarray(xrec, float64)
+        zrec = ascontiguousarray(zrec, float64)
+        nrec = min(len(xrec), len(zrec))
+        if (len(xrec) != len(zrec)):
+            print("Inconsistent array lengths")
+        xrecPointer = xrec.ctypes.data_as(POINTER(c_double))
+        zrecPointer = zrec.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.fteik2d.fteik_solver2d_setReceivers64f(nrec,
+                                                    zrecPointer,
+                                                    xrecPointer,
+                                                    ierr)
+        if (ierr.value != 0): 
+            print("Error setting receivers")
+            return -1
+        self.nrec = nrec
+        return 0
+
