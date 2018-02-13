@@ -46,6 +46,8 @@ MODULE FTEIK_SOLVER64F
   PUBLIC :: fteik_solver3d_solveSourceLSM
   PUBLIC :: fteik_solver3d_free
   PUBLIC :: fteik_solver3d_setVelocityModel64f
+  PUBLIC :: fteik_solver3d_setNodalVelocityModel64f
+  PUBLIC :: fteik_solver3d_setCellVelocityModel64f
   PUBLIC :: fteik_solver3d_setSources64f
   PUBLIC :: fteik_solver3d_getTravelTimeField64f
   PUBLIC :: fteik_solver3d_getTravelTimes64f
@@ -878,6 +880,79 @@ MODULE FTEIK_SOLVER64F
       ENDIF
       CALL fteik_receiver_initialize64f(nrec, zrec, xrec, yrec, verbose, ierr)
       IF (ierr /= 0) WRITE(*,*) 'fteik_solver3d_setReceivers64f: Failed to set receivers'
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the nodal velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz x nx x ny] for 3D.
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XYZ_ORDERING then vel has dimension 
+!>                      [nz x ny x nx] where nz is leading dimension 1 and ny is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZYX_ORDERING then vel has dimension
+!>                      [nx x ny x nz] where nx is leading dimension 1 and ny is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZXY_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz x nx x ny] where nz is leading
+!>                      dimension 1 and nx is leading dimension 2. \n
+!>    @param[in] vel    Nodal velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver3d_setNodalVelocityModel64f(ng, order, vel, ierr)  &
+      BIND(C, NAME='fteik_solver3d_setNodalVelocityModel64f')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setNodalVelocityModel64f
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ng, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      CALL fteik_model_setNodalVelocityModel64f(ng, order, vel, ierr)
+      IF (ierr /= 0) & 
+      WRITE(*,*) 'fteik_solver3d_setNodalVelocityModel64f: Error setting velocity model'
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the cell-based velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz-1 x nx-1 x ny-1].
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XYZ_ORDERING then vel has dimension 
+!>                      [nz-1 x ny-1 x nx-1] where nz-1 is leading dimension 1 and ny-1 is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZYX_ORDERING then vel has dimension
+!>                      [nx-1 x ny-1 x nz-1] where nx-1 is leading dimension 1 and ny-1 is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZXY_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz-1 x nx-1 x ny-1] where nz-1 is leading
+!>                      dimension 1 and nx-1 is leading dimension 2. \n
+!>    @param[in] vel    Cell-based velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+
+      SUBROUTINE fteik_solver3d_setCellVelocityModel64f(nc, order, vel, ierr)  &
+      BIND(C, NAME='fteik_solver3d_setCellVelocityModel64f')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setCellVelocityModel64f 
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nc, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      CALL fteik_model_setCellVelocityModel64f(nc, order, vel, ierr)
+      IF (ierr /= 0) & 
+      WRITE(*,*) 'fteik_solver3d_setCellVelocityModel64f: Error setting velocity model'
       RETURN
       END
 !                                                                                        !

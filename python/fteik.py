@@ -34,10 +34,20 @@ class fteik2d:
                                                      c_int,     #verbosity
                                                      POINTER(c_int) #ierr
                                                     )
-        lib.fteik_solver2d_setVelocityModel64f.argtypes = (c_int,             #ncell
-                                                           POINTER(c_double), #velocity
-                                                           POINTER(c_int)     #ierr
-                                                          )
+        #lib.fteik_solver2d_setVelocityModel64f.argtypes = (c_int,             #ncell
+        #                                                   POINTER(c_double), #velocity
+        #                                                   POINTER(c_int)     #ierr
+        #                                                  )
+        lib.fteik_solver2d_setCellVelocityModel64f.argtypes = (c_int,             #ncell
+                                                               c_int,             #order
+                                                               POINTER(c_double), #velocity
+                                                               POINTER(c_int)     #ierr
+                                                              )
+        lib.fteik_solver2d_setNodalVelocityModel64f.argtypes = (c_int,             #ngrd
+                                                                c_int,             #order
+                                                                POINTER(c_double), #velocity
+                                                                POINTER(c_int)     #ierr
+                                                               )
         lib.fteik_solver2d_setReceivers64f.argtypes = (c_int,             #nrec
                                                        POINTER(c_double), #zrec
                                                        POINTER(c_double), #xrec
@@ -147,17 +157,44 @@ class fteik2d:
 
     def setVelocityModel(self, vel):
         """
-        Sets the [nz-1 x nx-1] velocity model.
+        Sets the [nz-1 x nx-1] cell-based model velocity model or the [nz x nx]
+        nodal-based model.
+
+        Input
+        -----
+        vel : np.matrix
+           [nz-1 x nx-1] cell-based model or [nz x nx] nodal-based model of
+           velocities (m/s).
+
+        Returns
+        -------
+        ierr : int
+           0 indicates success.
         """
         vel = reshape(vel, vel.size, order='F')   # Make it a 1D [nz-1 x nx-1] array
         vel = ascontiguousarray(vel, float64)
+        lhaveGrid = False
+        ngrd = len(vel)
         ncell = len(vel)
         if (ncell != (self.nx - 1)*(self.nz - 1)):
-            print("Expecting %d elements"%ncell)
+            if (ngrd  != self.nx*self.nz):
+                print("Expecing %d grid points or %d cells"%
+                      self.nx*self.ny, (self.nx - 1)*(self.nz - 1))
+            else:
+                lhaveGrid = True
         velPointer = vel.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
-        self.fteik2d.fteik_solver2d_setVelocityModel64f(ncell, velPointer,
-                                                        byref(ierr))
+        order = order = int(0) # FTEIK_ZX_ORDERING
+        if (lhaveGrid):
+            self.fteik2d.fteik_solver2d_setNodalVelocityModel64f(ngrd, order,
+                                                                 velPointer,
+                                                                 byref(ierr)) 
+        else:
+            self.fteik2d.fteik_solver2d_setCellVelocityModel64f(ncell, order,
+                                                                velPointer,
+                                                                byref(ierr))
+        #self.fteik2d.fteik_solver2d_setVelocityModel64f(ncell, velPointer,
+        #                                                byref(ierr))
         if (ierr.value != 0):
             print("Error setting velocity")
             return -1
@@ -245,10 +282,10 @@ class fteik3d:
                                                      c_int,     #verbosity
                                                      POINTER(c_int) #ierr
                                                     )
-        lib.fteik_solver3d_setVelocityModel64f.argtypes = (c_int,             #ncell
-                                                           POINTER(c_double), #velocity
-                                                           POINTER(c_int)     #ierr
-                                                          )
+        #lib.fteik_solver3d_setVelocityModel64f.argtypes = (c_int,             #ncell
+        #                                                   POINTER(c_double), #velocity
+        #                                                   POINTER(c_int)     #ierr
+        #                                                  )
         lib.fteik_solver3d_setReceivers64f.argtypes = (c_int,             #nrec
                                                        POINTER(c_double), #zrec
                                                        POINTER(c_double), #xrec
@@ -266,6 +303,16 @@ class fteik3d:
                                                              POINTER(c_double), #ttimes
                                                              POINTER(c_int)     #ierr
                                                             )
+        lib.fteik_solver3d_setCellVelocityModel64f.argtypes = (c_int,             #ncell
+                                                               c_int,             #order
+                                                               POINTER(c_double), #velocity
+                                                               POINTER(c_int)     #ierr
+                                                              )
+        lib.fteik_solver3d_setNodalVelocityModel64f.argtypes = (c_int,             #ngrd
+                                                                c_int,             #order
+                                                                POINTER(c_double), #velocity
+                                                                POINTER(c_int)     #ierr
+                                                               )
         lib.fteik_solver3d_setSources64f.argtypes = (c_int,             #nsrc
                                                      POINTER(c_double), #zsrc
                                                      POINTER(c_double), #xsrc
@@ -366,18 +413,32 @@ class fteik3d:
 
     def setVelocityModel(self, vel):
         """
-        Sets the [nz-1 x nx-1 x ny-1] velocity model.
+        Sets the [nz-1 x ny-1 x nx-1] velocity model.
         """
-        # Make it a 1D [nz-1 x nx-1 x ny -1] array
+        # Make it a 1D [nz-1 x ny-1 x nx -1] array
         vel = reshape(vel, vel.size, order='F')
         vel = ascontiguousarray(vel, float64)
+        lhaveGrid = False
+        ngrd = len(vel)
         ncell = len(vel)
         if (ncell != (self.nx - 1)*(self.ny - 1)*(self.nz - 1)):
-            print("Expecting %d elements"%ncell)
+            if (ngrd  != self.nx*self.ny*self.nz):
+                print("Expecing %d grid points or %d cells"%
+                      self.nx*self.ny*self.nz,
+                      (self.nx - 1)*(self.ny - 1)*(self.nz - 1))
+            else:
+                lhaveGrid = True
         velPointer = vel.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
-        self.fteik3d.fteik_solver3d_setVelocityModel64f(ncell, velPointer,
-                                                        byref(ierr))
+        order = int(2) # FTEIK_ZYX_ORDERING
+        if (lhaveGrid):
+            self.fteik3d.fteik_solver3d_setNodalVelocityModel64f(ngrd, order,
+                                                                 velPointer,
+                                                                 byref(ierr)) 
+        else:
+            self.fteik3d.fteik_solver3d_setCellVelocityModel64f(ncell, order,
+                                                                velPointer,
+                                                                byref(ierr))
         if (ierr.value != 0): 
             print("Error setting velocity")
             return -1
@@ -436,7 +497,7 @@ class fteik3d:
         ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
         ttimesPointer = ttimes.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
-        order = 2 # FTEIK_ZYX_ORDERING 
+        order = int(2) # FTEIK_ZYX_ORDERING 
         self.fteik3d.fteik_solver3d_getTravelTimeField64f(ngrd, order,
                                                           ttimesPointer, ierr)
         if (ierr.value != 0):
@@ -456,7 +517,7 @@ if __name__ == "__main__":
     z = linspace(0.0, (nz-1)*dz, nz)
     xsrc = (nx - 1)*dx/4.0
     zsrc = (nz - 1)*dz/4.0
-    vel = zeros([nz-1,nx-1]) + 5.e3
+    vel = zeros([nz,nx]) + 5.e3 #zeros([nz-1,nx-1]) + 5.e3
     fteik2d = fteik2d('/home/bakerb25/C/fteik/lib/libfteik_shared.so')
     fteik2d.initialize(nx, nz, dx, dz, verbose=3)
     fteik2d.setVelocityModel(vel) 
@@ -476,16 +537,21 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    nx = 51
-    ny = 51
+    nx = 101
+    ny = 101
     nz = 51 
     dx = 10.0
     dy = 10.0
     dz = 10.0
-    xsrc = (nx - 1)*dx/2.0
+    xsrc = (nx - 1)*dx/4.0
     ysrc = (ny - 1)*dy/2.0
-    zsrc = (nz - 1)*dz/2.0
-    vel = zeros([nz-1,nx-1,ny-1]) + 5.e3
+    zsrc = (nz - 1)*dz/4.0
+    vmin = 5000.0
+    vmax = 6000.0 
+    vel = zeros([nz,ny,nx]) + 5.e3 #zeros([nz-1,nx-1,ny-1]) + 5.e3
+    for iz in range(nz):
+        vel[iz,:,:] = vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz)
+        #print(vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz))
     fteik3d = fteik3d('/home/bakerb25/C/fteik/lib/libfteik_shared.so')
     fteik3d.initialize(nx, ny, nz, dx, dy, dz, verbose=3) 
     fteik3d.setVelocityModel(vel)
@@ -494,7 +560,7 @@ if __name__ == "__main__":
     ttimes = fteik3d.getTravelTimeField()
     fteik3d.free()
 
-    """
+    #"""
     print(ttimes.shape)
     xindx = int(xsrc/dx)
     yindx = int(ysrc/dy)
@@ -528,4 +594,4 @@ if __name__ == "__main__":
     plt.ylabel('Y-Offset (m)')
     plt.colorbar()
     plt.show()
-    """
+    #"""

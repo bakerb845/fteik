@@ -1,6 +1,12 @@
 MODULE FTEIK_MODEL64F
   USE ISO_C_BINDING
   USE FTEIK_CONSTANTS64F, ONLY : zero
+  USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
+                                 FTEIK_ZXY_ORDERING,     &    
+                                 FTEIK_XYZ_ORDERING,     &    
+                                 FTEIK_ZYX_ORDERING,     &
+                                 FTEIK_ZX_ORDERING,      &
+                                 FTEIK_XZ_ORDERING
   IMPLICIT NONE
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: slow(:)  !< Slowness model in
                                                            !< (seconds/meter).
@@ -23,6 +29,7 @@ MODULE FTEIK_MODEL64F
   INTEGER(C_INT), PROTECTED, SAVE:: nzx =-1     !< =nz*nx
   INTEGER(C_INT), PROTECTED, SAVE :: nzm1_nxm1 =-1 !< =(nz - 1)*(nx - 1)
   INTEGER(C_INT), PROTECTED, SAVE :: nzm1 =-1      !< =(nz - 1)
+  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0   !< Controsl verbosity.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveModel = .FALSE. !< If true slowness model 
                                                            !< was set.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lis3dModel !< If true then the model is 3D.
@@ -32,6 +39,8 @@ MODULE FTEIK_MODEL64F
   PUBLIC :: fteik_model_setVelocityModel64f
   PUBLIC :: fteik_model_setVelocityModel32f
   PUBLIC :: fteik_model_getVelocityModel64f
+  PUBLIC :: fteik_model_setNodalVelocityModel64f
+  PUBLIC :: fteik_model_setCellVelocityModel64f
   PUBLIC :: fteik_model_isModel3D
   PUBLIC :: fteik_model_free
   PUBLIC :: fteik_model_setGridSpacing
@@ -287,6 +296,275 @@ MODULE FTEIK_MODEL64F
       ngrdOut = ngrd
       ncellOut = ncell
       RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the nodal velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz x nx x ny] for 3D or [nz x nx] for 2D.
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XYZ_ORDERING then vel has dimension 
+!>                      [nz x ny x nx] where nz is leading dimension 1 and ny is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZYX_ORDERING then vel has dimension
+!>                      [nx x ny x nz] where nx is leading dimension 1 and ny is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZXY_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz x nx x ny] where nz is leading
+!>                      dimension 1 and nx is leading dimension 2. \n
+!>                      If order == FTEIK_XZ_ORDERING then vel has dimension [nx x nz]
+!>                      where nx is the leading dimension and the model is 2D. \n
+!>                      If order == FTEIK_ZX_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz x nx] where nz is the leading
+!>                      dimension and the model is 2D.
+!>    @param[in] vel    Nodal velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_model_setNodalVelocityModel64f(ng, order, vel, ierr)  &
+      BIND(C, NAME='fteik_model_setNodalVelocityModel64f')
+      USE FTEIK_CONSTANTS64F, ONLY : one, zero
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ng, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) vmin
+      INTEGER(C_INT) indx(8), icell, ix, iy, iz
+      ierr = 0
+      lhaveModel = .FALSE.
+      IF (ng < ngrd) THEN
+         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: ng should be at least', ngrd 
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ng < 1) THEN
+         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: No points in model', ng
+         ierr = 1
+         RETURN
+      ENDIF
+      vmin = MINVAL(vel(1:ng))
+      IF (vmin <= zero) THEN
+         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: vmin must be positive', vmin
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Average the nodes to make the cells
+      slow(:) = zero
+      IF (lis3dModel) THEN
+         IF (order == FTEIK_XYZ_ORDERING) THEN
+            DO iy=1,ny-1
+               DO ix=1,nx-1
+                  DO iz=1,nz-1
+                     indx(1) = (iz - 1)*nx*ny + (iy - 1)*nx + ix
+                     indx(2) = (iz - 1)*nx*ny + (iy - 1)*nx + ix + 1
+                     indx(3) = (iz - 1)*nx*ny + (iy    )*nx + ix
+                     indx(4) = (iz - 1)*nx*ny + (iy    )*nx + ix + 1
+                     indx(5) = (iz    )*nx*ny + (iy - 1)*nx + ix
+                     indx(6) = (iz    )*nx*ny + (iy - 1)*nx + ix + 1
+                     indx(7) = (iz    )*nx*ny + (iy    )*nx + ix
+                     indx(8) = (iz    )*nx*ny + (iy    )*nx + ix + 1
+                     icell = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1)
+                     slow(icell) = SUM(vel(indx(1:8)))
+                  ENDDO
+               ENDDO
+            ENDDO
+         ELSEIF (order == FTEIK_ZYX_ORDERING) THEN
+            DO iy=1,ny-1
+               DO ix=1,nx-1
+                  DO iz=1,nz-1
+                     indx(1) = (ix - 1)*ny*nz + (iy - 1)*nz + iz
+                     indx(2) = (ix - 1)*ny*nz + (iy - 1)*nz + iz + 1
+                     indx(3) = (ix - 1)*ny*nz + (iy    )*nz + iz
+                     indx(4) = (ix - 1)*ny*nz + (iy    )*nz + iz + 1
+                     indx(5) = (ix    )*ny*nz + (iy - 1)*nz + iz
+                     indx(6) = (ix    )*ny*nz + (iy - 1)*nz + iz + 1 
+                     indx(7) = (ix    )*ny*nz + (iy    )*nz + iz
+                     indx(8) = (ix    )*ny*nz + (iy    )*nz + iz + 1
+                     icell = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1)
+                     slow(icell) = SUM(vel(indx(1:8)))*0.125d0
+                  ENDDO
+               ENDDO
+            ENDDO
+         ELSE
+            IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
+                verbose > 0) THEN
+               WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Defaulting ot zxy' 
+            ENDIF 
+            DO iy=1,ny-1
+               DO ix=1,nx-1
+                  DO iz=1,nz-1
+                     indx(1) = fteik_model_grid2indexF(iz,   ix,   iy,   nz, nzx)
+                     indx(2) = fteik_model_grid2indexF(iz+1, ix,   iy,   nz, nzx)
+                     indx(3) = fteik_model_grid2indexF(iz,   ix+1, iy,   nz, nzx)
+                     indx(4) = fteik_model_grid2indexF(iz+1, ix+1, iy,   nz, nzx)
+                     indx(5) = fteik_model_grid2indexF(iz,   ix,   iy,   nz, nzx)
+                     indx(6) = fteik_model_grid2indexF(iz+1, ix,   iy,   nz, nzx)
+                     indx(7) = fteik_model_grid2indexF(iz,   ix+1, iy,   nz, nzx)
+                     indx(8) = fteik_model_grid2indexF(iz+1, ix+1, iy,   nz, nzx)
+                     icell = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1)
+                     slow(icell) = SUM(vel(indx(1:8)))*0.125d0
+                  ENDDO
+               ENDDO
+            ENDDO
+         ENDIF
+      ! Same activity but for 2D
+      ELSE
+         IF (order == FTEIK_XZ_ORDERING) THEN
+            DO ix=1,nx-1
+               DO iz=1,nz-1
+                  indx(1) = (iz - 1)*nx + ix
+                  indx(2) = (iz - 1)*nx + ix + 1
+                  indx(3) = (iz    )*nx + ix
+                  indx(4) = (iz    )*nx + ix + 1
+                  icell = (ix - 1)*(nz - 1) + iz
+                  slow(icell) = SUM(vel(indx(1:4)))*0.25d0
+               ENDDO
+            ENDDO
+         ELSE
+            IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
+                verbose > 0) THEN
+               WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Defaulting ot zx'
+            ENDIF
+            DO iz=1,nz-1
+               DO ix=1,nx-1
+                  indx(1) = (ix - 1)*nz + iz
+                  indx(2) = (ix - 1)*nz + iz + 1
+                  indx(3) = (ix    )*nz + iz
+                  indx(4) = (ix    )*nz + iz + 1
+                  icell = (ix - 1)*(nz - 1) + iz
+                  slow(icell) = SUM(vel(indx(1:4)))*0.25d0
+               ENDDO
+            ENDDO
+         ENDIF
+      ENDIF
+      IF (MINVAL(slow(1:ncell)) <= zero) THEN
+         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Internal error'
+         ierr = 1
+         RETURN
+      ENDIF
+      slow(1:ncell) = one/slow(1:ncell)
+      lhaveModel = .TRUE.
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the cell-based velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz-1 x nx-1 x ny-1] for 3D or [nz-1 x nx-1] for 2D.
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XYZ_ORDERING then vel has dimension 
+!>                      [nz-1 x ny-1 x nx-1] where nz-1 is leading dimension 1 and ny-1 is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZYX_ORDERING then vel has dimension
+!>                      [nx-1 x ny-1 x nz-1] where nx-1 is leading dimension 1 and ny-1 is
+!>                      leading dimension 2. \n
+!>                      If order == FTEIK_ZXY_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz-1 x nx-1 x ny-1] where nz-1 is leading
+!>                      dimension 1 and nx-1 is leading dimension 2. \n
+!>                      If order == FTEIK_XZ_ORDERING then vel has dimension [nx-1 x nz-1]
+!>                      where nx-1 is the leading dimension and the model is 2D. \n
+!>                      If order == FTEIK_ZX_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz-1 x nx-1] where nz-1 is the leading
+!>                      dimension and the model is 2D.
+!>    @param[in] vel    Cell-based velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_model_setCellVelocityModel64f(nc, order, vel, ierr)  &
+      BIND(C, NAME='fteik_model_setCellVelocityModel64f')
+      USE FTEIK_CONSTANTS64F, ONLY : one, zero
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nc, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_DOUBLE) vmin
+      INTEGER(C_INT) icell, ix, iy, iz, jcell
+      ierr = 0
+      lhaveModel = .FALSE.
+      IF (nc < ncell) THEN
+         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: nc should be at least', ncell
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nc < 1) THEN
+         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: No points in model', nc
+         ierr = 1
+         RETURN
+      ENDIF
+      vmin = MINVAL(vel(1:nc))
+      IF (vmin <= zero) THEN
+         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: vmin must be positive', vmin
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (lis3dModel) THEN
+         IF (order == FTEIK_XYZ_ORDERING) THEN
+            DO iy=1,ny-1
+               DO ix=1,nx-1
+                  DO iz=1,nz-1
+                     jcell = (iz - 1)*(nx - 1)*(ny - 1) + (iy - 1)*(nx - 1) + ix
+                     icell = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1)
+                     slow(icell) = vel(jcell)
+                  ENDDO
+               ENDDO
+            ENDDO
+         ELSEIF (order == FTEIK_ZYX_ORDERING) THEN
+            DO iy=1,ny-1
+               DO ix=1,nx-1
+                  DO iz=1,nz-1
+                     jcell = (ix - 1)*(nz - 1)*(ny - 1) + (iy - 1)*(nz - 1) + iz
+                     icell = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1)
+                     slow(icell) = vel(jcell)
+                  ENDDO
+               ENDDO
+            ENDDO
+         ELSE
+            IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
+                verbose > 0) THEN
+               WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Defaulting ot zxy'
+            ENDIF
+            slow(1:ncell) = one/vel(1:ncell)
+            lhaveModel = .TRUE.
+            RETURN
+         ENDIF
+      ! Same activity but for 2D
+      ELSE
+         IF (order == FTEIK_XZ_ORDERING) THEN
+            DO ix=1,nx-1
+               DO iz=1,nz-1
+                  jcell = (iz - 1)*(nx - 1) + ix
+                  icell = (ix - 1)*(nz - 1) + iz
+                  slow(icell) = vel(jcell)
+               ENDDO
+            ENDDO
+         ELSE
+            IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
+                verbose > 0) THEN
+               WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Defaulting ot zx' 
+            ENDIF
+            slow(1:ncell) = one/vel(1:ncell)
+            lhaveModel = .TRUE.
+            RETURN
+         ENDIF
+      ENDIF
+      IF (MINVAL(slow(1:ncell)) <= zero) THEN
+         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Internal error'
+         ierr = 1 
+         RETURN
+      ENDIF
+      slow(1:ncell) = one/slow(1:ncell)
+      lhaveModel = .TRUE.
+      RETURN 
       END
 !                                                                                        !
 !========================================================================================!

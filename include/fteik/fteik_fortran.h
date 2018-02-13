@@ -96,6 +96,14 @@ void fteik_solver3d_free(void);
 void fteik_solver3d_setVelocityModel64f(const int ncell, 
                                         const double vel[],
                                         int *ierr);
+void fteik_solver3d_setNodalVelocityModel64f(const int ng,
+                                             const int order,
+                                             const double vel[],
+                                             int *ierr);
+void fteik_solver3d_setCellVelocityModel64f(const int nc,
+                                            const int order,
+                                            const double vel[],
+                                            int *ierr);
 void fteik_solver3d_setSources64f(const int nsrc,
                                   const double zsrc[],
                                   const double xsrc[],
@@ -125,6 +133,14 @@ void fteik_solver2d_initialize64f(const int nz, const int nx,
 void fteik_solver2d_setVelocityModel64f(const int ncell,
                                         const double vel[],
                                         int *ierr);
+void fteik_solver2d_setNodalVelocityModel64f(const int ng,
+                                             const int order,
+                                             const double vel[],
+                                             int *ierr);
+void fteik_solver2d_setCellVelocityModel64f(const int nc,
+                                            const int order,
+                                            const double vel[],
+                                            int *ierr);
 void fteik_solver2d_setReceivers64f(const int nrec,
                                     const double zrec[],
                                     const double xrec[],

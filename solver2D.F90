@@ -33,6 +33,8 @@ MODULE FTEIK2D_SOLVER64F
   LOGICAL(C_BOOL), SAVE, PRIVATE, ALLOCATABLE :: lupdWork(:)
   ! Label the subroutines/functions
   PUBLIC :: fteik_solver2d_setVelocityModel64f
+  PUBLIC :: fteik_solver2d_setNodalVelocityModel64f
+  PUBLIC :: fteik_solver2d_setCellVelocityModel64f 
   PUBLIC :: fteik_solver2d_initialize64f
   PUBLIC :: fteik_solver2d_free
   PUBLIC :: fteik_solver2d_solveSourceLSM
@@ -1431,6 +1433,71 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       epsS2C = epsIn
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the nodal velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz x nx].
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XZ_ORDERING then vel has dimension [nx x nz]
+!>                      where nx is the leading dimension and the model is 2D. \n
+!>                      If order == FTEIK_ZX_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz x nx] where nz is the leading
+!>                      dimension and the model is 2D.
+!>    @param[in] vel    Nodal velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver2d_setNodalVelocityModel64f(ng, order, vel, ierr)  &
+      BIND(C, NAME='fteik_solver2d_setNodalVelocityModel64f')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setNodalVelocityModel64f
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ng, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      CALL fteik_model_setNodalVelocityModel64f(ng, order, vel, ierr)
+      IF (ierr /= 0) & 
+      WRITE(*,*) 'fteik_solver2d_setNodalVelocityModel64f: Error setting velocity model'
+      RETURN
+      END 
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the cell-based velocity model.
+!>
+!>    @param[in] ng     Number of grid points in velocity.  This should be equal to
+!>                      [nz-1 x nx-1].
+!>    @param[in] order  Defines the column major order of vel. \n
+!>                      If order == FTEIK_XZ_ORDERING then vel has dimension [nx-1 x nz-1]
+!>                      where nx-1 is the leading dimension. \n
+!>                      If order == FTEIK_ZX_ORDERING or FTEIK_NATURAL_ORDERING
+!>                      then vel has dimension [nz-1 x nx-1] where nz-1 is the leading
+!>                      dimension.
+!>    @param[in] vel    Cell-based velocity model whose leading dimension are given
+!>                      by order.
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_solver2d_setCellVelocityModel64f(nc, order, vel, ierr)  &
+      BIND(C, NAME='fteik_solver2d_setCellVelocityModel64f')
+      USE FTEIK_MODEL64F, ONLY : fteik_model_setCellVelocityModel64f 
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nc, order
+      REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      CALL fteik_model_setCellVelocityModel64f(nc, order, vel, ierr)
+      IF (ierr /= 0) &
+      WRITE(*,*) 'fteik_solver2d_setCellVelocityModel64f: Error setting velocity model'
+      RETURN
+      END 
+
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
