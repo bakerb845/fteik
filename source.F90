@@ -205,8 +205,8 @@ MODULE FTEIK_SOURCE64F
                             ABS(xsrc(isrc) - xsrcIn(isrc))
                WRITE(*,913) zsiv(isrc), xsiv(isrc)
             ENDIF
+            WRITE(*,*)
          ENDIF
-         WRITE(*,*)
     1 CONTINUE
       lhaveSource = .TRUE.
   900 FORMAT(' fteik_source_initialize64f: Original source coordinates (z,x,y)=', &

@@ -6,6 +6,16 @@
 #endif
 #include <stdbool.h>
 
+enum fteikOrder_enum
+{
+    FTEIK_NATURAL_ORDERING = 0, /*!< Natural solver ordering. */
+    FTEIK_ZXY_ORDERING = 0,     /*!< Z X Y column major ordering. */
+    FTEIK_ZX_ORDERING = 0,      /*!< Z X column major ordering for 2D. */
+    FTEIK_XYZ_ORDERING = 1,     /*!< X Y Z column major ordering.  */
+    FTEIK_XZ_ORDERING = 1,      /*!< X Z column major ordering for 2D. */
+    FTEIK_ZYX_ORDERING = 2      /*!< Z Y X column major ordering. */
+};
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -158,9 +168,35 @@ void fteik_solver2d_setSources64f(const int nsrc,
 void fteik_solver2d_getTravelTimes64f(const int nrec, double ttr[], int *ierr);
 void fteik_solver2d_getNumberOfReceivers(int *nrec, int *ierr);
 void fteik_solver2d_free(void);
-//----------------------------------------------------------------------------//
-//                             Locator Module                                 //
-//----------------------------------------------------------------------------//
+/*----------------------------------------------------------------------------*/
+/*                              Analytic Module                               */
+/*----------------------------------------------------------------------------*/
+void fteik_analytic_initialize64f(
+     const int nz, const int nx, const int ny,
+     const double z0, const double x0, const double y0,
+     const double dz, const double dx, const double dy,
+     const int verbose, int *ierr);
+void fteik_analytic_setSources64f(const int nsrc,
+                                  const double zsrc[],
+                                  const double xsrc[],
+                                  const double ysrc[],
+                                  int *ierr);
+void fteik_analytic_setConstantVelocity64f(const double vconst, int *ierr);
+void fteik_analytic_setLinearVelocityGradient64f(const double v0,
+                                                 const double v1,
+                                                 int *ierr);
+void fteik_analytic_solveSourceConstantVelocity64f(const int isrc,
+                                                   int *ierr);
+void fteik_analytic_solveSourceLinearVelocityGradient64f(const int isrc,
+                                                         int *ierr);
+void fteik_analytic_getTravelTimeField64f(const int ngrd,
+                                          const int order,
+                                          double ttimes[],
+                                          int *ierr);
+void fteik_analytic_free(void); 
+/*----------------------------------------------------------------------------*/
+/*                             Locator Module                                 */
+/*----------------------------------------------------------------------------*/
 void locate_initialize(const int nEventsIn, const int ntfIn, const int ngrdIn,
                        int *ierr);
 void locate_setTravelTimeField64f(const int ngrdIn, const int itf,
