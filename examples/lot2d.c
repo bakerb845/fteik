@@ -36,6 +36,7 @@ int main( )
     int nsweep = 2;                     // Number of Gauss-Seidel iterations.
     double eps = 5.0;                   // Number of grid points around source to
                                         // use spherical approximation.
+    double convTol = 1.e-10;            // Convergence tolerance for Gauss-Seidel
     // Other parameters
     const char *archiveFile = "loh.h5";
     const char *modelName = "vpLayerOverHalfSpaceModel";
@@ -74,7 +75,8 @@ printf("%d %d\n", nx, nz);
                                  z0, x0,  
                                  dz, dx, 
                                  nsweep, eps,
-                                 0, &ierr);
+                                 convTol, 0,
+                                 &ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error initializing solver\n", __func__);

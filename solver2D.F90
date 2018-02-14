@@ -18,6 +18,8 @@ MODULE FTEIK2D_SOLVER64F
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
   !!!!DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
+  !> Gauss-Seidel method converges when update is less than tol
+  REAL(C_DOUBLE), PROTECTED, SAVE :: convTol = zero 
   !> Defines the number of levels.  For 2D that is nz + nx
   INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0
   !> Defines the max level size.
@@ -39,7 +41,8 @@ MODULE FTEIK2D_SOLVER64F
   INTEGER(C_INT), SAVE, PRIVATE :: zsi, xsi
   REAL(C_DOUBLE), SAVE, PRIVATE :: dx, dxi, dz, dzi, dz2i, dx2i, dz2i_dx2i, &
                                    dz2i_p_dx2i, dz2i_p_dx2i_inv
-  REAL(C_DOUBLE), SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), tupdWork(:)
+  REAL(C_DOUBLE), SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), tupdWork(:), &
+                                                ttold(:)
   LOGICAL(C_BOOL), SAVE, PRIVATE, ALLOCATABLE :: lupdWork(:)
   ! Label the subroutines/functions
   PUBLIC :: fteik_solver2d_setVelocityModel64f
@@ -56,6 +59,7 @@ MODULE FTEIK2D_SOLVER64F
   PUBLIC :: fteik_solver2d_setSources64f
   PUBLIC :: fteik_solver2d_setSphereToCartEpsilon
   PUBLIC :: fteik_solver2d_getNumberOfReceivers
+  PUBLIC :: fteik_solver2d_setConvergenceTolerance
   PRIVATE :: fteik_solver2d_isUpdateNodeF
   PRIVATE :: fteik_solver2d_prefetchTravelTimes64fF
   PRIVATE :: fteik_solver2d_prefetchSlowness64fF
@@ -80,11 +84,12 @@ MODULE FTEIK2D_SOLVER64F
   !--------------------------------------------------------------------------------------!
   !                                      Begin the Code                                  !
   !--------------------------------------------------------------------------------------!
-      SUBROUTINE fteik_solver2d_initialize64f(nzIn, nxIn,       &
-                                              z0In, x0In,       &
-                                              dzIn, dxIn,       &   
-                                              nsweepIn, epsIn,  &
-                                              verboseIn, ierr)  &
+      SUBROUTINE fteik_solver2d_initialize64f(nzIn, nxIn,           &
+                                              z0In, x0In,           &
+                                              dzIn, dxIn,           &
+                                              nsweepIn, epsIn,      &
+                                              convTolIn, verboseIn, &
+                                              ierr)                 &
                  BIND(C, NAME='fteik_solver2d_initialize64f')
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd
@@ -92,7 +97,7 @@ MODULE FTEIK2D_SOLVER64F
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dzIn
-      REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn, convtolIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nzIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -102,6 +107,7 @@ MODULE FTEIK2D_SOLVER64F
       IF (verboseIn > 0) WRITE(*,*) 'fteik_solver_initialize64f: Initializing...'
       CALL fteik_solver2d_free()
       CALL fteik_solver2d_setVerobosity(verboseIn)
+      CALL fteik_solver2d_setConvergenceTolerance(convTolIn)
       CALL fteik_model_initializeGeometry(lis3d,            &
                                           nzIn, nxIn, nyIn, &
                                           z0In, x0In, y0In, &
@@ -130,6 +136,7 @@ MODULE FTEIK2D_SOLVER64F
       ALLOCATE(slocWork(4*maxLevelSize))
       ALLOCATE(ttvecWork(4*maxLevelSize))
       ALLOCATE(tupdWork(maxLevelSize))
+      ALLOCATE(ttold(ngrd))
       lupdWork(:) = FALSE
       slocWork(:) = zero
       ttvecWork(:) = zero
@@ -153,6 +160,23 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Sets the convergence tolerance for the Gauss-Seidel sweeping.
+!>
+!>    @param[in] convTolIn   The Gauss-Seidel sweeping will terminate when the updated
+!>                           travel time perturbation is less than convTolIn (seconds).
+!>                           Note that if convTolin <= 0 then it will be disabled.
+!>
+!>
+      SUBROUTINE fteik_solver2d_setConvergenceTolerance(convTolIn) &
+      BIND(C, NAME='fteik_solver2d_setConvergenceTolerance')
+      USE ISO_C_BINDING
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: convTolIn
+      convTol = convTolIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Releases all memory associated with the solver and resets all variables.
 !>
 !>    @author Ben Baker
@@ -166,10 +190,12 @@ MODULE FTEIK2D_SOLVER64F
       IMPLICIT NONE
       lhaveTimes = .FALSE.
       epsS2C = zero
+      convTol = zero 
       nsweep = 0
       nLevels = 0
       verbose = 0
       IF (ALLOCATED(ttimes))     DEALLOCATE(ttimes)
+      IF (ALLOCATED(ttold))      DEALLOCATE(ttold)
       IF (ALLOCATED(lupdWork))   DEALLOCATE(lupdWork)
       IF (ALLOCATED(slocWork))   DEALLOCATE(slocWork)
       IF (ALLOCATED(ttvecWork))  DEALLOCATE(ttvecWork)
@@ -607,13 +633,13 @@ MODULE FTEIK2D_SOLVER64F
       SUBROUTINE fteik_solver2d_solveSourceLSM(isrc, ierr)   &
                  BIND(C, NAME='fteik_solver2d_solveSourceLSM')
       USE FTEIK_SOURCE64F, ONLY : nsrc
-      USE FTEIK_MODEL64F, ONLY : lhaveModel, nx, nz, slow
+      USE FTEIK_MODEL64F, ONLY : lhaveModel, ngrd, nx, nz, slow
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) ts4(4), t0, t1
-      INTEGER(C_INT) dest(4), i1, i2, kiter, level, nnodes, sweep
+      REAL(C_DOUBLE) ts4(4), t0, t1, tdiff
+      INTEGER(C_INT) dest(4), i, i1, i2, kiter, level, nnodes, sweep
       INTEGER(C_INT) iz, ix
       ierr = 0
       lhaveTimes = FALSE
@@ -698,6 +724,7 @@ MODULE FTEIK2D_SOLVER64F
 !           !                                          tupdWork, ttimes)
 !        ENDDO
 !     ENDDO
+      IF (convTol > zero) ttold(1:ngrd) = ttimes(1:ngrd)
       ! Number of Gauss-Seidel iterations
       DO kiter=1,nsweep
          ! Loop on sweeping directions
@@ -732,6 +759,17 @@ MODULE FTEIK2D_SOLVER64F
             IF (verbose > 3) WRITE(*,901) kiter, sweep, MINVAL(ttimes), MAXVAL(ttimes)
          ENDDO
          IF (verbose > 2) WRITE(*,900) kiter, MINVAL(ttimes), MAXVAL(ttimes)
+         ! Check convergence
+         tdiff = FTEIK_HUGE
+         IF (nsweep > 1 .AND. convTol > zero) THEN
+            !$OMP SIMD REDUCTION(MAX:tdiff)
+            DO i=1,ngrd
+               tdiff = MAX(tdiff, ABS(ttimes(i) - ttold(i)))
+               ttold(i) = ttimes(i)
+            ENDDO
+            IF (verbose > 3) WRITE(*,903) tdiff 
+         ENDIF
+         IF (tdiff < convTol) EXIT
       ENDDO
       IF (verbose > 2) THEN
          CALL CPU_TIME(t1)
@@ -748,6 +786,7 @@ MODULE FTEIK2D_SOLVER64F
   901 FORMAT(' fteik_solver2d_solveSourceLSM: (iteration,sweep,ttmin,ttmax)=', &
              2I4, 2F14.8)
   902 FORMAT(' fteik_solver2d_solveSourceLSM: Solver time in seconds=', F14.8)
+  903 FORMAT(' fteik_solver2d_solveSourceLSM: Max perturbation=', F16.10)
 !print *, lhaveTimes
       RETURN
       END

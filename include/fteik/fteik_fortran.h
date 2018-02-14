@@ -101,7 +101,8 @@ void fteik_solver3d_initialize64f(
     const double z0In, const double x0In, const double y0In,
     const double dzIn, const double dxIn, const double dyIn,
     const int nsweepIn, const double epsIn,
-    const int verbose, int *ierr);
+    const double convTol, const int verbose, 
+    int *ierr);
 void fteik_solver3d_free(void);
 void fteik_solver3d_setVelocityModel64f(const int ncell, 
                                         const double vel[],
@@ -139,7 +140,8 @@ void fteik_solver2d_initialize64f(const int nz, const int nx,
                                   const double z0, const double x0,
                                   const double dz, const double dx,
                                   const int nsweep, const double eps,
-                                  const int verbose, int *ierr);
+                                  const double convtol, const int verbose,
+                                  int *ierr);
 void fteik_solver2d_setVelocityModel64f(const int ncell,
                                         const double vel[],
                                         int *ierr);

@@ -30,6 +30,8 @@ MODULE FTEIK_SOLVER64F
                    lupdInit3(:), lupdInit4(:), &
                    lupdInit5(:), lupdInit6(:), &
                    lupdInit7(:), lupdInit8(:)
+  !> Gauss-Seidel method converges when update is less than tol
+  REAL(C_DOUBLE), PROTECTED, SAVE :: convTol = zero 
   !> Defines the transition from the spherical to the Cartesian solver solver
   !> during the initialization phase.  This has units of grid points.
   REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
@@ -59,6 +61,7 @@ MODULE FTEIK_SOLVER64F
   PUBLIC :: fteik_solver3d_getNumberOfReceivers
   PUBLIC :: fteik_solver3d_setNumberOfSweeps
   PUBLIC :: fteik_solver3d_setSphereToCartEpsilon
+  PUBLIC :: fteik_solver3d_setConvergenceTolerance
   PRIVATE :: fteik_solver3d_getSweepLimits
   PRIVATE :: fteik_solver3d_computeGraph
   PRIVATE :: fteik_solver3d_setInitialUpdateNodes
@@ -91,30 +94,34 @@ MODULE FTEIK_SOLVER64F
 !>    @param[in] epsIn      This is the radius, in number of grid points, around source
 !>                          where the spherical approximation finite difference stencils
 !>                          will be used.  This cannot be negative. 
+!>    @param[in] convTol    The Gauss-Seidel sweeping will stop if the updates
+!>                          to the travel time field are less than convTol (seconds).
 !>    @param[in] verboseIn  Controsl the verbosity.  < 1 is quiet. 
 !>
 !>    @param[out] ierr      0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver3d_initialize64f(nzIn, nxIn, nyIn,    &
-                                              z0In, x0In, y0In,    &
-                                              dzIn, dxIn, dyIn,    &
-                                              nsweepIn, epsIn,     &
-                                              verboseIn, ierr)     &
+      SUBROUTINE fteik_solver3d_initialize64f(nzIn, nxIn, nyIn,     &
+                                              z0In, x0In, y0In,     &
+                                              dzIn, dxIn, dyIn,     &
+                                              nsweepIn, epsIn,      &
+                                              convTolIn, verboseIn, &
+                                              ierr)                 &
                  BIND(C, NAME='fteik_solver3d_initialize64f')
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry, ngrd
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
-      REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn, convTolIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nyIn, nzIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       WRITE(*,*) 'fteik_solver3d_initialize64f: Initializing...'
       CALL fteik_solver3d_free()
       CALL fteik_solver3d_setVerobosity(verboseIn)
+      CALL fteik_solver3d_setConvergenceTolerance(convTolIn)
       CALL fteik_model_initializeGeometry(lis3d,            &
                                           nzIn, nxIn, nyIn, &
                                           z0In, x0In, y0In, &
@@ -157,6 +164,23 @@ MODULE FTEIK_SOLVER64F
       verbose = verboseIn
       RETURN
       END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the convergence tolerance for the Gauss-Seidel sweeping.
+!>
+!>    @param[in] convTolIn   The Gauss-Seidel sweeping will terminate when the updated
+!>                           travel time perturbation is less than convTolIn (seconds).
+!>                           Note that if convTolin <= 0 then it will be disabled.
+!>
+!>
+      SUBROUTINE fteik_solver3d_setConvergenceTolerance(convTolIn) &
+      BIND(C, NAME='fteik_solver3d_setConvergenceTolerance')
+      USE ISO_C_BINDING
+      REAL(C_DOUBLE), VALUE, INTENT(IN) :: convTolIn
+      convTol = convTolIn
+      RETURN
+      END 
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -549,6 +573,7 @@ MODULE FTEIK_SOLVER64F
       IMPLICIT NONE
       lhaveTimes = .FALSE.
       epsS2C = zero
+      convTol = zero
       nsweep = 0
       verbose = 0
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)

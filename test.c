@@ -164,7 +164,7 @@ omp_set_num_threads(1);
                                  z0, x0, y0,
                                  dz, dx, dy,
                                  nsweep, eps,
-                                 verbose, &ierr);
+                                 1.e-14, verbose, &ierr);
     // Set the sources
     printf("Setting sources...\n");
     fteik_solver3d_setSources64f(1, &zs, &xs, &ys, &ierr);

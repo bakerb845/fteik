@@ -34,6 +34,7 @@ int converge2D(const int job)
     double xsrc[1], ysrc[1], zsrc[1]; 
     double l1, l2, l8;
     double *ttimes, *ttref, *vel, vint;
+    const double convTol = 0.0;
     const int verbose = 0;
     const int nsweep = 2;
     const double eps = 3.0;
@@ -77,7 +78,7 @@ int converge2D(const int job)
         }
         // Run the eikonal solver
         fteik_solver2d_initialize64f(nz, nx, z0, x0, dz0, dx0, 
-                                     nsweep, eps, verbose, &ierr); 
+                                     nsweep, eps, convTol, verbose, &ierr); 
         if (ierr != 0){return EXIT_FAILURE;}
         fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, &ierr);
         if (ierr != 0){return EXIT_FAILURE;}

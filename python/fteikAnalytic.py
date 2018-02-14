@@ -270,7 +270,10 @@ class fteikAnalytic:
         if (ierr.value != 0): 
             print("Error getting travel time field")
             return None
-        ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
+        if (self.ny > 1):
+            ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
+        else:
+            ttimes = reshape(ttimes, [self.nz, self.nx], order='F')
         return ttimes
 
     def getTravelTimesConstantVelocity(self):

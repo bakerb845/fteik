@@ -48,6 +48,8 @@ struct fteikParms_struct
     double eps;        /*!< Radius, in grid points, where the finite 
                             differencing switches from spherical to Cartesian
                             operators. */
+    double convTol;    /*!< Convergence tolerance for Gauss-Seidel method 
+                            (seconds). */
     int nsweep;        /*!< Number of Gauss-Seidel sweeping iterations. */
     int nmodels;       /*!< Number of velocity models. */
     int nrec;          /*!< Number of receivers. */
@@ -173,7 +175,8 @@ int nyGrid = ny; //150;
                                          z0, x0, y0,
                                          dz, dx, dy,
                                          parms.nsweep, parms.eps,
-                                         parms.verbose, &ierr);
+                                         parms.convTol, parms.verbose,
+                                         &ierr);
             if (ierr != 0)
             {
                 fprintf(stderr, "%s: Error initializing solver\n", __func__);

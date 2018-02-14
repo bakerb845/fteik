@@ -47,8 +47,10 @@ class fteik:
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
     nx = 101
+    ny = 1
     nz = 101
     dx = 10.0
+    dy = 1.0
     dz = 10.0
     nrec = 11
     vconst = 5.e3
@@ -56,8 +58,10 @@ if __name__ == "__main__":
     x = linspace(0.0, (nx-1)*dx, nx)
     z = linspace(0.0, (nz-1)*dz, nz)
     xsrc = (nx - 1)*dx/4.0
+    ysrc = 0.0
     zsrc = (nz - 1)*dz/4.0
     xrec = linspace((nx-1)*dx*0.2, (nx-1)*dx*0.8, nrec)
+    yrec = zeros(nrec)
     zrec = zeros(nrec)
     vel = zeros([nz,nx]) + vconst
     fteik2d = fteik2d(fteikLibrary)
@@ -66,12 +70,39 @@ if __name__ == "__main__":
     fteik2d.setSources(xsrc, zsrc)
     fteik2d.setReceivers(xrec, zrec)
     fteik2d.solveLSM() 
-    ttimes = fteik2d.getTravelTimeField()
-    ttr = fteik2d.getTravelTimes()
-    print(ttr)
+    ttimesConst = fteik2d.getTravelTimeField()
+    ttrConst = fteik2d.getTravelTimes()
+    #print(ttrConst)
     fteik2d.free()
+    # Get the analytic times 
+    analytic = fteikAnalytic(fteikLibrary)
+    analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
+    analytic.setSources(xsrc, ysrc, zsrc)
+    analytic.setReceivers(xrec, yrec, zrec)
+    analytic.setConstantVelocity(vconst)
+    #analytic.setLinearVelocityGradient(vmin, vmax)
+    analytic.solveConstantVelocity()
+    ttConstantAnalytic = analytic.getTravelTimeField() 
+    ttrConstantAnalytic = analytic.getTravelTimesConstantVelocity()
+    #analytic.solveLinearVelocityGradient()
+    #ttGradAnalytic = analytic.getTravelTimeField()
+    #ttrGradAnalytic = analytic.getTravelTimesGradientVelocity()
+    analytic.free()
+    tres = ttConstantAnalytic - ttimesConst
+    tresL1 = abs(tres).sum()/tres.size
+    tresL8 = abs(tres).max()
+    tresL2 = sqrt(pow(tres, 2).sum())/tres.size
+
+    print("Gradient L1/L2/Linf residual:", tresL1, tresL2, tresL8)
+    print("Constant travel times\n", ttrConst)
+    print("Reference constant travel times\n", ttrConstantAnalytic)
+    #print("Gradient travel times\n", ttrGrad)
+    #print("Reference gradient travel times\n", ttrGradAnalytic)
+    #stop
+
     # plot it
     """
+    ttimes = ttimesConst
     print(ttimes.shape)
     plt.contourf(x, z, ttimes, 25, cmap=plt.cm.viridis)
     plt.ylim((nz - 1)*dz, 0)
@@ -130,6 +161,7 @@ if __name__ == "__main__":
     analytic.solveLinearVelocityGradient()
     ttGradAnalytic = analytic.getTravelTimeField()
     ttrGradAnalytic = analytic.getTravelTimesGradientVelocity()
+    analytic.free()
     tres = ttConstantAnalytic - ttimesConst
     tresL1 = abs(tres).sum()/tres.size
     tresL8 = abs(tres).max()        

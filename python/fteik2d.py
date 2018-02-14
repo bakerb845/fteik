@@ -30,6 +30,7 @@ class fteik2d:
                                                      c_double,  #dx 
                                                      c_int,     #nsweeps
                                                      c_double,  #eps
+                                                     c_double,  #convTol
                                                      c_int,     #verbosity
                                                      POINTER(c_int) #ierr
                                                     )
@@ -103,7 +104,8 @@ class fteik2d:
 
     def initialize(self, nx, nz, dx, dz,
                    x0 = 0.0, z0 = 0.0,
-                   nsweep = 2, eps = 3.0, verbose=0):
+                   nsweep = 2, eps = 3.0,
+                   convTol = 1.e-6, verbose=0):
         """
         Initializes the 2D solver eikonal solver.
 
@@ -133,6 +135,9 @@ class fteik2d:
            equation assumes a plane wave solution to the acoustic wave equation.
            In the source region there will be high-curvature which is difficult
            to approximate in cartesian coordinates.
+        convTol : float
+           The Gauss-Seidel method will terminate if the updates are less than
+           convTol (seconds).
 
         verbose : int
            Controls verbosity where 0 is quiet and 1, 2, ... correspond to
@@ -143,7 +148,7 @@ class fteik2d:
                                                   z0, x0,
                                                   dz, dx,
                                                   nsweep, eps,
-                                                  verbose, byref(ierr))
+                                                  convTol, verbose, byref(ierr))
         if (ierr.value != 0):
             print("Error initializing solver")
             return -1
