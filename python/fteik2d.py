@@ -285,6 +285,7 @@ class fteik2d:
                                                   ierr)
         if (ierr.value != 0):
             print("Error setting sources")
+            return -1
         self.nsrc = nsrc
         return 0
 

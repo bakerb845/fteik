@@ -82,55 +82,74 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    nx = 51
-    ny = 51
-    nz = 51
+    nx = 50
+    ny = 50
+    nz = 50
     dx = 25.0
     dy = 25.0
     dz = 25.0
     xsrc = (nx - 1)*dx/4.0
     ysrc = (ny - 1)*dy/2.0
     zsrc = (nz - 1)*dz/4.0
+    xrec = zeros(nrec)
+    yrec = zeros(nrec)
+    zrec = linspace((nz-1)*dz*0.2, (nz-1)*dz*0.8, nrec)
     vmin = 4000.0
     vmax = 6000.0 
     vel = zeros([nz,ny,nx]) + vconst
     velGrad = zeros([nz,ny,nx]) + vconst
+    # linear velocity gradient model 
     for iz in range(nz):
         velGrad[iz,:,:] = vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz)
         #print(vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz))
     fteik3d = fteik3d(fteikLibrary)
     fteik3d.initialize(nx, ny, nz, dx, dy, dz, verbose=3) 
     fteik3d.setSources(xsrc, ysrc, zsrc)
+    fteik3d.setReceivers(xrec, yrec, zrec)
     # Solve the constant velocity problem
     fteik3d.setVelocityModel(vel)
     fteik3d.solveLSM()
     ttimesConst = fteik3d.getTravelTimeField() 
+    ttrConst = fteik3d.getTravelTimes()
     # Solve the linear gradient problem
     fteik3d.setVelocityModel(velGrad)
     fteik3d.solveLSM()
     ttimesGrad = fteik3d.getTravelTimeField()
+    ttrGrad = fteik3d.getTravelTimes()
     fteik3d.free()
 
     analytic = fteikAnalytic(fteikLibrary)
     analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
     analytic.setSources(xsrc, ysrc, zsrc)
+    analytic.setReceivers(xrec, yrec, zrec)
     analytic.setConstantVelocity(vconst)
     analytic.setLinearVelocityGradient(vmin, vmax)
     analytic.solveConstantVelocity()
     ttConstantAnalytic = analytic.getTravelTimeField() 
+    ttrConstantAnalytic = analytic.getTravelTimesConstantVelocity()
     analytic.solveLinearVelocityGradient()
-    ttGradAnalytic     = analytic.getTravelTimeField()
+    ttGradAnalytic = analytic.getTravelTimeField()
+    ttrGradAnalytic = analytic.getTravelTimesGradientVelocity()
     tres = ttConstantAnalytic - ttimesConst
-    tresL1 = abs(tres).max()        
+    tresL1 = abs(tres).sum()/tres.size
+    tresL8 = abs(tres).max()        
     tresL2 = sqrt(pow(tres, 2).sum())/tres.size 
-    print("Constant L1/L2 residual:", tresL1, tresL2) 
+    print("Constant L1/L2/Linf residual:", tresL1, tresL2, tresL8)
     tres = ttGradAnalytic - ttimesGrad
-    tresL1 = abs(tres).max()    
+    tresL1 = abs(tres).sum()/tres.size
+    tresL8 = abs(tres).max()
     tresL2 = sqrt(pow(tres, 2).sum())/tres.size
-    print("Gradient L1/L2 residual:", tresL1, tresL2) #, tres.max(), ttGradAnalytic.max(), ttimesGrad.max())
+
+    print("Gradient L1/L2/Linf residual:", tresL1, tresL2, tresL8)
+    print("Constant travel times\n", ttrConst)
+    print("Reference constant travel times\n", ttrConstantAnalytic)
+    print("Gradient travel times\n", ttrGrad)
+    print("Reference gradient travel times\n", ttrGradAnalytic)
+
+    #, tres.max(), ttGradAnalytic.max(), ttimesGrad.max())
 
 
-    #"""
+    """
     ttimes = ttConstantAnalytic
     print(ttimes.shape)
     xindx = int(xsrc/dx)
@@ -165,4 +184,4 @@ if __name__ == "__main__":
     plt.ylabel('Y-Offset (m)')
     plt.colorbar()
     plt.show()
-    #"""
+    """

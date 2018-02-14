@@ -8,6 +8,8 @@ MODULE FTEIK_ANALYTIC64F
                                  TRUE, FALSE
   USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
                               fteik_source_free
+  USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f, &
+                                fteik_receiver_free
   USE ISO_C_BINDING
   IMPLICIT NONE
   INTEGER(C_INT), PROTECTED, SAVE :: nx = 0    !< Number of grid points in x.
@@ -26,11 +28,11 @@ MODULE FTEIK_ANALYTIC64F
   !> [nz x ny x nx]. 
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
 
-  INTEGER(C_INT), PROTECTED, SAVE :: nrec !< Number of receivers.
+  !INTEGER(C_INT), PROTECTED, SAVE :: nrec !< Number of receivers.
   INTEGER(C_INT), PROTECTED, SAVE :: verbose !< Verbosity.
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: xrec(:) !< Receiver positions (m) in x.
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: yrec(:) !< Receiver positions (m) in y.
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zrec(:) !< Receiver positions (m) in z. 
+  !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: xrec(:) !< Receiver positions (m) in x.
+  !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: yrec(:) !< Receiver positions (m) in y.
+  !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zrec(:) !< Receiver positions (m) in z. 
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: trec(:) !< Travel time (s) at receiver.
   !-----------------------------------Private Variables----------------------------------!
   !> Workspace for vectorizing acosh calls
@@ -56,9 +58,9 @@ MODULE FTEIK_ANALYTIC64F
   PUBLIC :: fteik_analytic_setConstantVelocity64f
   PUBLIC :: fteik_analytic_setLinearVelocityGradient64f
   PUBLIC :: fteik_analytic_solveSourceLinearVelocityGradient64f
-  !PUBLIC :: fteik_analytic_solveConstantVelocity64f
   PUBLIC :: fteik_analytic_getTravelTimeField64f
   PUBLIC :: fteik_analytic_setSources64f
+  PRIVATE :: solveConstantVelocity64f
   PRIVATE :: solveLinearVelocityGradient64f
   PRIVATE :: fteik_analytic_setOrigin
   PRIVATE :: initializeGradientVars
@@ -69,6 +71,8 @@ MODULE FTEIK_ANALYTIC64F
   PRIVATE :: fteik_model_free
   PRIVATE :: fteik_source_initialize64f
   PRIVATE :: fteik_source_free
+  PRIVATE :: fteik_receiver_initialize64f
+  PRIVATE :: fteik_receiver_free
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the code                                     !
@@ -104,6 +108,7 @@ MODULE FTEIK_ANALYTIC64F
       INTEGER(C_INT), INTENT(OUT) :: ierr
       LOGICAL(C_BOOL) lis3d
       ierr = 0
+      CALL fteik_analytic_free()
       CALL fteik_analytic_setVerobosity(verboseIn)
       IF (nxIn < 1 .OR. nyIn < 1 .OR. nzIn < 1) THEN
          WRITE(*,*) 'fteik_analytic_initialize64f: Invalid number of grid points', &
@@ -117,7 +122,7 @@ MODULE FTEIK_ANALYTIC64F
          ierr = 1
          RETURN
       ENDIF
-      nrec = 0
+      !nrec = 0
       nx = nxIn
       ny = nyIn
       nz = nzIn
@@ -135,9 +140,9 @@ MODULE FTEIK_ANALYTIC64F
       CALL fteik_analytic_setOrigin(x0In, y0In, z0In, ierr)
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(work))   DEALLOCATE(work)
-      IF (ALLOCATED(xrec))   DEALLOCATE(xrec)
-      IF (ALLOCATED(yrec))   DEALLOCATE(yrec)
-      IF (ALLOCATED(zrec))   DEALLOCATE(zrec)
+      !IF (ALLOCATED(xrec))   DEALLOCATE(xrec)
+      !IF (ALLOCATED(yrec))   DEALLOCATE(yrec)
+      !IF (ALLOCATED(zrec))   DEALLOCATE(zrec)
       IF (ALLOCATED(wrec))   DEALLOCATE(wrec)
       IF (ALLOCATED(trec))   DEALLOCATE(trec)
       ALLOCATE(ttimes(ngrd))
@@ -203,15 +208,17 @@ MODULE FTEIK_ANALYTIC64F
       USE ISO_C_BINDING
       IMPLICIT NONE
       CALL fteik_model_free()
+      CALL fteik_source_free()
+      CALL fteik_receiver_free()
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(work))   DEALLOCATE(work)
       IF (ALLOCATED(work))   DEALLOCATE(work)
-      IF (ALLOCATED(xrec))   DEALLOCATE(xrec)
-      IF (ALLOCATED(yrec))   DEALLOCATE(yrec)
-      IF (ALLOCATED(zrec))   DEALLOCATE(zrec)
+      !IF (ALLOCATED(xrec))   DEALLOCATE(xrec)
+      !IF (ALLOCATED(yrec))   DEALLOCATE(yrec)
+      !IF (ALLOCATED(zrec))   DEALLOCATE(zrec)
       IF (ALLOCATED(wrec))   DEALLOCATE(wrec)
       IF (ALLOCATED(trec))   DEALLOCATE(trec)
-      nrec = 0
+      !nrec = 0
       nx = 0
       ny = 0
       nz = 0
@@ -244,52 +251,52 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[out] ierr    0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_setReceivers64f(nrecIn, zrecIn, xrecIn, yrecIn, ierr) &
-      BIND(C, NAME='fteik_analytic_setReceivers64f')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
-      REAL(C_DOUBLE), INTENT(IN) :: xrecIn(nrecIn), yrecIn(nrecIn), zrecIn(nrecIn)
-      INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) xmin, xmax, ymin, ymax, zmin, zmax
-      ierr = 0
-      IF (nrecIn < 1) THEN
-         WRITE(*,*) 'fteik_analytic_setReceivers64f: No receivers locations to set'
-         RETURN
-      ENDIF
-      IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_analytic_setReceivers64f: Model not initialized'
-         ierr = 1
-         RETURN
-      ENDIF
-      nrec = nrecIn
-      xmin = x0
-      xmax = x0 + REAL(nx - 1)*dx
-      ymin = y0
-      ymax = y0 + REAL(ny - 1)*dy
-      zmin = z0
-      zmax = z0 + REAL(nz - 1)*dz
-      IF (ALLOCATED(xrec)) DEALLOCATE(xrec)
-      IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
-      IF (ALLOCATED(zrec)) DEALLOCATE(zrec)
-      IF (ALLOCATED(wrec)) DEALLOCATE(wrec)
-      IF (ALLOCATED(trec)) DEALLOCATE(trec)
-      ALLOCATE(xrec(nrec))
-      ALLOCATE(yrec(nrec))
-      ALLOCATE(zrec(nrec))
-      ALLOCATE(wrec(nrec))
-      ALLOCATE(trec(nrec))
-      xrec(1:nrec) = xrecIn(1:nrec)
-      yrec(1:nrec) = yrecIn(1:nrec)
-      zrec(1:nrec) = zrecIn(1:nrec)
-      trec(1:nrec) = 0.d0
-      IF (MINVAL(xrec) < xmin .OR. MAXVAL(xrec) > xmax .OR. &
-          MINVAL(yrec) < ymin .OR. MAXVAL(yrec) > ymax .OR. &
-          MINVAL(zrec) < zmin .OR. MAXVAL(zrec) > zmax) THEN
-         WRITE(*,*) 'fteik_analytic_setReceivers64f: Some receivers outside of model'
-      ENDIF
-      RETURN
-      END
+!     SUBROUTINE fteik_analytic_setReceivers64f(nrecIn, zrecIn, xrecIn, yrecIn, ierr) &
+!     BIND(C, NAME='fteik_analytic_setReceivers64f')
+!     USE ISO_C_BINDING
+!     IMPLICIT NONE
+!     INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
+!     REAL(C_DOUBLE), INTENT(IN) :: xrecIn(nrecIn), yrecIn(nrecIn), zrecIn(nrecIn)
+!     INTEGER(C_INT), INTENT(OUT) :: ierr
+!     REAL(C_DOUBLE) xmin, xmax, ymin, ymax, zmin, zmax
+!     ierr = 0
+!     IF (nrecIn < 1) THEN
+!        WRITE(*,*) 'fteik_analytic_setReceivers64f: No receivers locations to set'
+!        RETURN
+!     ENDIF
+!     IF (.NOT.linit) THEN
+!        WRITE(*,*) 'fteik_analytic_setReceivers64f: Model not initialized'
+!        ierr = 1
+!        RETURN
+!     ENDIF
+!     nrec = nrecIn
+!     xmin = x0
+!     xmax = x0 + REAL(nx - 1)*dx
+!     ymin = y0
+!     ymax = y0 + REAL(ny - 1)*dy
+!     zmin = z0
+!     zmax = z0 + REAL(nz - 1)*dz
+!     IF (ALLOCATED(xrec)) DEALLOCATE(xrec)
+!     IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
+!     IF (ALLOCATED(zrec)) DEALLOCATE(zrec)
+!     IF (ALLOCATED(wrec)) DEALLOCATE(wrec)
+!     IF (ALLOCATED(trec)) DEALLOCATE(trec)
+!     ALLOCATE(xrec(nrec))
+!     ALLOCATE(yrec(nrec))
+!     ALLOCATE(zrec(nrec))
+!     ALLOCATE(wrec(nrec))
+!     ALLOCATE(trec(nrec))
+!     xrec(1:nrec) = xrecIn(1:nrec)
+!     yrec(1:nrec) = yrecIn(1:nrec)
+!     zrec(1:nrec) = zrecIn(1:nrec)
+!     trec(1:nrec) = 0.d0
+!     IF (MINVAL(xrec) < xmin .OR. MAXVAL(xrec) > xmax .OR. &
+!         MINVAL(yrec) < ymin .OR. MAXVAL(yrec) > ymax .OR. &
+!         MINVAL(zrec) < zmin .OR. MAXVAL(zrec) > zmax) THEN
+!        WRITE(*,*) 'fteik_analytic_setReceivers64f: Some receivers outside of model'
+!     ENDIF
+!     RETURN
+!     END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -315,6 +322,45 @@ MODULE FTEIK_ANALYTIC64F
          RETURN
       ENDIF
       vconst = vconstIn
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the receivers in the model.
+!>
+!>    @param[in] nrec    Number of receivers to set.  
+!>    @param[in] zrec    z locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>    @param[in] xrec    x locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>    @param[in] yrec    y locations (meters) of receivers.  This is a vector of
+!>                       of dimension [nrec].
+!>
+!>    @param[out] ierr   0 indicates success.
+!>
+!>    @copyright Ben Baker distributed under the MIT license.
+!>
+      SUBROUTINE fteik_analytic_setReceivers64f(nrec, zrec, xrec, yrec, &
+                                                ierr)                   &
+      BIND(C, NAME='fteik_analytic_setReceivers64f')
+      USE ISO_C_BINDING
+      IMPLICIT NONE 
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrec 
+      REAL(C_DOUBLE), INTENT(IN) :: zrec(nrec), xrec(nrec), yrec(nrec)
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      ! It's actually safe to have no receivers
+      ierr = 0
+      IF (nrec < 1) THEN 
+         WRITE(*,*) 'fteik_analytic_setReceivers64f: No receivers to set'
+         RETURN
+      ENDIF
+      IF (ALLOCATED(wrec)) DEALLOCATE(wrec)
+      IF (ALLOCATED(trec)) DEALLOCATE(trec)
+      ALLOCATE(wrec(nrec))
+      ALLOCATE(trec(nrec))
+      CALL fteik_receiver_initialize64f(nrec, zrec, xrec, yrec, verbose, ierr)
+      IF (ierr /= 0) WRITE(*,*) 'fteik_analytic_setReceivers64f: Failed to set receivers'
       RETURN
       END
 !                                                                                        !
@@ -398,16 +444,22 @@ MODULE FTEIK_ANALYTIC64F
 !>    @param[in] zsrc   z source location (meters).
 !>    @param[in] xsrc   x source location (meters).
 !>    @param[in] ysrc   y source location (meters).
+!>    @param[in] nrec   Number of receivers if job is 2.
+!>    @param[in] zrec   z receiver location (meters).
+!>    @param[in] xrec   x receiver location (meters).
+!>    @param[in] yrec   y receiver location (meters).
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-      SUBROUTINE solveLinearVelocityGradient64f(job,              &
-                                                zsrc, xsrc, ysrc, &
+      SUBROUTINE solveLinearVelocityGradient64f(job,                    &
+                                                zsrc, xsrc, ysrc,       &
+                                                nrec, zrec, xrec, yrec, &
                                                 ierr)
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: job
+      INTEGER(C_INT), VALUE, INTENT(IN) :: job, nrec
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: xsrc, ysrc, zsrc
+      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: xrec, yrec, zrec
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) x, y, z
       INTEGER(C_INT) i, igrd, j, k
@@ -454,7 +506,7 @@ MODULE FTEIK_ANALYTIC64F
 #endif
          ttimes(:) = ttimes(:)/MAX(1.d-10, absG)
       ELSE
-         !$OMP SIMD
+!        !$OMP SIMD
          DO i=1,nrec
             CALL acoshArg(xrec(i), yrec(i), zrec(i),          &
                           xsrc, ysrc, zsrc,                   &
@@ -464,9 +516,10 @@ MODULE FTEIK_ANALYTIC64F
 #ifdef MKL
          CALL vdAcosh(nrec, wrec, trec)
 #else
-         DO i=1,ngrd
+         DO i=1,nrec
             trec(i) = ACOSH(wrec(i))
          ENDDO
+         trec(:) = trec(:)/MAX(1.d-10, absG)
 #endif
       ENDIF
       RETURN
@@ -487,6 +540,8 @@ MODULE FTEIK_ANALYTIC64F
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT), PARAMETER :: nrecDum = 1
+      REAL(C_DOUBLE) zdum(1), xdum(1), ydum(1)
       ierr = 0
       IF (isrc < 1 .OR. isrc > nsrc) THEN
          WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Invalid source', &
@@ -494,8 +549,9 @@ MODULE FTEIK_ANALYTIC64F
          ierr = 1
          RETURN
       ENDIF
-      CALL solveConstantVelocity64f(1,                                    &
-                                    ztrue(isrc), xtrue(isrc), ytrue(isrc),&
+      CALL solveConstantVelocity64f(1,                                     &
+                                    ztrue(isrc), xtrue(isrc), ytrue(isrc), &
+                                    nrecDum, zdum, xdum, ydum,             &
                                     ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Error solving'
@@ -518,6 +574,8 @@ MODULE FTEIK_ANALYTIC64F
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT), PARAMETER :: nrecDum = 1
+      REAL(C_DOUBLE) xdum(1), ydum(1), zdum(1)
       ierr = 0
       IF (isrc < 1 .OR. isrc > nsrc) THEN
          WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: Invalid source', &
@@ -527,6 +585,7 @@ MODULE FTEIK_ANALYTIC64F
       ENDIF
       CALL solveLinearVelocityGradient64f(1,                                     &
                                           ztrue(isrc), xtrue(isrc), ytrue(isrc), &
+                                          nrecDum, zdum, xdum, ydum,             &
                                           ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: Internal error'
@@ -545,16 +604,22 @@ MODULE FTEIK_ANALYTIC64F
 !>    @param[in] zsrc   z source offset from origin (meters).
 !>    @param[in] xsrc   x source offset from origin (meters).
 !>    @param[in] ysrc   y source offset from origin (meters).
+!>    @param[in] nrec   Number of receivers if job is 2.
+!>    @param[in] zrec   z receiver location (meters).
+!>    @param[in] xrec   x receiver location (meters).
+!>    @param[in] yrec   y receiver location (meters).
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-      SUBROUTINE solveConstantVelocity64f(job,              &
-                                          zsrc, xsrc, ysrc, &
-                                          ierr)             &
+      SUBROUTINE solveConstantVelocity64f(job,                    &
+                                          zsrc, xsrc, ysrc,       &
+                                          nrec, zrec, xrec, yrec, &
+                                          ierr)                   &
       BIND(C, NAME='solveConstantVelocity64f')
       USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: job
+      INTEGER(C_INT), VALUE, INTENT(IN) :: job, nrec
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: xsrc, ysrc, zsrc
+      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: zrec, xrec, yrec
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE) x, y, z
       INTEGER(C_INT) i, igrd, j, k
@@ -677,23 +742,76 @@ MODULE FTEIK_ANALYTIC64F
 !>                         the travel times at the receivers.
 !>    @aram[out] ierr      0 indicates success.
 !>
-      SUBROUTINE ttimes1d_getTravelTimesAtReceivers(nrecIn, trecOut, ierr) &
-      BIND(C, NAME='ttimes1d_getTravelTimesAtReceivers')
+      SUBROUTINE fteik_analytic_getTravelTimesConstantVel64f(nrecIn, trecOut, ierr) &
+      BIND(C, NAME='fteik_analytic_getTravelTimesConstantVel64f')
+      !USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
+      USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
+      USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
       REAL(C_DOUBLE), INTENT(OUT) :: trecOut(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) isrc
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'ttimes1d_getTravelTimesAtReceivers: ttimes not initialized'
+         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: ttimes not initialized'
          ierr = 1
          RETURN
       ENDIF
       IF (nrecIn < nrec) THEN
-         WRITE(*,*) 'ttimes1d_getTravelTimesAtReceivers: Insufficient space to store trec'
+         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: Insufficient space to store trec'
          ierr = 1
          RETURN
+      ENDIF
+isrc = 1 ! TODO fix me
+      CALL solveConstantVelocity64f(2,                                  &
+                                    zsrc(isrc), xsrc(isrc), ysrc(isrc), &
+                                    nrec, zrec, xrec, yrec,             &
+                                    ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: Internal error'
+         ierr = 1 
+      ENDIF
+      trecOut(1:nrec) = trec(1:nrec)
+      IF (nrecIn > nrec) trecOut(nrec+1:nrecIn) = 0.d0
+      RETURN
+      END
+
+      SUBROUTINE fteik_analytic_getTravelTimesGradientVel64f(nrecIn, trecOut, ierr) &
+      BIND(C, NAME='fteik_analytic_getTravelTimesGradientVel64f')
+      !USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
+      USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
+      USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
+      REAL(C_DOUBLE), INTENT(OUT) :: trecOut(nrecIn)
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) isrc
+      ierr = 0 
+      IF (.NOT.linit) THEN
+         WRITE(*,*) 'ttimes1d_getTravelTimesGradientVel64f: ttimes not initialized'
+         ierr = 1 
+         RETURN
+      ENDIF
+      IF (nrecIn < nrec) THEN
+         WRITE(*,*) 'ttimes1d_getTravelTimesGradient64f: Insufficient space to store trec'
+         ierr = 1 
+         RETURN
+      ENDIF
+isrc = 1 ! TODO fix me
+      CALL solveLinearVelocityGradient64f(2,                                  &
+                                          zsrc(isrc), xsrc(isrc), ysrc(isrc), &
+                                          nrec, zrec, xrec, yrec,             &
+                                          ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'ttimes1d_getTravelTimesGradientVel64f: Internal error'
+         ierr = 1 
       ENDIF
       trecOut(1:nrec) = trec(1:nrec)
       IF (nrecIn > nrec) trecOut(nrec+1:nrecIn) = 0.d0

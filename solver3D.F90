@@ -4,6 +4,8 @@ MODULE FTEIK_SOLVER64F
                                  FTEIK_ZXY_ORDERING,     &
                                  FTEIK_XYZ_ORDERING,     &
                                  FTEIK_ZYX_ORDERING
+  USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f, &
+                                fteik_receiver_free
   USE FTEIK_GRAPH3D, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, &
                             ijkv5, ijkv6, ijkv7, ijkv8, &
                             levelPtr, nLevels, maxLevelSize
@@ -62,8 +64,10 @@ MODULE FTEIK_SOLVER64F
   PRIVATE :: fteik_solver3d_setInitialUpdateNodes
   PRIVATE :: fteik_solver3d_setUpdateNodes
 
+  PRIVATE :: fteik_receiver_free
   PRIVATE :: fteik_source_initialize64f
   PRIVATE :: fteik_source_free
+  PRIVATE :: fteik_receiver_initialize64f
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the Code                                     !
@@ -539,7 +543,6 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver3d_free()             &
       BIND(C, NAME='fteik_solver3d_free')
       USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_free
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_free
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
@@ -869,7 +872,6 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver3d_setReceivers64f(nrec, zrec, xrec, yrec, &
                                                 ierr)                   &
       BIND(C, NAME='fteik_solver3d_setReceivers64f')
-      USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec

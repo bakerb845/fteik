@@ -58,6 +58,14 @@ class fteikAnalytic:
                                                              POINTER(c_double), #ttimes
                                                              POINTER(c_int)     #ierr
                                                             )
+        lib.fteik_analytic_getTravelTimesConstantVel64f.argtypes = (c_int,             #nrec
+                                                                    POINTER(c_double), #ttr
+                                                                    POINTER(c_int)     #ierr
+                                                                   )
+        lib.fteik_analytic_getTravelTimesGradientVel64f.argtypes = (c_int,             #nrec
+                                                                    POINTER(c_double), #ttr
+                                                                    POINTER(c_int)     #ierr
+                                                                   )
         lib.fteik_analytic_setSources64f.argtypes = (c_int,             #nsrc
                                                      POINTER(c_double), #zsrc
                                                      POINTER(c_double), #xsrc
@@ -66,6 +74,7 @@ class fteikAnalytic:
                                                     )
         lib.fteik_analytic_free.argtypes = None
 
+        self.nrec = 0
         self.nx = 0
         self.ny = 0
         self.nz = 0
@@ -76,6 +85,14 @@ class fteikAnalytic:
         return self
 
     def __exit__(self):
+        self.analytic.fteik_analytic_free()
+        return
+
+    def free(self):
+        self.nrec = 0
+        self.nx = 0
+        self.ny = 0
+        self.nz = 0
         self.analytic.fteik_analytic_free()
         return
 
@@ -256,3 +273,83 @@ class fteikAnalytic:
         ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
         return ttimes
 
+    def getTravelTimesConstantVelocity(self):
+        """
+        Gets the travel times at the receivers in constant velocity model.
+
+        Results
+        ttr : array_like
+           On successful exit this is the travel times (seconds) from the source
+           to the receiver.
+        """ 
+        nrec = self.nrec
+        if (nrec < 1): 
+            print("No receiver locations set")
+            return None
+        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_getTravelTimesConstantVel64f(nrec, ttrPointer, ierr)
+        if (ierr.value != 0): 
+            print("Error getting travel times")
+            return None
+        return ttr
+
+    def getTravelTimesGradientVelocity(self):
+        """
+        Gets the travel times at the receivers in linear gradient velocity model.
+
+        Results
+        ttr : array_like
+           On successful exit this is the travel times (seconds) from the source
+           to the receiver.
+        """ 
+        nrec = self.nrec
+        if (nrec < 1): 
+            print("No receiver locations set")
+            return None
+        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_getTravelTimesGradientVel64f(nrec, ttrPointer, ierr)
+        if (ierr.value != 0): 
+            print("Error getting travel times")
+            return None
+        return ttr
+
+    def setReceivers(self, xrec, yrec, zrec):
+        """
+        Sets the receiver positions.
+
+        Input
+        xrec : array_like
+          x receiver locations (meters).
+        yrec : array_like
+          y receiver locations (meters).
+        zrec : array_like
+          z receiver locations (meters).
+
+        Returns
+        ierr : int 
+           0 indicates success.
+        """
+        xrec = ascontiguousarray(xrec, float64)
+        yrec = ascontiguousarray(yrec, float64)
+        zrec = ascontiguousarray(zrec, float64)
+        nrec = min(len(xrec), len(yrec), len(zrec))
+        if (len(xrec) != len(zrec)):
+            print("Inconsistent array lengths")
+        xrecPointer = xrec.ctypes.data_as(POINTER(c_double))
+        yrecPointer = yrec.ctypes.data_as(POINTER(c_double))
+        zrecPointer = zrec.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_setReceivers64f(nrec,
+                                                     zrecPointer,
+                                                     xrecPointer,
+                                                     yrecPointer,
+                                                     ierr)
+        if (ierr.value != 0): 
+            print("Error setting receivers")
+            return -1
+        self.nrec = nrec
+        return 0

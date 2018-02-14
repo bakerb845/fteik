@@ -13,6 +13,12 @@ MODULE FTEIK_RECEIVER64F
    REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: xdr(:)
    !> y distance from DBLE(yri) . This is for the linear interpolation.
    REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: ydr(:)
+   !> True receiver position in z (meters).  This is a vector of dimension [nrec].
+   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zrec(:)
+   !> True receiver position in z (meters).  This is a vector of dimension [nrec].
+   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: xrec(:)
+   !> True receiver position in z (meters).  This is a vector of dimension [nrec].
+   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: yrec(:)
    !> Flag indicating whether or not the module has been initialized.
    LOGICAL(C_BOOL), PRIVATE, SAVE :: linit = .FALSE. 
    !> Number of receivers.
@@ -85,6 +91,12 @@ MODULE FTEIK_RECEIVER64F
       ALLOCATE(zdr(nrec))
       ALLOCATE(xdr(nrec))
       ALLOCATE(ydr(nrec))
+      ALLOCATE(zrec(nrec))
+      ALLOCATE(xrec(nrec))
+      ALLOCATE(yrec(nrec))
+      zrec(1:nrec) = z(1:nrec)
+      xrec(1:nrec) = x(1:nrec)
+      yrec(1:nrec) = y(1:nrec)
       ! Collocate the receivers
       DO 1 irec=1,nrecIn
          IF (z(irec) < z0 .OR. z(irec) > z0 + dz*DBLE(nz - 1)) THEN
@@ -307,12 +319,15 @@ MODULE FTEIK_RECEIVER64F
       IMPLICIT NONE
       nrec = 0 
       verbose = 0
-      IF (ALLOCATED(zri)) DEALLOCATE(zri)
-      IF (ALLOCATED(xri)) DEALLOCATE(xri)
-      IF (ALLOCATED(yri)) DEALLOCATE(yri)
-      IF (ALLOCATED(zdr)) DEALLOCATE(zdr)
-      IF (ALLOCATED(xdr)) DEALLOCATE(xdr)
-      IF (ALLOCATED(ydr)) DEALLOCATE(ydr)
+      IF (ALLOCATED(zri))  DEALLOCATE(zri)
+      IF (ALLOCATED(xri))  DEALLOCATE(xri)
+      IF (ALLOCATED(yri))  DEALLOCATE(yri)
+      IF (ALLOCATED(zdr))  DEALLOCATE(zdr)
+      IF (ALLOCATED(xdr))  DEALLOCATE(xdr)
+      IF (ALLOCATED(ydr))  DEALLOCATE(ydr)
+      IF (ALLOCATED(zrec)) DEALLOCATE(zrec)
+      IF (ALLOCATED(xrec)) DEALLOCATE(xrec)
+      IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
       linit = .FALSE.
       RETURN
       END
@@ -340,13 +355,19 @@ MODULE FTEIK_RECEIVER64F
          ALLOCATE(zdr(nrec))
          ALLOCATE(xdr(nrec))
          ALLOCATE(ydr(nrec))
+         ALLOCATE(zrec(nrec))
+         ALLOCATE(xrec(nrec))
+         ALLOCATE(yrec(nrec))
       ENDIF
-      CALL MPI_Bcast(zri, nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(xri, nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(yri, nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(zdr, nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(xdr, nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(ydr, nrec, MPI_DOUBLE, root, comm, mpierr) 
+      CALL MPI_Bcast(zri,  nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(xri,  nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(yri,  nrec, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(zdr,  nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(xdr,  nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(ydr,  nrec, MPI_DOUBLE, root, comm, mpierr) 
+      CALL MPI_Bcast(zrec, nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(xrec, nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(yrec, nrec, MPI_DOUBLE, root, comm, mpierr)
       END SUBROUTINE
 #endif
 !----------------------------------------------------------------------------------------!
