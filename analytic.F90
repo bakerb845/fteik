@@ -1,12 +1,14 @@
 MODULE FTEIK_ANALYTIC64F
-  USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry
-  USE FTEIK_MODEL64F, ONLY : fteik_model_free
-  USE ISO_C_BINDING
+  USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry, &
+                             fteik_model_free
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
                                  FTEIK_ZXY_ORDERING,     &    
                                  FTEIK_XYZ_ORDERING,     &    
                                  FTEIK_ZYX_ORDERING,     &
                                  TRUE, FALSE
+  USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
+                              fteik_source_free
+  USE ISO_C_BINDING
   IMPLICIT NONE
   INTEGER(C_INT), PROTECTED, SAVE :: nx = 0    !< Number of grid points in x.
   INTEGER(C_INT), PROTECTED, SAVE :: ny = 0    !< Number of grid points in y.
@@ -51,11 +53,13 @@ MODULE FTEIK_ANALYTIC64F
   PUBLIC :: fteik_analytic_free
   PUBLIC :: fteik_analytic_setVerobosity
   PUBLIC :: fteik_analytic_setReceivers64f
-  PUBLIC :: fteik_analytic_setVelocityConstant64f
-  PUBLIC :: fteik_analytic_setVelocityGradient64f
-  PUBLIC :: fteik_analytic_computeInGradientVelocityField
-  PUBLIC :: fteik_analytic_computeInConstantVelocityField
+  PUBLIC :: fteik_analytic_setConstantVelocity64f
+  PUBLIC :: fteik_analytic_setLinearVelocityGradient64f
+  PUBLIC :: fteik_analytic_solveSourceLinearVelocityGradient64f
+  !PUBLIC :: fteik_analytic_solveConstantVelocity64f
   PUBLIC :: fteik_analytic_getTravelTimeField64f
+  PUBLIC :: fteik_analytic_setSources64f
+  PRIVATE :: solveLinearVelocityGradient64f
   PRIVATE :: fteik_analytic_setOrigin
   PRIVATE :: initializeGradientVars
   PRIVATE :: ttimeInConstantVelocity
@@ -63,6 +67,8 @@ MODULE FTEIK_ANALYTIC64F
 
   PRIVATE :: fteik_model_initializeGeometry
   PRIVATE :: fteik_model_free
+  PRIVATE :: fteik_source_initialize64f
+  PRIVATE :: fteik_source_free
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the code                                     !
@@ -140,6 +146,37 @@ MODULE FTEIK_ANALYTIC64F
       linit = .TRUE.
       RETURN
       END SUBROUTINE
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the source(s) on the solver.
+!> 
+!>    @param[in] nsrc     Number of sources.
+!>    @param[in] zsrc     z locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>    @param[in] xsrc     x locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>    @param[in] ysrc     y locations (meters) of source.  This is a vector of dimension
+!>                        [nsrc].
+!>
+!>    @param[out] ierr    0 indicates success.
+!>
+!>    @author Ben Baker
+!>
+!>    @copyright MIT
+!>
+      SUBROUTINE fteik_analytic_setSources64f(nsrc, zsrc, xsrc, ysrc, &
+                                              ierr)                   &
+      BIND(C, NAME='fteik_analytic_setSources64f')
+      USE ISO_C_BINDING
+      IMPLICIT NONE 
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc 
+      REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
+      IF (ierr /= 0) WRITE(*,*) 'fteik_analytic_setSources64f: Failed to set source'
+      RETURN
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -264,15 +301,15 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_analytic_setVelocityConstant64f(vconstIn, ierr) &
-      BIND(C, NAME='fteik_analytic_setVelocityConstant64f')
+      SUBROUTINE fteik_analytic_setConstantVelocity64f(vconstIn, ierr) &
+      BIND(C, NAME='fteik_analytic_setConstantVelocity64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: vconstIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (vconstIn <= 0.d0) THEN
-         WRITE(*,*) 'fteik_analytic_setVelocityConstant64f: Velocity must be postiive', &
+         WRITE(*,*) 'fteik_analytic_setConstantVelocity64f: Velocity must be postiive', &
                     vconstIn
          ierr = 1
          RETURN
@@ -320,8 +357,8 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_analytic_setVelocityGradient64f(v0, v1, ierr) &
-      BIND(C, NAME='fteik_analytic_setVelocityGradient64f')
+      SUBROUTINE fteik_analytic_setLinearVelocityGradient64f(v0, v1, ierr) &
+      BIND(C, NAME='fteik_analytic_setLinearVelocityGradient64f')
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: v0, v1
@@ -330,12 +367,17 @@ MODULE FTEIK_ANALYTIC64F
       vtop = vconst
       vbottom = vconst
       IF (v0 <= 0.d0) THEN
-         WRITE(*,*) 'fteik_analytic_setVelocityGradient64f: Error v0 must be positive'
+         WRITE(*,*) 'fteik_analytic_setLinearVelocityGradient64f: v0 must be positive'
          ierr = 1
          RETURN
       ENDIF
+      IF (v1 <= 0.d0) THEN
+         WRITE(*,*) 'fteik_analytic_setLinearVelocityGradient64f: v1 must be positive'
+         ierr = 1 
+         RETURN
+      ENDIF
       IF (nz < 2) THEN
-         WRITE(*,*) 'fteik_analytic_setVelocityGradient64f: 2 points required in z'
+         WRITE(*,*) 'fteik_analytic_setLinearVelocityGradient64f: 2 points required in z'
          ierr = 1
          RETURN
       ENDIF
@@ -353,16 +395,15 @@ MODULE FTEIK_ANALYTIC64F
 !>
 !>    @param[in] job    If job is 1 then compute the travel time field. \n
 !>                      Otherwise compute the travel times to the receivers.
+!>    @param[in] zsrc   z source location (meters).
 !>    @param[in] xsrc   x source location (meters).
 !>    @param[in] ysrc   y source location (meters).
-!>    @param[in] zsrc   z source location (meters).
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_computeInGradientVelocityField(job,              &
-                                                               xsrc, ysrc, zsrc, &
-                                                               ierr)             &
-      BIND(C, NAME='fteik_analytic_computeInGradientVelocityField')
+      SUBROUTINE solveLinearVelocityGradient64f(job,              &
+                                                zsrc, xsrc, ysrc, &
+                                                ierr)
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: job
@@ -372,12 +413,12 @@ MODULE FTEIK_ANALYTIC64F
       INTEGER(C_INT) i, igrd, j, k
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_analytic_computeInGradientVelocityField: not initialized'
+         WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: not initialized'
          ierr = 1 
          RETURN
       ENDIF 
       IF (nz < 2) THEN
-         WRITE(*,*) 'fteik_analytic_computeInGradientVelocityField: nz < 2'
+         WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: nz < 2'
          ierr = 1
          RETURN
       ENDIF
@@ -433,21 +474,84 @@ MODULE FTEIK_ANALYTIC64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
+!>    @brief Solves the eikonal equation analytically in a constant velocity medium.
+!>
+!>    @param[in] isrc   Source number.  This must be in the range [1,nsrc].
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+      SUBROUTINE fteik_analytic_solveSourceConstantVelocity64f(isrc, ierr) &
+      BIND(C, NAME='fteik_analytic_solveSourceConstantVelocity64f')
+      USE FTEIK_SOURCE64F, ONLY : nsrc, ztrue, xtrue, ytrue
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (isrc < 1 .OR. isrc > nsrc) THEN
+         WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Invalid source', &
+                    isrc, 1, nsrc
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL solveConstantVelocity64f(1,                                    &
+                                    ztrue(isrc), xtrue(isrc), ytrue(isrc),&
+                                    ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Error solving'
+      ENDIF
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Solves the eikonal equation analytically in a linear velocity gradient.
+!>
+!>    @param[in] isrc   Source number.  This must be in range [1,nsrc].
+!>
+!>    @param[out] ierr  0 indicates success.
+!>
+      SUBROUTINE fteik_analytic_solveSourceLinearVelocityGradient64f(isrc, ierr) &
+      BIND(C, NAME='fteik_analytic_solveSourceLinearVelocityGradient64f')
+      USE FTEIK_SOURCE64F, ONLY : nsrc, ztrue, xtrue, ytrue
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (isrc < 1 .OR. isrc > nsrc) THEN
+         WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: Invalid source', &
+                    isrc, 1, nsrc
+         ierr = 1 
+         RETURN
+      ENDIF
+      CALL solveLinearVelocityGradient64f(1,                                     &
+                                          ztrue(isrc), xtrue(isrc), ytrue(isrc), &
+                                          ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_analytic_solveLinearVelocityGradient64f: Internal error'
+         ierr = 1
+      ENDIF 
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
 !>    @brief Computes the travel times in the contant velocity field.  This simply
 !>           computes travel time = distance/velocity.
 !>
 !>    @param[in] job    If job is 1 then compute the travel time field. \n
 !>                      Otherwise compute the travel times to the receivers.
+!>    @param[in] zsrc   z source offset from origin (meters).
 !>    @param[in] xsrc   x source offset from origin (meters).
 !>    @param[in] ysrc   y source offset from origin (meters).
-!>    @param[in] zsrc   z source offset from origin (meters).
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_computeInConstantVelocityField(job,              &
-                                                               xsrc, ysrc, zsrc, &
-                                                               ierr)             &
-      BIND(C, NAME='fteik_analytic_computeInConstantVelocityField')
+      SUBROUTINE solveConstantVelocity64f(job,              &
+                                          zsrc, xsrc, ysrc, &
+                                          ierr)             &
+      BIND(C, NAME='solveConstantVelocity64f')
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: job
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: xsrc, ysrc, zsrc
@@ -456,7 +560,7 @@ MODULE FTEIK_ANALYTIC64F
       INTEGER(C_INT) i, igrd, j, k
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_analytic_computeInConstantVelocityField: Not initialized'
+         WRITE(*,*) 'fteik_analytic_solveConstantVelocity64f: Not initialized'
          ierr = 1
          RETURN
       ENDIF

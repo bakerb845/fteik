@@ -67,13 +67,13 @@ MODULE FTEIK_RECEIVER64F
       CALL fteik_receiver_setVerobosity(verboseIn)
       ! Check that the model has been initialized
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_receiver_initialize64fF: Grid not yet set'
+         WRITE(*,*) 'fteik_receiver_initialize64f: Grid not yet set'
          ierr = 1
          RETURN
       ENDIF
       ! Verify the inputs
       IF (nrecIn < 1) THEN
-         WRITE(*,*) 'fteik_receiver_initialize64fF: No receivers'
+         WRITE(*,*) 'fteik_receiver_initialize64f: No receivers'
          ierr = 1
          RETURN
       ENDIF
@@ -88,17 +88,17 @@ MODULE FTEIK_RECEIVER64F
       ! Collocate the receivers
       DO 1 irec=1,nrecIn
          IF (z(irec) < z0 .OR. z(irec) > z0 + dz*DBLE(nz - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64fF: z position is out of bounds', &
+            WRITE(*,*) 'fteik_receiver_initialize64f: z position is out of bounds', &
                        z(irec), z0, z0 + dz*DBLE(nz - 1)
             ierr = ierr + 1
          ENDIF
          IF (x(irec) < x0 .OR. x(irec) > x0 + dx*DBLE(nx - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64fF: x position is out of bounds', &
+            WRITE(*,*) 'fteik_receiver_initialize64f: x position is out of bounds', &
                        x(irec), x0, x0 + dx*DBLE(nx - 1)
             ierr = ierr + 1
          ENDIF
          IF (y(irec) < y0 .OR. y(irec) > y0 + dy*DBLE(ny - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64fF: y position is out of bounds', &
+            WRITE(*,*) 'fteik_receiver_initialize64f: y position is out of bounds', &
                        y(irec), y0, y0 + dy*DBLE(ny - 1)
             ierr = ierr + 1
          ENDIF

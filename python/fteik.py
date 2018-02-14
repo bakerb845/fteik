@@ -13,6 +13,7 @@ from numpy import zeros
 from numpy import array
 from numpy import reshape
 from numpy import float64
+from numpy import sqrt
 from numpy import ascontiguousarray 
 from numpy import linspace
 from fteikAnalytic import fteikAnalytic
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     dx = 10.0
     dz = 10.0
     nrec = 11
+    vconst = 5.e3
     fteikLibrary = '/home/bakerb25/C/fteik/lib/libfteik_shared.so'
     x = linspace(0.0, (nx-1)*dx, nx)
     z = linspace(0.0, (nz-1)*dz, nz)
@@ -57,7 +59,7 @@ if __name__ == "__main__":
     zsrc = (nz - 1)*dz/4.0
     xrec = linspace((nx-1)*dx*0.2, (nx-1)*dx*0.8, nrec)
     zrec = zeros(nrec)
-    vel = zeros([nz,nx]) + 5.e3 #zeros([nz-1,nx-1]) + 5.e3
+    vel = zeros([nz,nx]) + vconst
     fteik2d = fteik2d(fteikLibrary)
     fteik2d.initialize(nx, nz, dx, dz, verbose=3)
     fteik2d.setVelocityModel(vel) 
@@ -83,30 +85,53 @@ if __name__ == "__main__":
     nx = 51
     ny = 51
     nz = 51
-    dx = 10.0
-    dy = 10.0
-    dz = 10.0
+    dx = 25.0
+    dy = 25.0
+    dz = 25.0
     xsrc = (nx - 1)*dx/4.0
     ysrc = (ny - 1)*dy/2.0
     zsrc = (nz - 1)*dz/4.0
-    vmin = 5000.0
+    vmin = 4000.0
     vmax = 6000.0 
-    vel = zeros([nz,ny,nx]) + 5.e3 #zeros([nz-1,nx-1,ny-1]) + 5.e3
+    vel = zeros([nz,ny,nx]) + vconst
+    velGrad = zeros([nz,ny,nx]) + vconst
     for iz in range(nz):
-        vel[iz,:,:] = vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz)
+        velGrad[iz,:,:] = vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz)
         #print(vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz))
     fteik3d = fteik3d(fteikLibrary)
     fteik3d.initialize(nx, ny, nz, dx, dy, dz, verbose=3) 
-    fteik3d.setVelocityModel(vel)
     fteik3d.setSources(xsrc, ysrc, zsrc)
+    # Solve the constant velocity problem
+    fteik3d.setVelocityModel(vel)
     fteik3d.solveLSM()
-    ttimes = fteik3d.getTravelTimeField()
+    ttimesConst = fteik3d.getTravelTimeField() 
+    # Solve the linear gradient problem
+    fteik3d.setVelocityModel(velGrad)
+    fteik3d.solveLSM()
+    ttimesGrad = fteik3d.getTravelTimeField()
     fteik3d.free()
 
     analytic = fteikAnalytic(fteikLibrary)
     analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
-    #analytic.setVelocityModel(vel
-    """
+    analytic.setSources(xsrc, ysrc, zsrc)
+    analytic.setConstantVelocity(vconst)
+    analytic.setLinearVelocityGradient(vmin, vmax)
+    analytic.solveConstantVelocity()
+    ttConstantAnalytic = analytic.getTravelTimeField() 
+    analytic.solveLinearVelocityGradient()
+    ttGradAnalytic     = analytic.getTravelTimeField()
+    tres = ttConstantAnalytic - ttimesConst
+    tresL1 = abs(tres).max()        
+    tresL2 = sqrt(pow(tres, 2).sum())/tres.size 
+    print("Constant L1/L2 residual:", tresL1, tresL2) 
+    tres = ttGradAnalytic - ttimesGrad
+    tresL1 = abs(tres).max()    
+    tresL2 = sqrt(pow(tres, 2).sum())/tres.size
+    print("Gradient L1/L2 residual:", tresL1, tresL2) #, tres.max(), ttGradAnalytic.max(), ttimesGrad.max())
+
+
+    #"""
+    ttimes = ttConstantAnalytic
     print(ttimes.shape)
     xindx = int(xsrc/dx)
     yindx = int(ysrc/dy)
@@ -140,4 +165,4 @@ if __name__ == "__main__":
     plt.ylabel('Y-Offset (m)')
     plt.colorbar()
     plt.show()
-    """
+    #"""

@@ -1,6 +1,8 @@
 MODULE FTEIK_SOURCE64F
   USE ISO_C_BINDING
   IMPLICIT NONE 
+  !> True source locations.
+  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ztrue(:), xtrue(:), ytrue(:)
   !> Double precision versions of the source grid points
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zsav(:), xsav(:), ysav(:)
   !> Source locations
@@ -34,15 +36,18 @@ MODULE FTEIK_SOURCE64F
       lhaveSource = .FALSE.
       nsrc = 0 
       verbose = 0
-      IF (ALLOCATED(zsrc)) DEALLOCATE(zsrc)
-      IF (ALLOCATED(xsrc)) DEALLOCATE(xsrc)
-      IF (ALLOCATED(ysrc)) DEALLOCATE(ysrc)
-      IF (ALLOCATED(zsiv)) DEALLOCATE(zsiv)
-      IF (ALLOCATED(xsiv)) DEALLOCATE(xsiv)
-      IF (ALLOCATED(ysiv)) DEALLOCATE(ysiv)
-      IF (ALLOCATED(zsav)) DEALLOCATE(zsav)
-      IF (ALLOCATED(xsav)) DEALLOCATE(xsav)
-      IF (ALLOCATED(ysav)) DEALLOCATE(ysav)
+      IF (ALLOCATED(zsrc))  DEALLOCATE(zsrc)
+      IF (ALLOCATED(xsrc))  DEALLOCATE(xsrc)
+      IF (ALLOCATED(ysrc))  DEALLOCATE(ysrc)
+      IF (ALLOCATED(zsiv))  DEALLOCATE(zsiv)
+      IF (ALLOCATED(xsiv))  DEALLOCATE(xsiv)
+      IF (ALLOCATED(ysiv))  DEALLOCATE(ysiv)
+      IF (ALLOCATED(zsav))  DEALLOCATE(zsav)
+      IF (ALLOCATED(xsav))  DEALLOCATE(xsav)
+      IF (ALLOCATED(ysav))  DEALLOCATE(ysav)
+      IF (ALLOCATED(ztrue)) DEALLOCATE(ztrue)
+      IF (ALLOCATED(xtrue)) DEALLOCATE(xtrue)
+      IF (ALLOCATED(ytrue)) DEALLOCATE(ytrue)
       RETURN
       END 
 !                                                                                        !
@@ -104,12 +109,18 @@ MODULE FTEIK_SOURCE64F
       ALLOCATE(zsav(nsrc))
       ALLOCATE(xsav(nsrc))
       ALLOCATE(ysav(nsrc))
+      ALLOCATE(ztrue(nsrc))
+      ALLOCATE(xtrue(nsrc))
+      ALLOCATE(ytrue(nsrc))
       zsiv(:) = 0
       xsiv(:) = 0
       ysiv(:) = 0
       zsav(:) =-one
       xsav(:) =-one
       ysav(:) =-one
+      ztrue(1:nsrc) = zsrcIn(1:nsrc)
+      xtrue(1:nsrc) = xsrcIn(1:nsrc)
+      ytrue(1:nsrc) = ysrcIn(1:nsrc)
       ! Compute max of grid
       zmax = DBLE(nz - 1)*dz
       xmax = DBLE(nx - 1)*dx

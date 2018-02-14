@@ -40,11 +40,17 @@ class fteikAnalytic:
                                                        POINTER(c_double), #yrec
                                                        POINTER(c_int)     #ierr
                                                       )
-        lib.fteik_analytic_setVelocityGradient64f.argtypes = (c_double,      #v0
-                                                              c_double,      #v1
-                                                              POINTER(c_int) #ierr
-                                                             )
-        lib.fteik_analytic_setVelocityConstant64f.argtypes = (c_double,      #v0 
+        lib.fteik_analytic_solveSourceLinearVelocityGradient64f.argtypes = (c_int,    #job
+                                                                            POINTER(c_int) #ierr
+                                                                           )
+        lib.fteik_analytic_solveSourceConstantVelocity64f.argtypes = (c_int,    #job
+                                                                      POINTER(c_int) #ierr
+                                                                     )
+        lib.fteik_analytic_setLinearVelocityGradient64f.argtypes = (c_double,      #v0
+                                                                    c_double,      #v1
+                                                                    POINTER(c_int) #ierr
+                                                                    )
+        lib.fteik_analytic_setConstantVelocity64f.argtypes = (c_double,      #v0 
                                                               POINTER(c_int) #ierr
                                                              )
         lib.fteik_analytic_getTravelTimeField64f.argtypes = (c_int,             #ngrd
@@ -52,6 +58,12 @@ class fteikAnalytic:
                                                              POINTER(c_double), #ttimes
                                                              POINTER(c_int)     #ierr
                                                             )
+        lib.fteik_analytic_setSources64f.argtypes = (c_int,             #nsrc
+                                                     POINTER(c_double), #zsrc
+                                                     POINTER(c_double), #xsrc
+                                                     POINTER(c_double), #ysrc
+                                                     POINTER(c_int)     #ierr
+                                                    )
         lib.fteik_analytic_free.argtypes = None
 
         self.nx = 0
@@ -120,4 +132,127 @@ class fteikAnalytic:
         self.nz = nz
         return 0
 
+    def setSources(self, xsrc, ysrc, zsrc):
+        """
+        Sets the source locations on model.
+
+        Input
+        xsrc : array_like
+          x source locations (meters).
+        ysrc : array_like
+          y source locations (meters).
+        zsrc : array_like
+          z source locations (meters).
+
+        Returns
+        ierr : int
+          0 indicates success. 
+        """
+        xsrc = ascontiguousarray(xsrc, float64)
+        ysrc = ascontiguousarray(ysrc, float64)
+        zsrc = ascontiguousarray(zsrc, float64)
+        nsrc = min(len(xsrc), len(ysrc), len(zsrc))
+        if (len(xsrc) != len(zsrc)):
+            print("Inconsistent array lengths")
+        xsrcPointer = xsrc.ctypes.data_as(POINTER(c_double))
+        ysrcPointer = ysrc.ctypes.data_as(POINTER(c_double))
+        zsrcPointer = zsrc.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_setSources64f(nsrc,
+                                                   zsrcPointer,
+                                                   xsrcPointer,
+                                                   ysrcPointer,
+                                                   ierr)
+        if (ierr.value != 0):
+            print("Error setting sources")
+            return -1
+        self.nsrc = nsrc
+        return 0
+
+    def setConstantVelocity(self, vel=5000.0):
+        """
+        Sets the constant velocity model.
+
+        vel : float
+           Constant velocity (m/s).
+        """
+        if (vel <= 0.0):
+            print("Velocity must be constant")
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_setConstantVelocity64f(vel, ierr)
+        if (ierr.value != 0): 
+            print("Error setting velocity")
+            return -1
+        return 0
+
+    def setLinearVelocityGradient(self, v1=5000.0, v2=6000.0):
+        """ 
+        Solves the eikonal equaiton given a linear velocity gradient. 
+        """
+        if (v1 <= 0.0 or v2 <= 0.0):
+            print("Velocities must be positive")
+        ierr = c_int(1)
+        self.analytic.fteik_analytic_setLinearVelocityGradient64f(v1, v2, ierr)
+        if (ierr.value != 0): 
+            print("Error setting velocity gradient")
+            return -1
+        return 0
+
+    def solveConstantVelocity(self):
+        """
+        Solves the eikonal equation given a contant travel time. 
+
+        Returns
+        errorAll : int
+           0 indicates success.
+        """
+        ierr = c_int(1)
+        errorAll = 0 
+        for i in range(self.nsrc):
+            isrc = i + 1 
+            self.analytic.fteik_analytic_solveSourceConstantVelocity64f(isrc, ierr)
+            if (ierr.value != 0): 
+                print("Failed to solve for source %d"%i+1)
+                errorAll = errorAll + 1 
+        return errorAll
+
+    def solveLinearVelocityGradient(self):
+        """
+        Solves the eikonal equaiton given a linear velocity gradient. 
+
+        Returns
+        errorAll : int
+           0 indicates success.
+        """
+        ierr = c_int(1)
+        errorAll = 0
+        for i in range(self.nsrc):
+            isrc = i + 1 
+            self.analytic.fteik_analytic_solveSourceLinearVelocityGradient64f(isrc, ierr)
+            if (ierr.value != 0): 
+                print("Failed to solve for source %d"%i+1)
+                errorAll = errorAll + 1 
+        return errorAll
+
+    def getTravelTimeField(self):
+        """
+        Extracts the travel time field from the solver.
+
+        Result
+        ttimes : numpy matrix
+            A [nz x ny x nx] matrix containing the travel times (seconds)
+            from the source to each node in the model.
+        """
+        ngrd = self.nz*self.nx*self.ny
+        ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
+        ttimesPointer = ttimes.ctypes.data_as(POINTER(c_double))
+        ierr = c_int(1)
+        order = int(2) # FTEIK_ZYX_ORDERING 
+        self.analytic.fteik_analytic_getTravelTimeField64f(ngrd, order,
+                                                           ttimesPointer, ierr)
+        if (ierr.value != 0): 
+            print("Error getting travel time field")
+            return None
+        ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
+        return ttimes
 

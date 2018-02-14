@@ -1368,8 +1368,10 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
       RETURN
       END
-!                                                                                        !!========================================================================================!
-!                                                                                        !!>    @brief Initializes the source(s) on the solver.
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Sets the source(s) on the solver.
 !> 
 !>    @param[in] nsrc     Number of sources.
 !>    @param[in] zsrc     z locations (meters) of source.  This is a vector of dimension
@@ -1393,7 +1395,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       ALLOCATE(ysrc(MAX(1, nsrc)))
       ysrc(:) = y0
       CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setSources64f: Failed to set source'
+      IF (ierr /= 0) WRITE(*,*) 'fteik_solver2d_setSources64f: Failed to set source'
       IF (ALLOCATED(ysrc)) DEALLOCATE(ysrc)
       RETURN
       END

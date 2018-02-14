@@ -787,6 +787,7 @@ INPUT                  = fteik.wiki/Home.md \
                          fteik.wiki/Flow-of-Control.md \
                          fteik.wiki/Solver-and-Archive-Coordinate-Conventions.md \
                          fteik.wiki/The-SEG-Over-Thrust-Model.md \
+                         analytic.F90 \
                          graph3d.F90 \
                          constants.F90 \
                          model.F90 \

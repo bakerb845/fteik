@@ -7,6 +7,8 @@ MODULE FTEIK_SOLVER64F
   USE FTEIK_GRAPH3D, ONLY : ijkv1, ijkv2, ijkv3, ijkv4, &
                             ijkv5, ijkv6, ijkv7, ijkv8, &
                             levelPtr, nLevels, maxLevelSize
+  USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
+                              fteik_source_free
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
@@ -59,6 +61,9 @@ MODULE FTEIK_SOLVER64F
   PRIVATE :: fteik_solver3d_computeGraph
   PRIVATE :: fteik_solver3d_setInitialUpdateNodes
   PRIVATE :: fteik_solver3d_setUpdateNodes
+
+  PRIVATE :: fteik_source_initialize64f
+  PRIVATE :: fteik_source_free
   CONTAINS
 !----------------------------------------------------------------------------------------!
 !                                     Begin the Code                                     !
@@ -535,7 +540,6 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver3d_free')
       USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_free
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_free
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_free
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE ISO_C_BINDING
@@ -662,7 +666,7 @@ MODULE FTEIK_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Initializes the source(s) on the solver.
+!>    @brief Sets the source(s) on the solver.
 !> 
 !>    @param[in] nsrc     Number of sources.
 !>    @param[in] zsrc     z locations (meters) of source.  This is a vector of dimension
@@ -681,7 +685,6 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver3d_setSources64f(nsrc, zsrc, xsrc, ysrc, &
                                               ierr)                   &
       BIND(C, NAME='fteik_solver3d_setSources64f')
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc

@@ -26,14 +26,14 @@ class fteik3d:
                  fteik_library='/usr/local/lib/libfteik_shared.so'):
         lib = ctypes.cdll.LoadLibrary(fteik_library)
         # Make the interfaces
-        lib.fteik_solver3d_initialize64f.argtypes = (c_int,     #nz 
-                                                     c_int,     #nx 
+        lib.fteik_solver3d_initialize64f.argtypes = (c_int,     #nz
+                                                     c_int,     #nx
                                                      c_int,     #ny
-                                                     c_double,  #z0 
-                                                     c_double,  #x0 
+                                                     c_double,  #z0
+                                                     c_double,  #x0
                                                      c_double,  #y0
-                                                     c_double,  #dz 
-                                                     c_double,  #dx 
+                                                     c_double,  #dz
+                                                     c_double,  #dx
                                                      c_double,  #dz
                                                      c_int,     #nsweeps
                                                      c_double,  #eps
@@ -110,7 +110,7 @@ class fteik3d:
 
     def initialize(self, nx, ny, nz, dx, dy, dz,
                    x0 = 0.0, y0 = 0.0, z0 = 0.0,
-                   nsweep = 2, eps = 3.0, verbose=0):
+                   nsweep = 2, eps = 5.0, verbose=0):
         """
         Initializes the 3D eikonal solver.  This will trigger a graph ordering 
         operation which can be fairly expensive and should only be done once.
