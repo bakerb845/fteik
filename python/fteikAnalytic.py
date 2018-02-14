@@ -74,6 +74,7 @@ class fteikAnalytic:
                                                     )
         lib.fteik_analytic_free.argtypes = None
 
+        self.nsrc = 0
         self.nrec = 0
         self.nx = 0
         self.ny = 0
@@ -89,6 +90,7 @@ class fteikAnalytic:
         return
 
     def free(self):
+        self.nsrc = 0
         self.nrec = 0
         self.nx = 0
         self.ny = 0
@@ -285,11 +287,15 @@ class fteikAnalytic:
            On successful exit this is the travel times (seconds) from the source
            to the receiver.
         """ 
+        nsrc = self.nsrc
         nrec = self.nrec
+        if (nsrc < 1):
+            print("No sources")
+            return None
         if (nrec < 1): 
             print("No receiver locations set")
             return None
-        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttr = ascontiguousarray(zeros(nrec*nsrc), dtype='float64')
         ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
         self.analytic.fteik_analytic_getTravelTimesConstantVel64f(nrec, ttrPointer, ierr)
@@ -303,21 +309,27 @@ class fteikAnalytic:
         Gets the travel times at the receivers in linear gradient velocity model.
 
         Results
-        ttr : array_like
-           On successful exit this is the travel times (seconds) from the source
-           to the receiver.
+        ttr : matrix
+           On successful exit this is the travel times (seconds) from the
+           sources to the receivers.  This has dimension [nrec x nsrc]. 
         """ 
+        nsrc = self.nsrc
         nrec = self.nrec
+        if (nsrc < 1):
+            print("No sources")
+            return None
         if (nrec < 1): 
             print("No receiver locations set")
             return None
-        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        ttr = ascontiguousarray(zeros(nrec*nsrc), dtype='float64')
         ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
         self.analytic.fteik_analytic_getTravelTimesGradientVel64f(nrec, ttrPointer, ierr)
         if (ierr.value != 0): 
             print("Error getting travel times")
             return None
+        if (nsrc > 1):
+            ttr = reshape(ttr, [self.nrec, self.nsrc], order='F')
         return ttr
 
     def setReceivers(self, xrec, yrec, zrec):

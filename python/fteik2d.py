@@ -225,8 +225,8 @@ class fteik2d:
 
         Result
         ttimes : numpy matrix
-            A [nz x nx] matrix containing the travel times (seconds)
-            from the source to each node in the model.
+           A [nz x nx] matrix containing the travel times (seconds)
+           from the source to each node in the model.
         """
         ngrd = self.nx*self.nz
         ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
@@ -269,13 +269,13 @@ class fteik2d:
 
         Input
         xsrc : array_like
-          x source locations (meters).
+           x source locations (meters).
         zsrc : array_like
-          z source locations (meters).
+           z source locations (meters).
 
         Returns
         ierr : int
-          0 indicates success. 
+           0 indicates success. 
         """
         xsrc = ascontiguousarray(xsrc, float64)
         zsrc = ascontiguousarray(zsrc, float64)
@@ -300,9 +300,9 @@ class fteik2d:
 
         Input
         xrec : array_like
-          x receiver locations (meters).
+           x receiver locations (meters).
         zrec : array_like
-          z receiver locations (meters).
+           z receiver locations (meters).
 
         Returns
         ierr : int 

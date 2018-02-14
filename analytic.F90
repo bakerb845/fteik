@@ -735,86 +735,104 @@ MODULE FTEIK_ANALYTIC64F
 !                                                                                        !
 !>    @brief Copies the travel time computed at the receivers from the module.
 !>
-!>    @param[in] nrecIn    Number of receivers in trecOut.  This should be at least nrec.
+!>    @param[in] ldr       Leading dimension of trecOut.  This must be at least nrec.
 !>
 !>    @param[out] trecOut  Travel times (seconds) at receivers.  This is an array of
-!>                         dimension [nrecIn] where the first [nrec] points contains
-!>                         the travel times at the receivers.
+!>                         dimension [ldr x nsrc] with leading dimension ldr. 
 !>    @aram[out] ierr      0 indicates success.
 !>
-      SUBROUTINE fteik_analytic_getTravelTimesConstantVel64f(nrecIn, trecOut, ierr) &
+      SUBROUTINE fteik_analytic_getTravelTimesConstantVel64f(ldr, trecOut, ierr) &
       BIND(C, NAME='fteik_analytic_getTravelTimesConstantVel64f')
-      !USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
       USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
       USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
       USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
-      REAL(C_DOUBLE), INTENT(OUT) :: trecOut(nrecIn)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ldr
+      REAL(C_DOUBLE), INTENT(OUT) :: trecOut(nsrc*nrec)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) isrc
+      INTEGER(C_INT) i1, i2, isrc
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: ttimes not initialized'
+         WRITE(*,*) 'fteik_analytic_getTravelTimesConstantVel64f: Not initialized'
          ierr = 1
          RETURN
       ENDIF
-      IF (nrecIn < nrec) THEN
-         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: Insufficient space to store trec'
+      IF (nsrc < 1) THEN
+         WRITE(*,*) 'fteik_analytic_getTravelTimesConstantVel64f: No sources'
          ierr = 1
          RETURN
       ENDIF
-isrc = 1 ! TODO fix me
-      CALL solveConstantVelocity64f(2,                                  &
-                                    zsrc(isrc), xsrc(isrc), ysrc(isrc), &
-                                    nrec, zrec, xrec, yrec,             &
-                                    ierr)
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: Internal error'
-         ierr = 1 
+      IF (ldr < nrec) THEN
+         WRITE(*,*) 'fteik_analytic_getTravelTimesConstantVel64f: ldr < nrec', ldr, nrec
+         ierr = 1
+         RETURN
       ENDIF
-      trecOut(1:nrec) = trec(1:nrec)
-      IF (nrecIn > nrec) trecOut(nrec+1:nrecIn) = 0.d0
+      IF (ldr > nrec) trecOut(1:ldr*nsrc) = 0.d0
+      DO isrc=1,nsrc
+         CALL solveConstantVelocity64f(2,                                  &
+                                       zsrc(isrc), xsrc(isrc), ysrc(isrc), &
+                                       nrec, zrec, xrec, yrec,             &
+                                       ierr)
+         IF (ierr /= 0) THEN
+            WRITE(*,*) 'fteik_getTravelTimesConstantVel64f: Internal error'
+            ierr = 1 
+            trecOut(1:ldr*nsrc) = 0.d0
+            EXIT
+         ENDIF
+         i1 = (isrc - 1)*ldr + 1
+         i2 = i1 + nrec - 1
+         trecOut(i1:i2) = trec(1:nrec)
+      ENDDO
       RETURN
       END
 
-      SUBROUTINE fteik_analytic_getTravelTimesGradientVel64f(nrecIn, trecOut, ierr) &
+      SUBROUTINE fteik_analytic_getTravelTimesGradientVel64f(ldr, trecOut, ierr) &
       BIND(C, NAME='fteik_analytic_getTravelTimesGradientVel64f')
-      !USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
       USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
       USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
       USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
-      REAL(C_DOUBLE), INTENT(OUT) :: trecOut(nrecIn)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ldr
+      REAL(C_DOUBLE), INTENT(OUT) :: trecOut(ldr*nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) isrc
+      INTEGER(C_INT) i1, i2, isrc
       ierr = 0 
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'ttimes1d_getTravelTimesGradientVel64f: ttimes not initialized'
+         WRITE(*,*) 'fteik_analytic_getTravelTimesGradientVel64f: Not initialized'
          ierr = 1 
          RETURN
       ENDIF
-      IF (nrecIn < nrec) THEN
-         WRITE(*,*) 'ttimes1d_getTravelTimesGradient64f: Insufficient space to store trec'
-         ierr = 1 
+      IF (nsrc < 1) THEN
+         WRITE(*,*) 'fteik_analytic_getTravelTimesGradientVel64f: No sources'
+         ierr = 1
          RETURN
       ENDIF
-isrc = 1 ! TODO fix me
-      CALL solveLinearVelocityGradient64f(2,                                  &
-                                          zsrc(isrc), xsrc(isrc), ysrc(isrc), &
-                                          nrec, zrec, xrec, yrec,             &
-                                          ierr)
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'ttimes1d_getTravelTimesGradientVel64f: Internal error'
-         ierr = 1 
+      IF (ldr < nrec) THEN
+         WRITE(*,*) 'fteik_analytic_getTravelTimesGradientVel64f: ldr < nrec', ldr, nrec
+         ierr = 1
+         RETURN
       ENDIF
-      trecOut(1:nrec) = trec(1:nrec)
-      IF (nrecIn > nrec) trecOut(nrec+1:nrecIn) = 0.d0
+      IF (ldr > nrec) trecOut(1:ldr*nsrc) = 0.d0
+      DO isrc=1,nsrc
+         CALL solveLinearVelocityGradient64f(2,                                  &
+                                             zsrc(isrc), xsrc(isrc), ysrc(isrc), &
+                                             nrec, zrec, xrec, yrec,             &
+                                             ierr)
+         IF (ierr /= 0) THEN
+            WRITE(*,*) 'ttimes1d_getTravelTimesGradientVel64f: Internal error'
+            ierr = 1 
+            EXIT
+         ENDIF
+         i1 = (isrc - 1)*ldr + 1
+         i2 = i1 + nrec - 1
+         trecOut(i1:i2) = trec(1:nrec)
+      ENDDO
       RETURN
       END
 !========================================================================================!
