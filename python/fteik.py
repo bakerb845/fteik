@@ -82,17 +82,17 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    nx = 50
-    ny = 50
-    nz = 50
-    dx = 25.0
-    dy = 25.0
-    dz = 25.0
+    nx = 90
+    ny = 90
+    nz = 90
+    dx = 15.0
+    dy = 15.0
+    dz = 15.0
     xsrc = (nx - 1)*dx/4.0
     ysrc = (ny - 1)*dy/2.0
     zsrc = (nz - 1)*dz/4.0
-    xrec = zeros(nrec)
-    yrec = zeros(nrec)
+    xrec = zeros(nrec) + (nx - 1)*dx/2.0
+    yrec = zeros(nrec) + (ny - 1)*dy/2.0
     zrec = linspace((nz-1)*dz*0.2, (nz-1)*dz*0.8, nrec)
     vmin = 4000.0
     vmax = 6000.0 
@@ -149,8 +149,8 @@ if __name__ == "__main__":
     #, tres.max(), ttGradAnalytic.max(), ttimesGrad.max())
 
 
-    """
-    ttimes = ttConstantAnalytic
+    #"""
+    ttimes = ttimesGrad#ConstantAnalytic
     print(ttimes.shape)
     xindx = int(xsrc/dx)
     yindx = int(ysrc/dy)
@@ -184,4 +184,4 @@ if __name__ == "__main__":
     plt.ylabel('Y-Offset (m)')
     plt.colorbar()
     plt.show()
-    """
+    #"""

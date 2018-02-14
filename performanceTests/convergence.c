@@ -14,6 +14,7 @@ static void computeNorms(const int n,
 int main( )
 {
     converge2D(1);
+    converge2D(2);
     return EXIT_SUCCESS;
 }
 
@@ -70,6 +71,7 @@ int converge2D(const int job)
             for (iz=0; iz<nz-1; iz++)
             {
                 vint = vmin + (vmax - vmin)/(z1 - z0)*(iz*dz0 + z0);
+                indx = iz*(nx - 1);
                 for (ix=0; ix<nx-1; ix++){vel[indx+ix] = vint;}
             }
         }
@@ -99,7 +101,15 @@ int converge2D(const int job)
         fteik_analytic_setSources64f(nsrc, zsrc, xsrc, ysrc, &ierr);
         if (ierr != 0){return EXIT_FAILURE;}
         fteik_analytic_setConstantVelocity64f(vconst, &ierr);
-        fteik_analytic_solveSourceConstantVelocity64f(isrc, &ierr);
+        fteik_analytic_setLinearVelocityGradient64f(vmin, vmax, &ierr);
+        if (job == 1)
+        {
+            fteik_analytic_solveSourceConstantVelocity64f(isrc, &ierr);
+        }
+        else
+        {
+            fteik_analytic_solveSourceLinearVelocityGradient64f(isrc, &ierr);
+        }
         if (ierr != 0){return EXIT_FAILURE;}
         fteik_analytic_getTravelTimeField64f(ngrd, FTEIK_ZYX_ORDERING,
                                              ttref, &ierr);
