@@ -302,6 +302,8 @@ class fteikAnalytic:
         if (ierr.value != 0): 
             print("Error getting travel times")
             return None
+        if (nsrc > 1):
+            ttr = reshape(ttr, [self.nrec, self.nsrc], order='F')
         return ttr
 
     def getTravelTimesGradientVelocity(self):

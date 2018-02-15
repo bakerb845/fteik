@@ -139,19 +139,20 @@ MODULE FTEIK_RECEIVER64F
                WRITE(*,901) iz, ix, iy               
             ELSE
                WRITE(*,910) z(irec), x(irec)
-               WRITE(*,911) iz, ix, iy
+               WRITE(*,911) iz, ix
             ENDIF
+            WRITE(*,*)
          ENDIF
     1 CONTINUE
       linit = .TRUE.
   900 FORMAT(' fteik_receiver_initialize64f: Original receiver coordinates (z,x,y)=', &
              3F12.2, ' (m)')
   901 FORMAT(' fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0,iy0)=', &
-             3I3)
+             I6, I6, I6)
   910 FORMAT(' fteik_receiver_initialize64f: Original receiver coordinates (z,x)=', &
              2F12.2, ' (m)')
   911 FORMAT(' fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0)=', &
-             2I2)
+             I6, I6)
       RETURN
       END
 !                                                                                        !

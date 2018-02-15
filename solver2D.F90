@@ -15,7 +15,9 @@ MODULE FTEIK2D_SOLVER64F
                               fteik_source_free
   USE ISO_C_BINDING
   IMPLICIT NONE
-  !> Holds the travel-times (seconds).  This has dimension [ngrd].
+  !> Holds the travel times (seoncds) at receivers.  This has dimension [nrec x nsrc].
+  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimesRec(:)
+  !> Holds the travel times (seconds).  This has dimension [ngrd].
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
   !!!!DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
   !> Gauss-Seidel method converges when update is less than tol
@@ -80,6 +82,7 @@ MODULE FTEIK2D_SOLVER64F
   PRIVATE :: fteik_receiver_free
   PRIVATE :: fteik_source_initialize64f
   PRIVATE :: fteik_source_free
+  PRIVATE :: solver2d_extractTravelTimes
   CONTAINS
   !--------------------------------------------------------------------------------------!
   !                                      Begin the Code                                  !
@@ -194,6 +197,7 @@ MODULE FTEIK2D_SOLVER64F
       nsweep = 0
       nLevels = 0
       verbose = 0
+      IF (ALLOCATED(ttimesRec))  DEALLOCATE(ttimesRec)
       IF (ALLOCATED(ttimes))     DEALLOCATE(ttimes)
       IF (ALLOCATED(ttold))      DEALLOCATE(ttold)
       IF (ALLOCATED(lupdWork))   DEALLOCATE(lupdWork)
@@ -622,7 +626,40 @@ MODULE FTEIK2D_SOLVER64F
       ENDIF
       RETURN
       END
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      SUBROUTINE fteik_solver2d_solveLSM(ierr)    &
+      BIND(C, NAME='fteik_solver2d_solveLSM')
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
+      USE FTEIK_MODEL64F, ONLY : lhaveModel
+      USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_RECEIVER64F, ONLY : nrec
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) isrc
+      ierr = 0
+      IF (.NOT.lhaveModel) THEN
+         WRITE(*,*) 'fteik_solver2d_solveLSM: Model not yet set'
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (nsrc < 1) THEN
+         IF (verbose > 0) WRITE(*,*) 'fteik_solver2d_solveLSM: No sources'
+         RETURN
+      ENDIF
+      IF (nsrc > 0 .AND. nrec > 0) THEN
+         IF (.NOT.ALLOCATED(ttimesRec)) ALLOCATE(ttimesRec(nsrc*nrec))
+         ttimesRec(:) = FTEIK_HUGE
+      ENDIF
+      DO isrc=1,nsrc
+         CALL fteik_solver2d_solveSourceLSM(isrc, ierr)
+         IF (ierr /= 0) THEN
+            WRITE(*,*) 'fteik_solver2d_solveLSM: Error solving source', isrc
+            EXIT
+         ENDIF
+      ENDDO
+      RETURN
+      END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -771,11 +808,15 @@ MODULE FTEIK2D_SOLVER64F
          ENDIF
          IF (tdiff < convTol) EXIT
       ENDDO
+      lhaveTimes = TRUE
+      CALL solver2d_extractTravelTimes(isrc, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'fteik_solver2d_solveSourceLSM: Failed to get travel times'
+      ENDIF 
       IF (verbose > 2) THEN
          CALL CPU_TIME(t1)
          WRITE(*,902) t1 - t0 
       ENDIF
-      lhaveTimes = TRUE
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
@@ -1070,25 +1111,34 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !                                                                                        !
 !>    @brief Extracts the travel times at the receivers.
 !>
-!>    @param[in] nrec   Number of receivers.
+!>    @param[in] ldr    Leading dimension of ttr.  This must >= nrec.
 !>
-!>    @param[out] ttr   Travel times (seconds) at the receivers.  This is a vector of
-!>                      dimension [nrec].
+!>    @param[out] ttr   Travel times (seconds) at the receivers for all sources.
+!>                      This is a vector of dimension [ldr x nsrc] with leading
+!>                      dimension ldr.
 !>    @param[out] ierr  0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_getTravelTimes64f(nrec, ttr, ierr) &
+      SUBROUTINE fteik_solver2d_getTravelTimes64f(ldr, ttr, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimes64f')
-      USE FTEIK_MODEL64F, ONLY : ngrd
+!     USE FTEIK_MODEL64F, ONLY : ngrd
+      USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE FTEIK_RECEIVER64F, ONLY : nrec 
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
-      REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrec)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ldr
+      REAL(C_DOUBLE), INTENT(OUT) :: ttr(ldr*nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) i1, i2, isrc, j1, j2
       ierr = 0
-      IF (nrec <= 0) THEN
+      IF (nrec < 1) THEN
          WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: No receivers'
+         RETURN
+      ENDIF
+      IF (nsrc < 1) THEN
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: No sources'
+         ierr = 1
          RETURN
       ENDIF
       IF (.NOT.lhaveTimes) THEN
@@ -1096,10 +1146,53 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
          ierr = 1
          RETURN
       ENDIF
-      CALL fteik_receiver_getTravelTimes64f(nrec, ngrd, ttimes, ttr, ierr)
-      IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Error getting travel times'
+      IF (ldr < nrec) THEN
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: ldr < nrec', ldr, nrec
          ierr = 1
+         RETURN
+      ENDIF
+      IF (ldr > nrec) ttr(1:ldr*nsrc) = 0.d0
+      DO isrc=1,nsrc
+         i1 = (isrc - 1)*ldr + 1
+         i2 = i1 + nrec - 1
+         j1 = (isrc - 1)*nrec + 1
+         j2 = j1 + nrec - 1
+         ttr(i1:i2) = ttimesRec(j1:j2)
+         !print *, ttr(i1:i2)
+      ENDDO
+!     CALL fteik_receiver_getTravelTimes64f(nrec, ngrd, ttimes, ttr, ierr)
+!     IF (ierr /= 0) THEN
+!        WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Error getting travel times'
+!        ierr = 1
+!     ENDIF
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+      SUBROUTINE solver2d_extractTravelTimes(isrc, ierr)
+      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
+      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE FTEIK_RECEIVER64F, ONLY : nrec
+      USE FTEIK_SOURCE64F, ONLY : nsrc
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) i1, i2
+      ierr = 0
+      IF (nrec < 1) RETURN
+      IF (nsrc < 1) RETURN
+      IF (.NOT.lhaveTimes) THEN 
+         WRITE(*,*) 'fteik_solver2d_getTravelTimes64f: Travel times not yet computed'
+         ierr = 1
+         RETURN
+      ENDIF
+      i1 = (isrc - 1)*nrec + 1
+      i2 = i1 + nrec - 1
+      CALL fteik_receiver_getTravelTimes64f(nrec, ngrd, ttimes, ttimesRec(i1:i2), ierr) 
+      IF (ierr /= 0) THEN
+         WRITE(*,*) 'extractTravelTimes: Failed to get travel times'
+         ttimesRec(i1:i2) = FTEIK_HUGE
       ENDIF
       RETURN
       END
@@ -1375,36 +1468,44 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
 !                                                                                        !
 !>    @brief Sets the receivers in the model.
 !>
-!>    @param[in] nrec    Number of receivers to set.  
+!>    @param[in] nrecIn  Number of receivers to set.  
 !>    @param[in] zrec    z locations (meters) of receivers.  This is a vector of
-!>                       of dimension [nrec].
+!>                       of dimension [nrecIn].
 !>    @param[in] xrec    x locations (meters) of receivers.  This is a vector of
-!>                       of dimension [nrec].
+!>                       of dimension [nrecIn].
 !>
 !>    @param[out] ierr   0 indicates success.
 !>
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
-      SUBROUTINE fteik_solver2d_setReceivers64f(nrec, zrec, xrec, ierr) &
+      SUBROUTINE fteik_solver2d_setReceivers64f(nrecIn, zrec, xrec, ierr) &
       BIND(C, NAME='fteik_solver2d_setReceivers64f')
+      USE FTEIK_RECEIVER64F, ONLY : nrec
+      USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : y0
       USE ISO_C_BINDING
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
-      REAL(C_DOUBLE), INTENT(IN) :: zrec(nrec), xrec(nrec)
+      INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
+      REAL(C_DOUBLE), INTENT(IN) :: zrec(nrecIn), xrec(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       REAL(C_DOUBLE), ALLOCATABLE :: yrec(:)
       ! It's actually safe to have no receivers
       ierr = 0
-      IF (nrec < 1) THEN
+      IF (nrecIn < 1) THEN
          WRITE(*,*) 'fteik_solver_setReceivers64fF: No receivers to set'
          RETURN
       ENDIF
-      ALLOCATE(yrec(MAX(nrec, 1)))
+      ALLOCATE(yrec(MAX(nrecIn, 1)))
       yrec(:) = y0
-      CALL fteik_receiver_initialize64f(nrec, zrec, xrec, yrec, verbose, ierr)
+      CALL fteik_receiver_initialize64f(nrecIn, zrec, xrec, yrec, verbose, ierr)
       IF (ierr /= 0) WRITE(*,*) 'fteik_solver_setReceivers64f: Failed to set receivers'
       IF (ALLOCATED(yrec)) DEALLOCATE(yrec)
+      ! May be ready to allocate space for travel times 
+      IF (ALLOCATED(ttimesRec)) DEALLOCATE(ttimesRec)
+      IF (nsrc > 0) THEN
+         IF (ALLOCATED(ttimesRec)) DEALLOCATE(ttimesRec)
+         ALLOCATE(ttimesRec(nrec*nsrc))
+      ENDIF
       RETURN
       END
 !                                                                                        !
@@ -1425,6 +1526,7 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       SUBROUTINE fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, ierr) &
       BIND(C, NAME='fteik_solver2d_setSources64f')
       USE FTEIK_MODEL64F, ONLY : y0
+      USE FTEIK_RECEIVER64F, ONLY : nrec
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
@@ -1436,6 +1538,12 @@ print *, 'p4:', minval(ttimes), maxval(ttimes)
       CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
       IF (ierr /= 0) WRITE(*,*) 'fteik_solver2d_setSources64f: Failed to set source'
       IF (ALLOCATED(ysrc)) DEALLOCATE(ysrc)
+      ! May be ready to allocate space for travel times 
+      IF (ALLOCATED(ttimesRec)) DEALLOCATE(ttimesRec)
+      IF (nrec > 0) THEN
+         IF (ALLOCATED(ttimesRec)) DEALLOCATE(ttimesRec)
+         ALLOCATE(ttimesRec(nrec*nsrc))
+      ENDIF
       RETURN
       END
 !                                                                                        !

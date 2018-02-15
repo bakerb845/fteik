@@ -49,6 +49,7 @@ class fteik2d:
                                                        POINTER(c_double), #xrec
                                                        POINTER(c_int)     #ierr
                                                       )
+        lib.fteik_solver2d_solveLSM.argtypes = (POINTER(c_int),) # ierr
         lib.fteik_solver2d_solveSourceLSM.argtypes = (c_int,         #(Fortran) source number
                                                       POINTER(c_int) #ierr
                                                      )
@@ -210,14 +211,19 @@ class fteik2d:
            Error counter where 0 indicates a success.
         """
         ierr = c_int(1)
-        errorAll = 0
-        for i in range(self.nsrc):
-            isrc = i + 1
-            self.fteik2d.fteik_solver2d_solveSourceLSM(isrc, ierr)
-            if (ierr.value != 0):
-                print("Failed to solve for source %d"%i+1)
-                errorAll = errorAll + 1
-        return errorAll
+        self.fteik2d.fteik_solver2d_solveLSM(ierr)
+        if (ierr.value != 0):
+            print("Error solving eikonal equation")
+            return -1
+        return 0
+        #errorAll = 0
+        #for i in range(self.nsrc):
+        #    isrc = i + 1
+        #    self.fteik2d.fteik_solver2d_solveSourceLSM(isrc, ierr)
+        #    if (ierr.value != 0):
+        #        print("Failed to solve for source %d"%i+1)
+        #        errorAll = errorAll + 1
+        #return errorAll
 
     def getTravelTimeField(self):
         """
@@ -246,21 +252,26 @@ class fteik2d:
         Gets the travel times at the receivers.
 
         Results
-        ttr : array_like
-           On successful exit this is the travel times (seconds) from the source
-           to the receiver.
+        ttr : matrix.
+           On successful exit this is the travel times (seconds) from all
+           sources to the receivers.  This is a [nrec x nsrc] matrix.
         """ 
         nrec = self.nrec
+        nsrc = self.nsrc
         if (nrec < 1): 
             print("No receiver locations set")
             return None
-        ttr = ascontiguousarray(zeros(nrec), dtype='float64')
+        if (nsrc < 1):
+            print("No sources")
+        ttr = ascontiguousarray(zeros(nrec*nsrc), dtype='float64')
         ttrPointer = ttr.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
         self.fteik2d.fteik_solver2d_getTravelTimes64f(nrec, ttrPointer, ierr)
         if (ierr.value != 0): 
             print("Error getting travel times")
             return None
+        if (nsrc > 1):
+            ttr = reshape(ttr, [self.nrec, self.nsrc], order='F')
         return ttr
 
     def setSources(self, xsrc, zsrc):

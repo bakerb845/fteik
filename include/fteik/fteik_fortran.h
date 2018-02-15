@@ -167,7 +167,8 @@ void fteik_solver2d_setSources64f(const int nsrc,
                                   const double zsrc[],
                                   const double xsrc[],
                                   int *ierr);
-void fteik_solver2d_getTravelTimes64f(const int nrec, double ttr[], int *ierr);
+void fteik_solver2d_getTravelTimes64f(const int ldr, double ttr[],
+                                      int *ierr);
 void fteik_solver2d_getNumberOfReceivers(int *nrec, int *ierr);
 void fteik_solver2d_free(void);
 /*----------------------------------------------------------------------------*/
