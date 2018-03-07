@@ -183,7 +183,7 @@ MODULE FTEIK_LOCATE
       nwork = ntf
       nwork = nwork*ldgrd
       IF (nwork > HUGE(1)) THEN
-         WRITE(*,"('locate_initializeF: WARNING: Beware of integer overflow',A)")
+         WRITE(*,"('locate_initializeF: WARNING: Beware of integer overflow in MPI',A)")
       ENDIF
       nalloc = nEvents*lntf
       CALL allocate32f(weights,          alignment, nalloc)
