@@ -19,10 +19,10 @@ MODULE FTEIK_LOCATE
   !> dimension [ntf x ldgrd].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: ttFields(:) 
   !> Workspace array holding the objective function.  This is a vector of
-  !> dimension [nGrd].
+  !> dimension [ngrd].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: objWork(:)
   !> Workspace array holding the origin time.  This is a vector of 
-  !> dimension [MAX(blockSize, nGrd)].
+  !> dimension [MAX(blockSize, ngrd)].
   REAL(C_FLOAT), PROTECTED, POINTER, SAVE :: t0Work(:)
   !> Flag indicating whether or not to skip this event/observation pair.  This is a vector
   !> of dimension [nEvents x lntf]
@@ -35,10 +35,10 @@ MODULE FTEIK_LOCATE
   !> Number of travel time fields.
   INTEGER(C_INT), PROTECTED, SAVE :: ntf = 0
   !> Number of grid points.
-  INTEGER(C_INT), PROTECTED, SAVE :: nGrd = 0
+  INTEGER(C_INT), PROTECTED, SAVE :: ngrd = 0
   !> Padded version of ntf which serves as a leading dimension.
   INTEGER(C_INT), PRIVATE, SAVE :: lntf = 0
-  !> Padded version of nGrd which serves as a leading dimension.
+  !> Padded version of ngrd which serves as a leading dimension.
   INTEGER(C_INT), PRIVATE, SAVE :: ldgrd = 0 
   !> Flag indicating whether or not locator has been initialized.
   LOGICAL(C_BOOL), PRIVATE, SAVE :: linit = .FALSE.
@@ -143,6 +143,8 @@ MODULE FTEIK_LOCATE
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nEventsIn, ntfIn, ngrdIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT64_T) nwork
+      INTEGER(C_SIZE_T) nalloc 
 
       CALL locate_finalize()
       CALL locate_setNumberOfEvents(nEventsIn, ierr)
@@ -178,12 +180,23 @@ MODULE FTEIK_LOCATE
          ierr = 1
          RETURN
       ENDIF
-      CALL allocate32f(weights,          alignment, nEvents*lntf)
-      CALL allocate32f(observations,     alignment, nEvents*lntf)
-      CALL allocate32f(ttFields,         alignment, ntf*ldgrd)
-      CALL allocate32f(staticCorrection, alignment, ntf)
-      CALL allocate32f(t0Work,           alignment, MAX(nGrd, blockSize))
-      CALL allocate32f(objWork,          alignment, nGrd)
+      nwork = ntf
+      nwork = nwork*ldgrd
+      IF (nwork > HUGE(1)) THEN
+         WRITE(*,"('locate_initializeF: WARNING: Beware of integer overflow',A)")
+      ENDIF
+      nalloc = nEvents*lntf
+      CALL allocate32f(weights,          alignment, nalloc)
+      CALL allocate32f(observations,     alignment, nalloc)
+      nalloc = ntf 
+      nalloc = nalloc*ldgrd
+      CALL allocate32f(ttFields,         alignment, nalloc)
+      nalloc = ntf
+      CALL allocate32f(staticCorrection, alignment, nalloc)
+      nalloc = MAX(ngrd, blockSize) 
+      CALL allocate32f(t0Work,           alignment, nalloc)
+      ngrd = ngrd
+      CALL allocate32f(objWork,          alignment, nalloc)
       tepoch(:) = 0.d0
       originTimes(:) = zero
       lhaveOT(:) = FALSE
@@ -233,7 +246,7 @@ MODULE FTEIK_LOCATE
       ENDIF
       lntf = 0
       ldgrd = 0
-      nGrd = 0
+      ngrd = 0
       ngrdAll = 0
       nEvents = 0
       linit = .FALSE.
@@ -276,10 +289,10 @@ MODULE FTEIK_LOCATE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngrdIn, itf
       REAL(C_DOUBLE), INTENT(IN) :: ttIn(ngrdIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
+      REAL(C_FLOAT), POINTER :: ttptr(:)
 #if defined(FTEIK_FORTRAN_USE_INTEL)
 
 #else
-      REAL(C_FLOAT), POINTER :: ttptr(:)
       INTEGER(C_INT) igrd
 #endif 
       INTEGER(C_INT) i1, i2
@@ -304,20 +317,24 @@ MODULE FTEIK_LOCATE
       ENDIF
       i1 = (itf - 1)*ldgrd + 1
       i2 = itf*ldgrd
+      ttptr => ttFields(i1:i2)
+      IF (.NOT.ASSOCIATED(ttptr)) THEN
+         WRITE(*,"('locate_setTravelTimeField64fF: Failed to associate pointer',A)")
+         ierr = 1
+      ENDIF
 #if defined(FTEIK_FORTRAN_USE_INTEL)
-      ierr = ippsConvert_64f32f(ttIn, ttFields(i1:i2), ngrd)
+      ierr = ippsConvert_64f32f(ttIn, ttptr, ngrd) !ttFields(i1:i2), ngrd)
       IF (ierr /= 0) THEN
          WRITE(*,910) itf
-  910    FORMAT('locate_setTravelTimeField64f: Failed to travel time field=', I4)
+  910    FORMAT('locate_setTravelTimeField64f: Failed to convert travel time field=', I4)
       ENDIF
 #else
-      ttptr => ttFields(i1:i2)
       !$OMP SIMD ALIGNED(ttptr: 64)
       DO 1 igrd=1,ngrd
          ttptr(igrd) = REAL(ttIn(igrd))
    1  CONTINUE
-      NULLIFY(ttptr)
 #endif
+      NULLIFY(ttptr)
       RETURN
       END
 !                                                                                        !
@@ -690,12 +707,15 @@ MODULE FTEIK_LOCATE
    11    CONTINUE
          !$OMP END PARALLEL DO
       ENDIF
-do i=1,ngrd
- if (objWork(i) <= objWork(474953)) then != zero) then 
-   print *, i, objWork(i), t0Work(i)
-  !pause
- endif
-enddo
+
+!if (size(objWork) >= 474953) then
+!do i=1,ngrd
+! if (objWork(i) <= objWork(474953)) then != zero) then 
+!   print *, i, objWork(i), t0Work(i)
+!  !pause
+! endif
+!enddo
+!endif
 !print *, 'objWork:', objWork(474953), objWork(455965), objWork(474953+1), t0Work(474953)
  
 !     DO 21 igrd=1,ngrd
@@ -785,13 +805,13 @@ enddo
       INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root, nEventsIn, ntfIn, ngrdIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       INTEGER(C_INT), ALLOCATABLE :: grdPtr(:), lkeep(:)
-      INTEGER(C_INT) dGrid, i, ierrLoc, group, keepGroup, myid, nEventsTemp, &
+      INTEGER(C_INT) dGrid, i, ierrLoc, group, keepGroup, nEventsTemp, &
                      ntfTemp, ngrdLoc, ngrdTemp
       ierr = 0
-      CALL MPI_Comm_rank(comm, myid,   mpierr)
-      CALL MPI_Comm_size(comm, nprocs, mpierr)
+      CALL MPI_Comm_rank(comm, mylocatorID, mpierr)
+      CALL MPI_Comm_size(comm, nprocs,      mpierr)
       ! Broadcast anticipated sizes
-      IF (myid == root) THEN
+      IF (mylocatorID == root) THEN
          nEventsTemp = nEventsIn
          ntfTemp     = ntfIn
          ngrdTemp    = ngrdIn
@@ -814,7 +834,7 @@ enddo
       CALL MPI_Group_free(group, mpierr)
       ! Initialize the group and set the grid points the process is response for
       linLocator = .FALSE.
-      IF (myid < MIN(ngrdTemp, nprocs)) THEN
+      IF (mylocatorID < MIN(ngrdTemp, nprocs)) THEN
          ALLOCATE(grdPtr(nprocs+1))
          IF (nprocs == 1) THEN
             grdPtr(1) = 1
@@ -830,7 +850,7 @@ enddo
          ngrdLoc = grdPtr(mylocatorID+2) - grdPtr(mylocatorID+1)
          CALL locate_initialize(nEventsTemp, ntfTemp, ngrdLoc, ierrLoc)
          IF (ierrLoc /= 0) THEN
-            WRITE(*,900) myid 
+            WRITE(*,900) mylocatorID
   900       FORMAT('locate_initializeMPIF: Error initializing on process ', I4)
             ierrLoc = 1
          ENDIF

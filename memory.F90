@@ -20,7 +20,7 @@ MODULE FTEIK_MEMORY
    SUBROUTINE allocate64f(x, align, n)
    USE ISO_C_BINDING
    REAL(C_DOUBLE), POINTER, DIMENSION(:), INTENT(INOUT) :: x
-   INTEGER(C_INT), INTENT(IN) :: align, n
+   INTEGER(C_SIZE_T), INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
    TYPE(C_PTR) :: cptr = C_NULL_PTR
    INTERFACE
@@ -71,7 +71,7 @@ MODULE FTEIK_MEMORY
    SUBROUTINE allocate32f(x, align, n)
    USE ISO_C_BINDING
    REAL(C_FLOAT), POINTER, DIMENSION(:), INTENT(INOUT) :: x
-   INTEGER(C_INT), INTENT(IN) :: align, n
+   INTEGER(C_SIZE_T), INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
    TYPE(C_PTR) :: cptr = C_NULL_PTR
    INTERFACE

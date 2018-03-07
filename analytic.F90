@@ -877,7 +877,7 @@ MODULE FTEIK_ANALYTIC64F
       zbot = z0 + REAL(nz - 1)*dz
       vel0 = vtop + (vbottom - vtop)/(zbot - ztop)*zsrc ! Velocity at source depth
       vel1 = vbottom    ! This doesn't change
-      slow0 = 1.d0/vel0 ! Slowness at soruce depth 
+      slow0 = 1.d0/vel0 ! Slowness at source depth 
       vGradInX = 0.d0
       vGradInY = 0.d0
       vGradInZ = (vel1 - vel0)/(zbot - zsrc) ! Should match the initial gradient
