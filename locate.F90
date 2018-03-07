@@ -47,7 +47,7 @@ MODULE FTEIK_LOCATE
   !> Flag indicating whether or not to save the origin time field.
   LOGICAL(C_BOOL), PRIVATE, SAVE :: lwantT0Field = .TRUE. 
   !> Memory alignment.
-  INTEGER(C_INT), PRIVATE, PARAMETER :: alignment = 64
+  INTEGER(C_SIZE_T), PRIVATE, PARAMETER :: alignment = 64
   !> Block size in grid search.
   INTEGER(C_INT), PRIVATE, PARAMETER :: blockSize = 512
 
