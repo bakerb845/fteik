@@ -38,7 +38,7 @@ MODULE FTEIK2D_SOLVER64F
   !> 
   LOGICAL(C_BOOL), PARAMETER :: lis3d = .FALSE.
   !> Private variables for the local solver
-  INTEGER(C_INT), PARAMETER :: alignment = 64
+  INTEGER(C_SIZE_T), PARAMETER :: alignment = 64
   REAL(C_DOUBLE), SAVE, PRIVATE :: zsa, xsa, szero, szero2, eps
   INTEGER(C_INT), SAVE, PRIVATE :: zsi, xsi
   REAL(C_DOUBLE), SAVE, PRIVATE :: dx, dxi, dz, dzi, dz2i, dx2i, dz2i_dx2i, &

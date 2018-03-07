@@ -196,8 +196,8 @@ MODULE FTEIK_MEMORY
    INTEGER(C_INT) xmod
    INTEGER, PARAMETER :: sizeof_double = 8
    padLength64F = 0
-   xmod = MOD(n*sizeof_double, alignment)
-   IF (xmod /= 0) padLength64F = (alignment - xmod)/sizeof_double
+   xmod = MOD(n*sizeof_double, INT(alignment))
+   IF (xmod /= 0) padLength64F = (INT(alignment) - xmod)/sizeof_double
    RETURN
    END FUNCTION
 
@@ -222,8 +222,8 @@ MODULE FTEIK_MEMORY
    INTEGER(C_INT) xmod
    INTEGER, PARAMETER :: sizeof_float = 4
    padLength32F = 0 
-   xmod = MOD(n*sizeof_float, alignment)
-   IF (xmod /= 0) padLength32F = (alignment - xmod)/sizeof_float
+   xmod = MOD(n*sizeof_float, INT(alignment))
+   IF (xmod /= 0) padLength32F = (INT(alignment) - xmod)/sizeof_float
    RETURN
    END FUNCTION
 
