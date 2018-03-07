@@ -2,7 +2,16 @@
 
 MODULE FTEIK_MEMORY
    USE ISO_C_BINDING
+   PUBLIC :: allocate64f
+   PUBLIC :: allocate32f
+   PUBLIC :: free64
+   PUBLIC :: free32
+   PUBLIC :: padLength64F
+   PUBLIC :: padLength32F
    CONTAINS
+   !-------------------------------------------------------------------------------------!
+   !                                   Begin the Code                                    !
+   !-------------------------------------------------------------------------------------!
    !> @brief Allocates aligned memory to a Fortran pointer.  For example, to 
    !>        allocate a 64 bit aligned vector with 250 elements one would call
    !>        CALL allocate64f(x, 64, 250).

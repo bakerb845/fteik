@@ -791,6 +791,7 @@ INPUT                  = fteik.wiki/Home.md \
                          graph3d.F90 \
                          constants.F90 \
                          model.F90 \
+                         memory.F90 \
                          locate.F90 \
                          receiver.F90 \ 
                          source.F90 \
