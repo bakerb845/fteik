@@ -29,7 +29,7 @@ MODULE FTEIK_MEMORY
    SUBROUTINE allocate64f(x, align, n)
    USE ISO_C_BINDING
    REAL(C_DOUBLE), POINTER, DIMENSION(:), INTENT(INOUT) :: x
-   INTEGER(C_SIZE_T), INTENT(IN) :: align, n
+   INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
    TYPE(C_PTR) :: cptr = C_NULL_PTR
    INTERFACE
@@ -80,7 +80,7 @@ MODULE FTEIK_MEMORY
    SUBROUTINE allocate32f(x, align, n)
    USE ISO_C_BINDING
    REAL(C_FLOAT), POINTER, DIMENSION(:), INTENT(INOUT) :: x
-   INTEGER(C_SIZE_T), INTENT(IN) :: align, n
+   INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
    TYPE(C_PTR) :: cptr = C_NULL_PTR
    INTERFACE
@@ -191,7 +191,8 @@ MODULE FTEIK_MEMORY
    BIND(C, NAME='padLength64fF')
    USE ISO_C_BINDING
    IMPLICIT NONE
-   INTEGER(C_INT), INTENT(IN) :: alignment, n
+   INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: alignment
+   INTEGER(C_INT), VALUE, INTENT(IN) :: n
    INTEGER(C_INT) xmod
    INTEGER, PARAMETER :: sizeof_double = 8
    padLength64F = 0
@@ -216,7 +217,8 @@ MODULE FTEIK_MEMORY
    BIND(C, NAME='padLength32fF')
    USE ISO_C_BINDING
    IMPLICIT NONE
-   INTEGER(C_INT), INTENT(IN) :: alignment, n
+   INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: alignment
+   INTEGER(C_INT), VALUE, INTENT(IN) :: n
    INTEGER(C_INT) xmod
    INTEGER, PARAMETER :: sizeof_float = 4
    padLength32F = 0 
