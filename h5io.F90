@@ -188,7 +188,7 @@ MODULE FTEIK_H5IO64F
             ix = ijkv(4*(node-1)+2)
             iy = ijkv(4*(node-1)+3)
             indx = (iz - 1)*nx*ny + (iy - 1)*nx + ix
-            levels(indx) = level
+            levels(indx) = INT2(level)
     2    CONTINUE
     1 CONTINUE
       RETURN
@@ -413,7 +413,7 @@ MODULE FTEIK_H5IO64F
                   !jz = iz !nz-iz ! flip coordinate syste
                   indx = fteik_model_velGrid2indexF(iz, ix, iy, nzm1, nzm1_nxm1) 
                   jndx = (iz-1)*(nx-1)*(ny-1) + (iy-1)*(nx-1) + ix
-                  vout(jndx) = INT(1.d0/slow(indx)  + 0.5d0)
+                  vout(jndx) = INT2(INT(1.d0/slow(indx)  + 0.5d0))
                   !print *, vout(jndx), 1.d0/slow(indx)
     3          CONTINUE
     2       CONTINUE
@@ -425,7 +425,7 @@ MODULE FTEIK_H5IO64F
                jz = nz-iz ! flip coordinate syste
                indx = fteik_model_velGrid2indexF(jz, ix, iy, nzm1, nzm1_nxm1) 
                jndx = (iz-1)*(nx-1) + ix
-               vout(jndx) = INT(1.d0/slow(indx)  + 0.5d0)
+               vout(jndx) = INT2(INT(1.d0/slow(indx)  + 0.5d0))
                !print *, vout(jndx), 1.d0/slow(indx)
    12       CONTINUE
    11    CONTINUE
