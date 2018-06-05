@@ -63,6 +63,9 @@ if __name__ == "__main__":
     xrec = linspace((nx-1)*dx*0.2, (nx-1)*dx*0.8, nrec)
     yrec = zeros(nrec)
     zrec = zeros(nrec)
+    vmin = vconst
+    vmax = vconst + 1000.0
+    print(xsrc, zsrc)
     vel = zeros([nz,nx]) + vconst
     fteik2d = fteik2d(fteikLibrary)
     fteik2d.initialize(nx, nz, dx, dz, verbose=3)
@@ -79,13 +82,16 @@ if __name__ == "__main__":
     analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
     analytic.setSources(xsrc, ysrc, zsrc)
     analytic.setReceivers(xrec, yrec, zrec)
+
     analytic.setConstantVelocity(vconst)
-    #analytic.setLinearVelocityGradient(vmin, vmax)
     analytic.solveConstantVelocity()
     ttConstantAnalytic = analytic.getTravelTimeField() 
     ttrConstantAnalytic = analytic.getTravelTimesConstantVelocity()
+
+    #analytic.setLinearVelocityGradient(vmin, vmax)
     #analytic.solveLinearVelocityGradient()
     #ttGradAnalytic = analytic.getTravelTimeField()
+    #print(ttGradAnalytic.T)
     #ttrGradAnalytic = analytic.getTravelTimesGradientVelocity()
     analytic.free()
     tres = ttConstantAnalytic - ttimesConst
@@ -96,6 +102,7 @@ if __name__ == "__main__":
     print("Gradient L1/L2/Linf residual:", tresL1, tresL2, tresL8)
     print("Constant travel times\n", ttrConst)
     print("Reference constant travel times\n", ttrConstantAnalytic)
+
     #print("Gradient travel times\n", ttrGrad)
     #print("Reference gradient travel times\n", ttrGradAnalytic)
     #stop
@@ -111,6 +118,7 @@ if __name__ == "__main__":
     plt.ylabel('Depth (m)')
     plt.colorbar()
     plt.show()
+    stop
     """
 
     nx = 90
