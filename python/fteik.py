@@ -24,9 +24,11 @@ import os
 
 class fteik:
     def __init__(self,
-                 fteik_library='/usr/local/lib/libfteik_shared.so'):
-        self.fteik2d = fteik2d(fteik_library)
-        self.fteik3d = fteik3d(fteik_library)
+                 fteik_path=os.environ['LD_LIBRARY_PATH'].split(os.pathsep),
+                 fteik_library='libfteik_shared.so'):
+        #         fteik_library='/usr/local/lib/libfteik_shared.so'):
+        self.fteik2d = fteik2d(fteik_path, fteik_library)
+        self.fteik3d = fteik3d(fteik_path, fteik_library)
 
     def __enter__(self):
         return self
@@ -67,7 +69,7 @@ if __name__ == "__main__":
     vmax = vconst + 1000.0
     print(xsrc, zsrc)
     vel = zeros([nz,nx]) + vconst
-    fteik2d = fteik2d(fteikLibrary)
+    fteik2d = fteik2d()#fteikLibrary)
     fteik2d.initialize(nx, nz, dx, dz, verbose=3)
     fteik2d.setVelocityModel(vel) 
     fteik2d.setSources(xsrc, zsrc)
@@ -78,7 +80,7 @@ if __name__ == "__main__":
     #print(ttrConst)
     fteik2d.free()
     # Get the analytic times 
-    analytic = fteikAnalytic(fteikLibrary)
+    analytic = fteikAnalytic()#fteikLibrary)
     analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
     analytic.setSources(xsrc, ysrc, zsrc)
     analytic.setReceivers(xrec, yrec, zrec)
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     for iz in range(nz):
         velGrad[iz,:,:] = vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz)
         #print(vmin + (vmax - vmin)/((nz-1)*dz)*(iz*dz))
-    fteik3d = fteik3d(fteikLibrary)
+    fteik3d = fteik3d()#fteikLibrary)
     fteik3d.initialize(nx, ny, nz, dx, dy, dz, verbose=3) 
     fteik3d.setSources(xsrc, ysrc, zsrc)
     fteik3d.setReceivers(xrec, yrec, zrec)
@@ -157,7 +159,7 @@ if __name__ == "__main__":
     ttrGrad = fteik3d.getTravelTimes()
     fteik3d.free()
 
-    analytic = fteikAnalytic(fteikLibrary)
+    analytic = fteikAnalytic()#fteikLibrary)
     analytic.initialize(nx, ny, nz, dx, dy, dz, verbose=3)
     analytic.setSources(xsrc, ysrc, zsrc)
     analytic.setReceivers(xrec, yrec, zrec)

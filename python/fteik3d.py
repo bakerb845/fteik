@@ -23,8 +23,20 @@ import os
 
 class fteik3d:
     def __init__(self,
-                 fteik_library='/usr/local/lib/libfteik_shared.so'):
-        lib = ctypes.cdll.LoadLibrary(fteik_library)
+                 fteik_path=os.environ['LD_LIBRARY_PATH'].split(os.pathsep),
+                 fteik_library='libfteik_shared.so'):
+        # Load the library
+        lfound = False
+        for path in fteik_path:
+            fteik_lib = os.path.join(path, fteik_library)
+            if (os.path.isfile(fteik_lib)):
+                lfound = True
+                break
+        if (lfound):
+            lib = ctypes.cdll.LoadLibrary(fteik_lib)
+        else:
+            print("Couldn't find %s"%fteik_library)
+            return
         # Make the interfaces
         lib.fteik_solver3d_initialize64f.argtypes = (c_int,     #nz
                                                      c_int,     #nx
