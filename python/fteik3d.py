@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 Python interface to the 3D fteik eikonal equation Fortran library.
 
