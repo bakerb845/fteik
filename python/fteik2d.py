@@ -115,6 +115,13 @@ class fteik2d:
         self.fteik2d.fteik_solver2d_free()
         return
 
+    def finalize(self):
+        """
+        Frees the solver.
+        """
+        self.__exit__()
+        return
+
     def initialize(self, nx, nz, dx, dz,
                    x0 = 0.0, z0 = 0.0,
                    nsweep = 2, eps = 3.0,
