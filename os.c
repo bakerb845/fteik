@@ -19,8 +19,8 @@
  * 
  * @param[in] filenm    Name of file to test.
  * 
- * @result  If true then filenm is an existing file. \n
- *          If false then filenm is not a file.
+ * @retval  If true then filenm is an existing file.
+ * @retval  If false then filenm is not a file.
  *
  * @author Ben Baker, ISTI
  *
@@ -56,8 +56,8 @@ bool fteik_os_isfile(const char *filenm)
  * 
  * @param[in] dirnm    Name of directory to test.
  *
- * @result If true true then dirnm is an existing directory. \n
- *         If false then dirnm is not a directory.
+ * @retval If true true then dirnm is an existing directory.
+ * @retval If false then dirnm is not a directory.
  * 
  * @author Ben Baker
  *
@@ -227,7 +227,7 @@ int fteik_os_mkdir(const char *dirnm)
  *
  * @param[in] path    Directory tree to make.
  *
- * @result ISCL error code where 0 indicates success.
+ * @result 0 indicates success.
  *
  * @author Ben Baker
  *
