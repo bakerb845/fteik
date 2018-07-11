@@ -201,12 +201,12 @@ int fteik_os_mkdir(const char *dirnm)
     int ierr;
     if (dirnm == NULL)
     {   
-        fprintf(stderr, "Directory name is NULL");
+        fprintf(stderr, "Directory name is NULL\n");
         return -1;
     }   
     if (strlen(dirnm) == 0)
     {   
-        fprintf(stderr, "Directory name is empty");
+        fprintf(stderr, "Directory name is empty\n");
         return -1;
     }   
 #if defined WINNT || defined WIN32 || defined WIN64
@@ -216,7 +216,7 @@ int fteik_os_mkdir(const char *dirnm)
 #endif
     if (ierr != 0)
     {   
-        fprintf(stderr, "Error making directory %s", dirnm);
+        fprintf(stderr, "Error making directory %s\n", dirnm);
         return -1;
     }   
     return 0;
@@ -249,18 +249,18 @@ int fteik_os_makedirs(const char *path)
     ierr = 0; //ISCL_SUCCESS;
     if (path == NULL)
     {   
-        fprintf(stderr, "Directory name is NULL");
+        fprintf(stderr, "Directory name is NULL\n");
         return -1; //ISCL_NULL_PATH;
     }
     lenos = strlen(path);
     if (lenos == 0)
     {   
-        fprintf(stderr, "Directory name is empty");
+        fprintf(stderr, "Directory name is empty\n");
         return -1; //ISCL_EMPTY_PATH;
     }
     if (lenos > PATH_MAX - 2)
     {   
-        fprintf(stderr, "Directory %s is too long", path);
+        fprintf(stderr, "Directory %s is too long\n", path);
         return -1; //ISCL_INVALID_INPUT;
     }
     // Already exists
@@ -292,9 +292,9 @@ int fteik_os_makedirs(const char *path)
                 ierr = fteik_os_mkdir(directory);
                 if (ierr != 0) //ISCL_SUCCESS)
                 {
-                    fprintf(stderr, "Error making subdirectory: %s",
+                    fprintf(stderr, "Error making subdirectory: %s\n",
                             directory);
-                    fprintf(stderr, "Error making directory: %s", path);
+                    fprintf(stderr, "Error making directory: %s\n", path);
                     free(dname);
                     return ierr;
                 }
