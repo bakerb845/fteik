@@ -8,6 +8,7 @@ import ctypes
 from ctypes import c_int
 from ctypes import c_double
 from ctypes import byref
+from ctypes import c_char_p
 from ctypes import POINTER
 from numpy import zeros
 from numpy import array
@@ -90,9 +91,16 @@ class fteik3d:
         lib.fteik_solver3d_getNumberOfReceivers.argtypes = (POINTER(c_int), #nrec 
                                                             POINTER(c_int)  #ierr
                                                            )
+        lib.fteik_h5io_initializeF.argtypes = [c_char_p]
+        lib.fteik_h5io_writeLevelSchedulesF.argtypes = None
+        lib.fteik_h5io_writeTravelTimesF.argtypes = [c_char_p]
+        lib.fteik_h5io_writeVelocityModelF.argtypes = [c_char_p]
+        lib.fteik_h5io_finalizeF.argtypes = None
+
 
         lib.fteik_solver3d_free.argtypes = None
         self.linit = False
+        self.lhaveArchive = False
         self.nx = 0
         self.ny = 0
         self.nz = 0
@@ -112,12 +120,15 @@ class fteik3d:
         """
         Frees the internal Fortran module.
         """
+        if (self.lhaveArchive):
+            self.fteik3d.fteik_h5io_finalizeF()
         self.nx = 0
         self.ny = 0
         self.nz = 0
         self.nsrc = 0
         self.nrec = 0
         self.linit = False
+        self.lhaveArchive = False
         self.fteik3d.fteik_solver3d_free()
         return
 
@@ -366,3 +377,81 @@ class fteik3d:
         self.nrec = nrec
         return 0
 
+    def createArchive(self, archiveName, lwriteLevels=False):
+        """
+        Initializes an archive.
+
+        Input
+        -----
+        archiveName : str
+            Name of archive - e.g., myarchive.h5
+        lwriteLevels : bool
+            If true then write the level reordering.
+
+        Returns
+        ierr : int
+           Error flag where 0 indicates sucess.
+        """
+        archiveNamePtr = archiveName.encode('utf-8')#c_char_p(archiveName)
+        ierr = self.fteik3d.fteik_h5io_initializeF(archiveNamePtr)
+        if (ierr != 0):
+            print("Failed to initialize archive")
+            return -1
+        self.lhaveArchive = True
+        if (lwriteLevels):
+            ierr = self.fteik3d.fteik_h5io_writeLevelSchedulesF()
+            if (ierr != 0):
+                print("Failed to write level schedules")
+        return 0
+
+    def writeVelocityModelToArchive(self, velName):
+        """
+        Writes the current velocity model to an archive.
+
+        Input
+        -----
+        velName : str
+            Name of velocity model.
+
+        Returns
+        ierr : int
+           Error flag where 0 indicates sucess.
+        """
+        velNamePtr = velName.encode('utf-8')#c_char_p(velName)
+        ierr = self.fteik3d.fteik_h5io_writeVelocityModelF(velNamePtr) 
+        if (ierr != 0):
+            print("Failed to write velocity model")
+            return -1
+        return 0
+
+    def writeTravelTimeFieldToArchive(self, tname):
+        """
+        Writes the current travel time field to an archive.
+        
+        Input
+        -----
+        tname : str
+            Name of travel time field.
+
+        Returns
+        ierr : int
+           Error flag where 0 indicates sucess.
+        """
+        tnamePtr = tname.encode('utf-8')#c_char_p(tname)
+        ierr = self.fteik3d.fteik_h5io_writeTravelTimesF(tnamePtr)
+        if (ierr != 0):
+            print("Failed to write travel times")
+            return -1
+        return 0
+
+    def closeArchive(self):
+        """
+        Closes an HDF5 archive file.
+        Returns
+        ierr : int
+           Error flag where 0 indicates sucess.
+        """
+        ierr = self.fteik3d.fteik_h5io_finalizeF()
+        if (ierr != 0):
+            print("%s: Failed to close archive")
+        return -1

@@ -270,26 +270,31 @@ int fteik_xdmfGrid_write(const struct fteikXDMFGrid_struct xdmf)
     buf = xmlBufferCreate();
     if (buf == NULL)
     {
-        fprintf(stderr, "%s: Error creating XML buffer!", __func__);
+        fprintf(stderr, "%s: Error creating XML buffer!\n", __func__);
         return -1;
     }
     // Create a new xmlWriter for uri with no compression
     writer = xmlNewTextWriterMemory(buf, 0);
     if (writer == NULL)
     {
-        fprintf(stderr, "%s: Error creating xml writer", __func__);
+        fprintf(stderr, "%s: Error creating xml writer\n", __func__);
         return -1;
     }
-    xmlTextWriterSetIndentString(writer, "  "); //"\t");
+    xmlTextWriterSetIndentString(writer, BAD_CAST("  ")); //"\t");
     // Start the document with default xml version
     rc = xmlTextWriterStartDocument(writer, NULL, XML_ENCODING, NULL);
     if (rc < 0)
     {
-        fprintf(stderr, "%s: Error starting writer", __func__);
+        fprintf(stderr, "%s: Error starting writer\n", __func__);
         return -1;
     }
     // <Xdmf>
     xmlTextWriterSetIndent(writer, 1);
+    rc = xmlTextWriterWriteDTD(writer,
+                               BAD_CAST "Xdmf\0",
+                               NULL,
+                               BAD_CAST "Xdmf.dtd",
+                               BAD_CAST "");
     rc = xmlTextWriterStartElement(writer, BAD_CAST "Xdmf\0");
     rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "xmlns:xi\0",
                                      BAD_CAST "http://www.w3.org/2003/XInclude\0");
@@ -377,7 +382,7 @@ int fteik_xdmfGrid_write(const struct fteikXDMFGrid_struct xdmf)
     strncpy(xmlmsg, (const char *)buf->content, msglen);
     // Write it 
     xmlFileHandle = fopen(xdmf.xdmfFile, "w");
-    fprintf(xmlFileHandle, xmlmsg);
+    fprintf(xmlFileHandle, "%s", xmlmsg);
     fclose(xmlFileHandle);
     // Clean up
     xmlCleanupParser();

@@ -96,9 +96,11 @@ printf("%d %d\n", nx, nz);
 ttimes = (double *) calloc((size_t) (nz*nx), sizeof(double));
 double *slow = (double *) calloc((size_t) ((nz-1)*(nx-1)), sizeof(double));
 for (int k=0; k<(nz-1)*(nx-1); k++){slow[k] = 1.0/vel[k];}
+/*
 printf("calling ref\n");
 solver2d_c(slow, ttimes, nz, nx, zsrc[0], xsrc[0], dz, dx, nsweep); 
     fprintf(stdout, "%s: Calling debug solver...\n", __func__);
+*/
 fteik_solver2d_solveSourceFSM(1, &ierr);
 printf("calling lsm\n"); 
     fprintf(stdout, "%s: Calling solver...\n", __func__);

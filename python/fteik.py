@@ -157,6 +157,11 @@ if __name__ == "__main__":
     fteik3d.solveLSM()
     ttimesGrad = fteik3d.getTravelTimeField()
     ttrGrad = fteik3d.getTravelTimes()
+
+    fteik3d.createArchive("python3d.h5")
+    fteik3d.writeVelocityModelToArchive("velModel")
+    fteik3d.writeTravelTimeFieldToArchive("tfield")
+    fteik3d.closeArchive()
     fteik3d.free()
 
     analytic = fteikAnalytic()#fteikLibrary)
