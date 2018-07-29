@@ -148,7 +148,9 @@ MODULE FTEIK_H5IO64F
 !>
       INTEGER(C_INT) FUNCTION fteik_h5io_finalizeF() &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_finalizeF')
-      ierr = fteik_h5io_finalize();
+      ierr = fteik_h5io_finalize()
+      !ierr = eik_h5io_closeFileF(h5fl) 
+      linitH5FL = .FALSE.
       RETURN
       END
 !                                                                                        !

@@ -109,7 +109,7 @@ int fteik_h5io_initialize(const char *fileName,
         // Try to make it
         if (fteik_os_makedirs(dirName) != 0)
         {
-            fprintf(stderr, "%s: Failed to make dirctory: %s\n",
+            fprintf(stderr, "%s: Failed to make directory: %s\n",
                     __func__, dirName);
             return -1;
         }
