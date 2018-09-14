@@ -1,4 +1,12 @@
+MODULE FTEIK_MPI
+      USE ISO_FORTRAN_ENV
+      USE ISO_C_BINDING
+      USE MPI_F08
 
+      CONTAINS
+!========================================================================================!
+!                                      Begin the Code                                    !
+!========================================================================================!
 !>    @brief Broadcasts the basic graph startup variables to the other processes
 !>           on the communicator.
 !>
@@ -14,23 +22,22 @@
 !>
       SUBROUTINE fteik_mpi_broadcastGraph64fF(root, comm, mpierr) &
                  BIND(C, NAME='fteik_mpi_broadcastGraph64fF')
-      USE FTEIK_UTILS64F, ONLY : dx, dy, dz, x0, y0, z0
+!     USE FTEIK_UTILS64F, ONLY : dx, dy, dz, x0, y0, z0
       USE FTEIK_UTILS64F, ONLY : ncell, ngrd, nx, ny, nz, nzx, nzm1, nzm1_nxm1
       USE FTEIK_UTILS64F, ONLY : levelPtr, ijkv1, ijkv2, ijkv3, ijkv4, &
                                  ijkv5, ijkv6, ijkv7, ijkv8, &
                                  nLevels, maxLevelSize
-      USE FTEIK_UTILS64F, ONLY : tt1
-      USE FTEIK_UTILS64F, ONLY : lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
+!     USE FTEIK_UTILS64F, ONLY : tt1
+!     USE FTEIK_UTILS64F, ONLY : lupd1, lupd2, lupd3, lupd4, lupd5, lupd6, lupd7, lupd8
       USE FTEIK_UTILS64F, ONLY : lhaveGrid, lhaveGridSpacing
-      USE FTEIK_UTILS64F, ONLY : zero
-      USE MPI
-      USE ISO_C_BINDING
+!     USE FTEIK_UTILS64F, ONLY : zero
+      !USE MPI
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: comm, root
       INTEGER, INTENT(OUT) :: mpierr
       INTEGER lreturn, myid
       ! who am i?
-      CALL MPI_Comm_Rank(myid, comm, mpierr)
+!     CALL MPI_Comm_rank(myid, comm, mpierr)
       ! is the root process ready to broadcast?
       IF (myid /= root) THEN
          lhaveGrid = .FALSE.
@@ -42,34 +49,34 @@
             lreturn = 1
          ENDIF
       ENDIF
-      CALL MPI_Bcast(lreturn, 1, MPI_INTEGER, root, comm, mpierr)
+!     CALL MPI_Bcast(lreturn, 1, MPI_INTEGER, root, comm, mpierr)
       IF (lreturn == 1) THEN
          mpierr = MPI_ERR_ARG
          RETURN
       ENDIF
       ! grid sizes
-      CALL MPI_Bcast(ncell,     1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ngrd,      1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(nz,        1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(nx,        1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ny,        1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(nzx,       1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(nzm1,      1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(nzm1_nxm1, 1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ncell,     1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ngrd,      1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nz,        1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nx,        1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ny,        1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nzx,       1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nzm1,      1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nzm1_nxm1, 1, MPI_INT32_T, root, comm, mpierr)
       ! graph sizes
-      CALL MPI_Bcast(nLevels,      1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(maxLevelSize, 1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(nLevels,      1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(maxLevelSize, 1, MPI_INT32_T, root, comm, mpierr)
       ! grid spacing and origin
-      CALL MPI_Bcast(dz, 1, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(dx, 1, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(dy, 1, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(z0, 1, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(x0, 1, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(y0, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(dz, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(dx, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(dy, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(z0, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(x0, 1, MPI_DOUBLE, root, comm, mpierr)
+!     CALL MPI_Bcast(y0, 1, MPI_DOUBLE, root, comm, mpierr)
       ! number of Gauss-Seidel iterations
-      CALL fteik_mpi_broadcastNumberOfSweepsF(root, comm, mpierr)
+!     CALL fteik_mpi_broadcastNumberOfSweepsF(root, comm, mpierr)
       ! spherical to cartesian parameter
-      CALL fteik_mpi_broadcastEpsS2C64fF(root, comm, mpierr)
+!     CALL fteik_mpi_broadcastEpsS2C64fF(root, comm, mpierr)
       ! set space
       IF (myid /= root) THEN
          IF (ALLOCATED(levelPtr)) DEALLOCATE(levelPtr)
@@ -110,26 +117,26 @@
          ALLOCATE(tt1(maxLevelSize))
          tt1(:) = zero
       ENDIF
-      CALL MPI_Bcast(levelPtr, nLevels+1, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv1, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv2, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv3, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv4, 4*ngrd, MPI_INT32_T, root, comm, mpierr) 
-      CALL MPI_Bcast(ijkv5, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv6, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv7, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(ijkv8, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
-      CALL MPI_Bcast(lupd1, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd2, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd3, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd4, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd5, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd6, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd7, ngrd, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lupd8, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(levelPtr, nLevels+1, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv1, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv2, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv3, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv4, 4*ngrd, MPI_INT32_T, root, comm, mpierr) 
+!     CALL MPI_Bcast(ijkv5, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv6, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv7, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(ijkv8, 4*ngrd, MPI_INT32_T, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd1, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd2, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd3, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd4, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd5, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd6, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd7, ngrd, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lupd8, ngrd, MPI_C_BOOL, root, comm, mpierr)
       ! we're okay
-      CALL MPI_Bcast(lhaveGrid,        1, MPI_C_BOOL, root, comm, mpierr)
-      CALL MPI_Bcast(lhaveGridSpacing, 1, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lhaveGrid,        1, MPI_C_BOOL, root, comm, mpierr)
+!     CALL MPI_Bcast(lhaveGridSpacing, 1, MPI_C_BOOL, root, comm, mpierr)
       RETURN
       END
 !                                                                                        !
@@ -205,3 +212,4 @@
 
       RETURN
       END
+END MODULE

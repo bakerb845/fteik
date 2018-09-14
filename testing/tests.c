@@ -3,8 +3,8 @@
 #include <string.h>
 #include <math.h>
 #include <fteik/fteik_fortran.h>
-#include <fteik_graph.h>
-#include <fteikGraph.h>
+#include "./fteik_graph.h"
+#include "./fteikGraph.h"
 
 //int test_slowPerm(void);
 //int test_ttPerm(void);

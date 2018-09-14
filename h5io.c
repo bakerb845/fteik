@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <limits.h>
 #include "fteik/fteik_h5io.h"
 #include "fteik/fteik_xdmf.h"

@@ -110,7 +110,7 @@
             PURE REAL(C_DOUBLE) FUNCTION fteik_tAna64fF(i, j, k, dz, dx, dy,   &
                                                         zsa, xsa, ysa, szero)  &
                                 BIND(C, NAME='fteik_tAna64fF')
-            !$OMP DECLARE SIMD(fteik_tAna64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero) 
+            !!$OMP DECLARE SIMD(fteik_tAna64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero) 
             USE ISO_C_BINDING
             IMPLICIT NONE
             REAL(C_DOUBLE), INTENT(IN), VALUE :: dx, dy, dz, szero, xsa, ysa, zsa
@@ -120,7 +120,7 @@
             PURE SUBROUTINE fteik_tAnaD64fF(t_anad, tzc, txc, tyc, i, j, k,   &
                                             dz, dx, dy, zsa, xsa, ysa, szero) &
                             BIND(C, NAME='fteik_tAnaD64fF')
-            !$OMP DECLARE SIMD(fteik_tAnaD64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+            !!$OMP DECLARE SIMD(fteik_tAnaD64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
             USE ISO_C_BINDING
             IMPLICIT NONE
             REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero
@@ -188,8 +188,8 @@
                                                    sgntz, sgntx, sgnty,              &
                                                    sgnrz_dzi, sgnrx_dxi, sgnry_dyi)  &
             RESULT(tupd) BIND(C, NAME='fteik_localSolverExplicit64fF')
-            !$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
-            !$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+            !!$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
+            !!$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
             USE ISO_C_BINDING
             IMPLICIT NONE 
             REAL(C_DOUBLE), INTENT(IN), VALUE :: tv, te, tn, tev, ten, tnv, tnve, tt0
@@ -447,7 +447,7 @@
 
             PURE INTEGER(C_INT) FUNCTION grid2indexF(i, j, k, nz, nzx)   &
                                 BIND(C, NAME='fteik_grid2indexF')
-            !$OMP DECLARE SIMD(grid2indexF) UNIFORM(nz, nzx)
+            !!$OMP DECLARE SIMD(grid2indexF) UNIFORM(nz, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx
@@ -455,7 +455,7 @@
 
             PURE SUBROUTINE index2gridF(igrd, i, j, k, ierr) &
                             BIND(C, NAME='fteik_index2gridF')
-            !$OMP DECLARE SIMD(index2gridF)
+            !!$OMP DECLARE SIMD(index2gridF)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: igrd 
@@ -464,7 +464,7 @@
 
             PURE INTEGER(C_INT) FUNCTION velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)  &
                                 BIND(C, NAME='fteik_velGrid2indexF')
-            !$OMP DECLARE SIMD(velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+            !!$OMP DECLARE SIMD(velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1
@@ -548,7 +548,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep1TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep1TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep1TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
@@ -562,7 +562,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep2TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep2TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep2TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
@@ -576,7 +576,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep3TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep3TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep3TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
@@ -590,7 +590,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep4TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep4TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep4TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
@@ -604,7 +604,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep5TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep5TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep5TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx 
@@ -618,7 +618,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep6TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep6TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep6TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
@@ -632,7 +632,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep7TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep7TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep7TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx
@@ -646,7 +646,7 @@
                                                                ttimes, tt1, tt2, tt3, tt4, &
                                                                tt5, tt6, tt7, tt8)         &
             BIND(C, NAME='fteik_prefetchSweep8TravelTimes64fF')
-            !$OMP DECLARE SIMD(fteik_prefetchSweep8TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+            !!$OMP DECLARE SIMD(fteik_prefetchSweep8TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
             USE ISO_C_BINDING
             IMPLICIT NONE
             INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nx, ny, nzx

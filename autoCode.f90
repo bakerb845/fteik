@@ -24,7 +24,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep1TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep1TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep1TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -70,7 +70,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep2TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep2TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep2TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -116,7 +116,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep3TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep3TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep3TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -162,7 +162,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep4TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep4TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep4TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -208,7 +208,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep5TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep5TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep5TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -254,7 +254,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep6TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep6TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep6TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -300,7 +300,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep7TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep7TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep7TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE
@@ -346,7 +346,7 @@
                                                          ttimes, tt1, tt2, tt3, tt4, &
                                                          tt5, tt6, tt7, tt8)         &
       BIND(C, NAME='fteik_prefetchSweep8TravelTimes64fF')
-      !$OMP DECLARE SIMD(fteik_prefetchSweep8TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
+      !!$OMP DECLARE SIMD(fteik_prefetchSweep8TravelTimes64fF) UNIFORM(nz, nx, ny, nzx)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : grid2indexF
       IMPLICIT NONE

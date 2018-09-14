@@ -1,3 +1,9 @@
+!> @defgroup graph Graph
+!> @ingroup solver2d
+!> @ingroup solver3d
+!> @brief Graph utiltiies for making the level-set elimination tree.
+!> @author Ben Baker
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_GRAPH3D
    USE ISO_C_BINDING
    IMPLICIT NONE
@@ -476,7 +482,7 @@ MODULE FTEIK_GRAPH3D
 !>    @copyright Ben Baker distributed under the MIT license.
 !>
       PURE SUBROUTINE fteik_graph3d_index2grid(igrd, i, j, k, ierr)
-      !$OMP DECLARE SIMD(fteik_graph3d_index2grid) UNIFORM(ierr)
+      !!$OMP DECLARE SIMD(fteik_graph3d_index2grid) UNIFORM(ierr)
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
       INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr

@@ -297,7 +297,7 @@ MODULE FTEIK_H5IO64F
          FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx)        &
          BIND(C, NAME='fteik_model_grid2indexF')                   &
          RESULT(grid2indexF)
-         !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
+         !!$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
          USE ISO_C_BINDING
          IMPLICIT NONE
          INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx 
@@ -384,7 +384,7 @@ MODULE FTEIK_H5IO64F
          FUNCTION fteik_model_velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
          BIND(C, NAME='fteik_model_velGrid2indexF')                      &
          RESULT(velGrid2IndexF)
-         !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+         !!$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
          USE ISO_C_BINDING
          IMPLICIT NONE
          INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1

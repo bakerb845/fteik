@@ -1,6 +1,6 @@
 #ifndef FTEIK_OS_H__
 #define FTEIK_OS_H__ 1
-#include <limits.h>
+#include "fteik/fteik_config.h"
 #ifdef __cplusplus
 extern "C"
 {

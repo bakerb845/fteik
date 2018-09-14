@@ -1684,7 +1684,7 @@ print *, minval(ttimes), maxval(ttimes)
 
 
 
- REAL(C_DOUBLE)                                                     &
+      REAL(C_DOUBLE)                                                          &
       FUNCTION fteik_localSolverExplicit64fF(tv, te, tn, tev,                 &
                                              ten, tnv, tnve, tt0,             &
                                              slow1, slow2, slow3, slow4,      &
@@ -1694,8 +1694,8 @@ print *, minval(ttimes), maxval(ttimes)
                                              sgntz, sgntx, sgnty,             &
                                              sgnrz_dzi, sgnrx_dxi, sgnry_dyi) &
       RESULT(tupd) BIND(C, NAME='fteik_localSolverExplicit64fF')
-      !$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
-      !$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
+      !!$OMP DECLARE SIMD(fteik_localSolverExplicit64fF) &
+      !!$OMP UNIFORM(linitk, sgntz, sgntx, sgnty, sgnrz_dzi, sgnrx_dxi, sgnry_dyi)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : fteik_tAnaD64fF, fteik_tAna64fF
       USE FTEIK_UTILS64F, ONLY : FTEIK_HUGE
@@ -1754,14 +1754,13 @@ print *, minval(ttimes), maxval(ttimes)
       tzc = 0.d0
       txc = 0.d0
       tyc = 0.d0
-      !tauv = FTEIK_HUGE
-      !taue = FTEIK_HUGE
-      !taun = FTEIK_HUGE
-      !taun = FTEIK_HUGE
-      !tauev = FTEIK_HUGE
-      !tauen = FTEIK_HUGE
-      !taunv = FTEIK_HUGE
-      !taunve = FTEIK_HUGE
+      tauv = FTEIK_HUGE
+      taue = FTEIK_HUGE
+      taun = FTEIK_HUGE
+      tauev = FTEIK_HUGE
+      tauen = FTEIK_HUGE
+      taunv = FTEIK_HUGE
+      taunve = FTEIK_HUGE
       IF (tmin <= epsSolver .OR. linitk) THEN
          !t0c = t_anad64f(tzc, txc, tyc, i, j, k)
          CALL fteik_tAnaD64fF(t0c, tzc, txc, tyc, i, j, k,    &
@@ -2089,7 +2088,7 @@ print *, minval(ttimes), maxval(ttimes)
 !>
       PURE INTEGER(C_INT) FUNCTION grid2indexF(i, j, k, nz, nzx) &
                           BIND(C, NAME='fteik_grid2indexF')
-      !$OMP DECLARE SIMD(grid2indexF) UNIFORM(nz, nzx)
+      !!$OMP DECLARE SIMD(grid2indexF) UNIFORM(nz, nzx)
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx
@@ -2114,7 +2113,7 @@ print *, minval(ttimes), maxval(ttimes)
 !>
       PURE SUBROUTINE index2gridF(igrd, i, j, k, ierr) &
                       BIND(C, NAME='fteik_index2gridF')
-      !$OMP DECLARE SIMD(index2gridF)
+      !!$OMP DECLARE SIMD(index2gridF)
       USE ISO_C_BINDING
       USE FTEIK_UTILS64F, ONLY : nx, ny, nz, nz, nzx
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
@@ -2184,7 +2183,7 @@ print *, minval(ttimes), maxval(ttimes)
 !                                                                                        !
       PURE INTEGER(C_INT) FUNCTION velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
                           BIND(C, NAME='fteik_velGrid2indexF')
-      !$OMP DECLARE SIMD(velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+      !!$OMP DECLARE SIMD(velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1
@@ -2275,7 +2274,7 @@ print *, minval(ttimes), maxval(ttimes)
       PURE REAL(C_DOUBLE) FUNCTION fteik_tAna64fF(i, j, k, dz, dx, dy,   &
                                                   zsa, xsa, ysa, szero)  &
                           BIND(C, NAME='fteik_tAna64fF')
-      !$OMP DECLARE SIMD(fteik_tAna64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+      !!$OMP DECLARE SIMD(fteik_tAna64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, szero, zsa, xsa, ysa
@@ -2325,7 +2324,7 @@ print *, minval(ttimes), maxval(ttimes)
       PURE SUBROUTINE fteik_tAnaD64fF(t_anad, tzc, txc, tyc, i, j, k,   &
                                       dz, dx, dy, zsa, xsa, ysa, szero) &
                               BIND(C, NAME='fteik_tAnaD64fF')
-      !$OMP DECLARE SIMD(fteik_tAnaD64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+      !!$OMP DECLARE SIMD(fteik_tAnaD64fF) UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero

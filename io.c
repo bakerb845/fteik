@@ -67,7 +67,7 @@ int fteik_io_writeVelocityModel(const char *fileName,
                             const double z0, const double x0, const double y0,
                             const double *__restrict__ vel)
 {
-    hid_t atype, attrSpace, attrID, dataSet, dataSpace, dataSpace1, fileID;
+    hid_t atype, attrSpace, attrID, dataSet, dataSpace, fileID;
     hsize_t dims[3] = {ncellz, ncelly, ncellx};
     hsize_t dim1[1] = {1};
     int one[1] = {1};
@@ -180,6 +180,7 @@ int fteik_io_readVelocityModel(const char *fileName,
     bool lisvp, lzDown;
     status = 0;
     ierr = 0;
+    vin = NULL;
     vi2 = NULL;
     vi4 = NULL;
     v4 = NULL;
@@ -412,7 +413,7 @@ static void unpackInt16ModelToDouble(const bool lzDown,
     }
     else
     {
-        printf("Flipping model...\n");
+        fprintf(stdout, "%s: Flipping model...\n", __func__);
         for (iy=0; iy<ny; iy++)
         {
             for (ix=0; ix<nx; ix++)
@@ -452,7 +453,7 @@ static void unpackInt32ModelToDouble(const bool lzDown,
     }   
     else
     {   
-        printf("Flipping model...\n");
+        fprintf(stdout, "%s: Flipping model...\n", __func__);
         for (iy=0; iy<ny; iy++)
         {
             for (ix=0; ix<nx; ix++)
@@ -492,7 +493,7 @@ static void unpackFloatModelToDouble(const bool lzDown,
     }   
     else
     {   
-        printf("Flipping model...\n");
+        fprintf(stdout, "%s: Flipping model...\n", __func__);
         for (iy=0; iy<ny; iy++)
         {
             for (ix=0; ix<nx; ix++)
@@ -532,7 +533,7 @@ static void unpackDoubleModelToDouble(const bool lzDown,
     }   
     else
     {   
-        printf("Flipping model...\n");
+        fprintf(stdout, "%s: Flipping model...\n", __func__);
         for (iy=0; iy<ny; iy++)
         {
             for (ix=0; ix<nx; ix++)

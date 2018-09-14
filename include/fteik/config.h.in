@@ -4,6 +4,9 @@
 #ifndef FTEIK_CONFIG_H__
 #define FTEIK_CONFIG_H__ 1
 
+#include <limits.h>
+#include <stdlib.h>
+
 /* using intel */
 #cmakedefine FTEIK_USE_INTEL
 /* using HDF5 */
@@ -33,6 +36,8 @@
 #ifndef MIN3
 #define MIN3(x,y,z) (((x) < MIN(y,z)) ? (x) : MIN(y,z))
 #endif
-
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 #endif /* FTEIK_CONFIG_H__ */

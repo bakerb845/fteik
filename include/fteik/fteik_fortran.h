@@ -42,16 +42,16 @@ void fteik_model_setVelocityModel64f(
 void fteik_model_setVelocityModel32f(
     const int nv, const float *__restrict__ vel4, int *ierr);
 void fteik_model_isModel3D(bool *lis3d, int *ierr);
-#pragma omp declare simd uniform(nz, nzx)
+//#pragma omp declare simd uniform(nz, nzx)
 int fteik_model_grid2indexF(const int iz, const int ix, const int iy, 
                             const int nz, const int nzx);
-#pragma omp declare simd uniform(nz, nzx)
+//#pragma omp declare simd uniform(nz, nzx)
 int fteik_model_grid2index(const int iz, const int ix, const int iy,
                            const int nz, const int nzx);
-#pragma omp declare simd uniform (ierr)
+//#pragma omp declare simd uniform (ierr)
 void fteik_model_index2gridF(const int igrd, int *iz, int *ix, int *iy,
                              int *ierr);
-#pragma omp declare simd uniform (nzm1, nzm1_nxm1)
+//#pragma omp declare simd uniform (nzm1, nzm1_nxm1)
 int fteik_model_velGrid2indexF(const int iz, const int ix, const int iy,
                                const int nzm1, const int nzm1_nxm1);
 //----------------------------------------------------------------------------//

@@ -1,6 +1,7 @@
 #ifndef FTEIK_H5IO_H__
 #define FTEIK_H5IO_H__ 1
 #include <stdbool.h>
+#include <limits.h>
 #include "fteik/fteik_config.h"
 #include <hdf5.h>
 

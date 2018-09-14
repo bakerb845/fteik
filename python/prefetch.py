@@ -187,7 +187,7 @@ def makeTTSub(sweep):
          + "                                                         ttimes, tt1, tt2, tt3, tt4, &\n" \
          + "                                                         tt5, tt6, tt7, tt8)         &\n" \
          + "      BIND(C, NAME='fteik_prefetchSweep%dTravelTimes64fF')\n"%(sweep) \
-         + "      !$OMP DECLARE SIMD(fteik_prefetchSweep%dTravelTimes64fF) UNIFORM(nz, nx, ny, nzx)\n"%(sweep)
+         + "      !!$OMP DECLARE SIMD(fteik_prefetchSweep%dTravelTimes64fF) UNIFORM(nz, nx, ny, nzx)\n"%(sweep)
    cline = cline + '      USE ISO_C_BINDING\n'
    cline = cline + '      USE FTEIK_UTILS64F, ONLY : grid2indexF\n'
    cline = cline + '      IMPLICIT NONE\n'

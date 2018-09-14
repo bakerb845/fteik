@@ -1,5 +1,9 @@
 MODULE FTEIK_LOCATE
+  USE ISO_FORTRAN_ENV
   USE ISO_C_BINDING
+#if defined(FTEIK_FORTRAN_USE_MPI)
+  USE MPI_F08
+#endif
   IMPLICIT NONE
   !> Contains the largest epochal time for each gather.  This is a vector with 
   !> dimension [nEvents].
@@ -54,22 +58,22 @@ MODULE FTEIK_LOCATE
 
   !> Total number of grid poitns in mesh
   INTEGER(C_INT), PRIVATE, SAVE :: ngrdAll
-  !> Number of processes.
-  INTEGER, PRIVATE, SAVE :: nprocs = 1
   !> Send counts in MPI scatterv.  This is a vector of dimension [nprocs].
   INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: sendCounts(:)
   !> The displacements in MPI scatterv.  This is a vector of dimension [nprocs].
   INTEGER(C_INT), PRIVATE, ALLOCATABLE, SAVE :: displs(:)
-  !> Handle to the MPI communicator
-  INTEGER, PRIVATE, SAVE :: locatorComm =-1
   !> If true then the process is included in the locator. 
   LOGICAL(C_BOOL), PRIVATE, SAVE :: linLocator = .FALSE.
   !> If true then use the MPI locator.
   LOGICAL(C_BOOL), PRIVATE, SAVE :: luseMPI = .FALSE.
+#if defined(FTEIK_FORTRAN_USE_MPI)
+  !> Handle to the MPI communicator
+  TYPE(MPI_Comm), PRIVATE, SAVE :: locatorComm !INTEGER, PRIVATE, SAVE :: locatorComm =-1
   !> Myid on solver.
   INTEGER, PRIVATE, SAVE :: mylocatorID = 0
-
-#if defined(FTEIK_FORTRAN_USE_MPI)
+  !> Number of processes.
+  INTEGER, PRIVATE, SAVE :: nprocs = 1
+  !> MPI error code.
   INTEGER, PRIVATE :: mpierr
 #endif
   PUBLIC :: locate_initialize
@@ -149,19 +153,19 @@ MODULE FTEIK_LOCATE
       CALL locate_finalize()
       CALL locate_setNumberOfEvents(nEventsIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,900)
+         WRITE(ERROR_UNIT,900)
  900     FORMAT('locate_initializeF: Failed to set number of events')
          RETURN
       ENDIF
       CALL locate_setNumberOfTravelTimeFields(ntfIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,905)
+         WRITE(ERROR_UNIT,905)
  905     FORMAT('locate_initializeF: Failed to set number of travel time fields')
          RETURN
       ENDIF
       CALL locate_setNumberOfGridPointsF(ngrdIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,"('locate_initializeF: Failed to set number of grid points',A)")
+         WRITE(ERROR_UNIT,"('locate_initializeF: Failed to set number of grid points',A)")
          RETURN
       ENDIF
       ALLOCATE(tepoch(nEvents))
@@ -169,14 +173,14 @@ MODULE FTEIK_LOCATE
       ALLOCATE(lhaveOT(nEvents))
       lntf  = ntf  + padLength32F(alignment, ntf) 
       IF (MOD(4*lntf, alignment) /= 0) THEN
-         WRITE(*,"('locate_initializeF: Failed to pad ntf',A)")
+         WRITE(ERROR_UNIT,"('locate_initializeF: Failed to pad ntf',A)")
          ierr = 1
          RETURN
       ENDIF
       ALLOCATE(lskip(nEvents*lntf))
       ldgrd = ngrd + padLength32F(alignment, ngrd)
       IF (MOD(4*ldgrd, alignment) /= 0) THEN
-         WRITE(*,"('locate_initializeF: Failed to pad ngrd',A)")
+         WRITE(ERROR_UNIT,"('locate_initializeF: Failed to pad ngrd',A)")
          ierr = 1
          RETURN
       ENDIF
@@ -253,7 +257,7 @@ MODULE FTEIK_LOCATE
 #if defined(FTEIK_FORTRAN_USE_MPI)
       IF (linLocator) THEN
          CALL MPI_Comm_free(locatorComm, mpierr) 
-         locatorComm =-1
+         locatorComm = MPI_COMM_NULL !-1
          mylocatorID = 0
          nprocs = 0
       ENDIF
@@ -755,7 +759,7 @@ MODULE FTEIK_LOCATE
       REAL(C_FLOAT), POINTER :: obsptr(:), ttptr(:), wtsptr(:)
       REAL(C_FLOAT) res, test, tori, ts
       INTEGER(C_INT) i, iv, k1, k2
-      !$OMP SIMD aligned(tstatic: 64)
+      !$OMP SIMD !aligned(tstatic: 64)
       DO 1 i=1,nobs
          tstatic(i) = zero
     1 CONTINUE 
@@ -767,7 +771,7 @@ MODULE FTEIK_LOCATE
          ttptr  => tt(k1:k2)
          wtsptr => wts(k1:k2) 
          ts = zero
-         !$OMP SIMD ALIGNED(tstatic, obsptr, ttptr, wtsptr: 64)
+         !$OMP SIMD ALIGNED(obsptr, ttptr, wtsptr: 64) !tstatic, obsptr, ttptr, wtsptr: 64)
          DO i=1,nobs
             test = ttptr(i) + tori
             res = wtsptr(i)*(obsptr(i) - test)
@@ -800,13 +804,15 @@ MODULE FTEIK_LOCATE
       SUBROUTINE locate_initializeMPIF(root, comm,                     &
                                        nEventsIn, ntfIn, ngrdIn, ierr) &
       BIND(C, NAME='locate_initializeMPIF')
-      USE MPI
+      USE MPI_F08
       USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root, nEventsIn, ntfIn, ngrdIn
+      TYPE(MPI_Comm), VALUE, INTENT(IN) :: comm
+      INTEGER(C_INT), VALUE, INTENT(IN) :: root, nEventsIn, ntfIn, ngrdIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       INTEGER(C_INT), ALLOCATABLE :: grdPtr(:), lkeep(:)
-      INTEGER(C_INT) dGrid, i, ierrLoc, group, keepGroup, nEventsTemp, &
+      INTEGER(C_INT) dGrid, i, ierrLoc, nEventsTemp, &
                      ntfTemp, ngrdLoc, ngrdTemp
+      TYPE(MPI_Group) :: group, keepGroup
       ierr = 0
       CALL MPI_Comm_rank(comm, mylocatorID, mpierr)
       CALL MPI_Comm_size(comm, nprocs,      mpierr)
@@ -890,7 +896,7 @@ MODULE FTEIK_LOCATE
 !>    @copyright MIT
 !>
       SUBROUTINE locate_getRank(rank) BIND(C, NAME='locate_getRank')
-      USE MPI
+      USE MPI_F08
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(OUT) :: rank
       INTEGER(C_INT) mpierr
@@ -929,7 +935,7 @@ MODULE FTEIK_LOCATE
       SUBROUTINE locate_setTravelTimeField64fMPIF(root, ngrdIn, itfIn, &
                                                   ttIn, ierr)          &
       BIND(C, NAME='locate_setTravelTimeField64fMPIF')
-      USE MPI
+      USE MPI_F08
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: root, ngrdIn, itfIn
       REAL(C_DOUBLE), INTENT(IN) :: ttIn(ngrdIn)
@@ -974,7 +980,7 @@ MODULE FTEIK_LOCATE
 !>
       SUBROUTINE locate_locateEventMPIF(evnmbr, optIndx, t0Opt, objOpt) &
       BIND(C, NAME='locate_locateEventMPIF')
-      USE MPI 
+      USE MPI_F08
       USE FTEIK_CONSTANTS32F, ONLY : zero
       USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: evnmbr

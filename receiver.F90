@@ -1,3 +1,9 @@
+!> @defgroup receiver Receiver
+!> @ingroup solver2d
+!> @ingroup solver3d
+!> @brief Defines the receiver list and locations.
+!> @author Ben Baker
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_RECEIVER64F
    USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
    USE ISO_C_BINDING
@@ -50,13 +56,8 @@ MODULE FTEIK_RECEIVER64F
 !>    @param[in] x          Receiver positions in x (meters).
 !>    @param[in] y          Receiver positions in y (meters).
 !>    @param[in] verboseIn  Controls the verbosity.  < 1 is quiet.
-!>
 !>    @param[out] ierr      0 indicate success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup receiver
       SUBROUTINE fteik_receiver_initialize64f(nrecIn, z, x, y, verboseIn, ierr) &
                  BIND(C, NAME='fteik_receiver_initialize64f')
       USE FTEIK_MODEL64F, ONLY : lis3dModel, dx, dy, dz, nx, ny, nz, x0, y0, z0
@@ -159,9 +160,8 @@ MODULE FTEIK_RECEIVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the verbosity on the module.
-!>
 !>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
-!>
+!>    @ingroup receiver
       SUBROUTINE fteik_receiver_setVerobosity(verboseIn) &
       BIND(C, NAME='fteik_receiver_setVerbosity')
       USE ISO_C_BINDING
@@ -176,9 +176,7 @@ MODULE FTEIK_RECEIVER64F
 !>
 !>    @param[out] nrecOut  Number of receivers set in module.
 !>    @param[out] ierr     0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup receiver
       SUBROUTINE fteik_receiver_getNumberOfReceivers(nrecOut, ierr)  &
       BIND(C, NAME='fteik_receiver_getNumberOfReceivers')
       USE ISO_C_BINDING
@@ -208,9 +206,7 @@ MODULE FTEIK_RECEIVER64F
 !>                         dimension [nrecIn] however only the first nrec values are 
 !>                         interpolated.  Excess values will be set to FTEIK_HUGE.
 !>    @param[out] ierr     0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup receiver
       SUBROUTINE fteik_receiver_getTravelTimes64f(nrecIn, ngrd,       &
                                                   ttimes, ttr, ierr)  &
       BIND(C, NAME='fteik_receiver_getTravelTimes64f')
@@ -309,11 +305,7 @@ MODULE FTEIK_RECEIVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Releases memory in the receiver module and sets all variables to 0.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup receiver
       SUBROUTINE fteik_receiver_free( ) &
                  BIND(C, NAME='fteik_receiver_free')
       USE ISO_C_BINDING
@@ -338,16 +330,19 @@ MODULE FTEIK_RECEIVER64F
 #if defined(FTEIK_FORTRAN_USE_MPI) 
       SUBROUTINE fteik_receiver_broadcastF(root, comm, mpierr) &
                  BIND(C, NAME='fteik_receiver_broadcastF')
-      USE MPI
+      !USE MPI
       USE ISO_C_BINDING
+      USE MPI_F08
       IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root 
+      TYPE(MPI_Comm), VALUE, INTENT(IN) :: comm
+      INTEGER(C_INT), VALUE, INTENT(IN) :: root !INTEGER(C_INT), VALUE, INTENT(IN) :: comm, root 
       INTEGER(C_INT), INTENT(OUT) :: mpierr
       INTEGER(C_INT) myid
+      mpierr = 0
       CALL MPI_Comm_rank(comm, myid, mpierr)
-      CALL MPI_Bcast(nrec,    1, MPI_INT, root, comm, mpierr) 
+      CALL MPI_Bcast(nrec,    1, MPI_INTEGER, root, comm, mpierr) 
       IF (nrec < 1) RETURN 
-      CALL MPI_Bcast(verbose, 1, MPI_INT, root, comm, mpierr)
+      CALL MPI_Bcast(verbose, 1, MPI_INTEGER, root, comm, mpierr)
       IF (myid /= root) THEN 
          CALL fteik_receiver_free()
          ALLOCATE(zri(nrec))
@@ -360,15 +355,15 @@ MODULE FTEIK_RECEIVER64F
          ALLOCATE(xrec(nrec))
          ALLOCATE(yrec(nrec))
       ENDIF
-      CALL MPI_Bcast(zri,  nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(xri,  nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(yri,  nrec, MPI_INT, root, comm, mpierr)
-      CALL MPI_Bcast(zdr,  nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(xdr,  nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(ydr,  nrec, MPI_DOUBLE, root, comm, mpierr) 
-      CALL MPI_Bcast(zrec, nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(xrec, nrec, MPI_DOUBLE, root, comm, mpierr)
-      CALL MPI_Bcast(yrec, nrec, MPI_DOUBLE, root, comm, mpierr)
+      CALL MPI_Bcast(zri,  nrec, MPI_INTEGER, root, comm, mpierr)
+      CALL MPI_Bcast(xri,  nrec, MPI_INTEGER, root, comm, mpierr)
+      CALL MPI_Bcast(yri,  nrec, MPI_INTEGER, root, comm, mpierr)
+      CALL MPI_Bcast(zdr,  nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr)
+      CALL MPI_Bcast(xdr,  nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr)
+      CALL MPI_Bcast(ydr,  nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr) 
+      CALL MPI_Bcast(zrec, nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr)
+      CALL MPI_Bcast(xrec, nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr)
+      CALL MPI_Bcast(yrec, nrec, MPI_DOUBLE_PRECISION, root, comm, mpierr)
       END SUBROUTINE
 #endif
 !----------------------------------------------------------------------------------------!

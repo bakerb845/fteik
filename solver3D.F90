@@ -1,3 +1,7 @@
+!> @defgroup solver3d 3D Eikonal Solver
+!> @brief 3D eikonal equation solver.
+!> @author Ben Baker
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : zero
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
@@ -11,6 +15,7 @@ MODULE FTEIK_SOLVER64F
                             levelPtr, nLevels, maxLevelSize
   USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
                               fteik_source_free
+  USE ISO_FORTRAN_ENV
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
@@ -94,14 +99,13 @@ MODULE FTEIK_SOLVER64F
 !>    @param[in] epsIn      This is the radius, in number of grid points, around source
 !>                          where the spherical approximation finite difference stencils
 !>                          will be used.  This cannot be negative. 
-!>    @param[in] convTol    The Gauss-Seidel sweeping will stop if the updates
+!>    @param[in] convTolIn  The Gauss-Seidel sweeping will stop if the updates
 !>                          to the travel time field are less than convTol (seconds).
-!>    @param[in] verboseIn  Controsl the verbosity.  < 1 is quiet. 
+!>    @param[in] verboseIn  Controls the verbosity.  Less than 1 is quiet. 
 !>
 !>    @param[out] ierr      0 indicates success.
 !>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_initialize64f(nzIn, nxIn, nyIn,     &
                                               z0In, x0In, y0In,     &
                                               dzIn, dxIn, dyIn,     &
@@ -154,9 +158,8 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the verbosity on the module.
-!>
 !>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setVerobosity(verboseIn) &
       BIND(C, NAME='fteik_solver3d_setVerbosity')
       USE ISO_C_BINDING
@@ -173,7 +176,7 @@ MODULE FTEIK_SOLVER64F
 !>                           travel time perturbation is less than convTolIn (seconds).
 !>                           Note that if convTolin <= 0 then it will be disabled.
 !>
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setConvergenceTolerance(convTolIn) &
       BIND(C, NAME='fteik_solver3d_setConvergenceTolerance')
       USE ISO_C_BINDING
@@ -185,13 +188,8 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Computes the graph and pointers to be used by the level schedule solver.
-!>
 !>    @result 0 indicates success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_computeGraph(ierr)
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
@@ -309,15 +307,9 @@ MODULE FTEIK_SOLVER64F
 !>    @brief Sets the update nodes for the initialization.  Because during initialization
 !>           it may be possible that all nodes preceding the source location have no
 !>           useful information to propagate forward they can be ignored.
-!>
 !>    @param[in] isrc     Source number.
-!>
 !>    @param[out] ierr    0 indicates.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setInitialUpdateNodes(isrc, ierr)
       USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE FTEIK_MODEL64F, ONLY : ngrd

@@ -1,4 +1,11 @@
+!> @defgroup model Model
+!> @ingroup solver2d
+!> @ingroup solver3d
+!> @brief Defines the velocity model and physical domain.
+!> @author Ben Baker
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_MODEL64F
+  USE ISO_FORTRAN_ENV
   USE ISO_C_BINDING
   USE FTEIK_CONSTANTS64F, ONLY : zero
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
@@ -38,6 +45,7 @@ MODULE FTEIK_MODEL64F
   PUBLIC :: fteik_model_initializeGeometry
   PUBLIC :: fteik_model_setVelocityModel64f
   PUBLIC :: fteik_model_setVelocityModel32f
+  PUBLIC :: fteik_model_getGridSize
   PUBLIC :: fteik_model_getVelocityModel64f
   PUBLIC :: fteik_model_setNodalVelocityModel64f
   PUBLIC :: fteik_model_setCellVelocityModel64f
@@ -76,10 +84,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr    0 indicates success.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_initializeGeometry(lis3d,         &
                                                 nz, nx, ny,    &
                                                 z0, x0, y0,    &
@@ -94,12 +99,12 @@ MODULE FTEIK_MODEL64F
       lis3dModel = lis3d
       CALL fteik_model_setGridSize(lis3d, nz, nx, ny, ierr) 
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_model_initializeGeometry: Error setting gridsize'
+         WRITE(ERROR_UNIT,900)
          RETURN
       ENDIF 
       CALL fteik_model_setGridSpacing(lis3d, dz, dx, dy, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_model_initializeGeomtry: Error setting grid spacing'
+         WRITE(ERROR_UNIT,901)
          RETURN
       ENDIF
       IF (lis3d) THEN
@@ -107,6 +112,8 @@ MODULE FTEIK_MODEL64F
       ELSE
          CALL fteik_model_setOrigin2D(z0, x0)
       ENDIF
+  900 FORMAT('fteik_model_initializeGeometry: Error setting gridsize')
+  901 FORMAT('fteik_model_initializeGeomtry: Error setting grid spacing')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -124,8 +131,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr     0 indicates success.
 !>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setGridSpacing(lis3d, dzIn, dxIn, dyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSpacing')
       USE FTEIK_CONSTANTS64F, ONLY : zero, one
@@ -139,10 +145,9 @@ MODULE FTEIK_MODEL64F
       dx = zero 
       dy = zero
       IF (dzIn <= zero .OR. dxIn <= zero .OR. (lis3d .AND. dyIn <= zero)) THEN
-         IF (dzIn <= zero) WRITE(*,*) 'fteik_model_setGridSpacing: dz is too small', dzIn
-         IF (dxIn <= zero) WRITE(*,*) 'fteik_model_setGridSpacing: dx is too small', dxIn
-         IF (lis3d .AND. dyIn <= zero) &
-         WRITE(*,*) 'fteik_model_setGridSpacing: dy is too small', dyIn
+         IF (dzIn <= zero) WRITE(ERROR_UNIT,900) dzIn
+         IF (dxIn <= zero) WRITE(ERROR_UNIT,901) dxIn
+         IF (lis3d .AND. dyIn <= zero) WRITE(ERROR_UNIT,902)  dyIn
          ierr = 1
          RETURN
       ENDIF
@@ -153,6 +158,9 @@ MODULE FTEIK_MODEL64F
       ELSE
          dy = one
       ENDIF
+  900 FORMAT('fteik_model_setGridSpacing: dz is too small', E12.5)
+  901 FORMAT('fteik_model_setGridSpacing: dy is too small', E12.5)
+  902 FORMAT('fteik_model_setGridSpacing: dx is too small', E12.5)
       RETURN
       END
 !                                                                                        !
@@ -172,10 +180,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr    0 indicates success.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setGridSize(lis3d, nzIn, nxIn, nyIn, ierr) &
                  BIND(C, NAME='fteik_model_setGridSize')
       USE ISO_C_BINDING
@@ -191,10 +196,9 @@ MODULE FTEIK_MODEL64F
       ngrd = 0
       ncell = 0
       IF (nzIn < 3 .OR. nxIn < 3 .OR. (lis3d .AND. nyIn < 3)) THEN
-         IF (nzIn < 3) WRITE(*,*) 'fteik_model_setGridSize: ERROR nz is too small', nzIn
-         IF (nxIn < 3) WRITE(*,*) 'fteik_model_setGridSize: ERROR nx is too small', nxIn
-         IF (lis3d .AND. nyIn < 3) &
-         WRITE(*,*) 'fteik_model_setGridSize: ERROR ny is too small', nyIn
+         IF (nzIn < 3) WRITE(ERROR_UNIT,900) nzIn
+         IF (nxIn < 3) WRITE(ERROR_UNIT,901) nxIn
+         IF (lis3d .AND. nyIn < 3) WRITE(ERROR_UNIT,902) nyIn
          ierr = 1
          RETURN
       ENDIF
@@ -210,21 +214,19 @@ MODULE FTEIK_MODEL64F
       IF (ALLOCATED(slow)) DEALLOCATE(slow)
       ALLOCATE(slow(ncell))
       slow(:) = zero
+  900 FORMAT('fteik_model_setGridSize: ERROR nz is too small', I0)
+  901 FORMAT('fteik_model_setGridSize: ERROR nx is too small', I0)
+  902 FORMAT('fteik_model_setGridSize: ERROR ny is too small', I0)
       RETURN
       END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the model origin.
-!>
 !>    @param[in] z0In    z origin (meters).
 !>    @param[in] x0In    x origin (meters).
 !>    @param[in] y0In    y origin (meters).
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setOrigin3D(z0In, x0In, y0In) &
                  BIND(C, NAME='fteik_model_setOrigin3D')
       USE ISO_C_BINDING
@@ -238,14 +240,9 @@ MODULE FTEIK_MODEL64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the model origin.
-!>
 !>    @param[in] z0In    z origin (meters).
 !>    @param[in] x0In    x origin (meters).
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setOrigin2D(z0In, x0In) &
                  BIND(C, NAME='fteik_model_setOrigin2D')
       USE FTEIK_CONSTANTS64F, ONLY : zero
@@ -269,10 +266,7 @@ MODULE FTEIK_MODEL64F
 !>    @param[out] ncellOut  Number of cells in velocity field (=(nz-1)*(nx-1)*(ny-1)).
 !>    @param[out] ierr      0 indicates success.
 !> 
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_getGridSize(nzOut, nxOut, nyOut,     &
                                          ngrdOut, ncellOut, ierr) &
                  BIND(C, NAME='fteik_model_getGridSize')
@@ -286,7 +280,7 @@ MODULE FTEIK_MODEL64F
       ngrdOut = 0
       ncellOut = 0
       IF (nx < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_model_getGridSize: Grid not yet set'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
@@ -295,6 +289,7 @@ MODULE FTEIK_MODEL64F
       nyOut = ny
       ngrdOut = ngrd
       ncellOut = ncell
+  900 FORMAT('fteik_model_getGridSize: Grid not yet set')
       RETURN
       END
 !                                                                                        !
@@ -324,8 +319,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setNodalVelocityModel64f(ng, order, vel, ierr)  &
       BIND(C, NAME='fteik_model_setNodalVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
@@ -338,18 +332,21 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (ng < ngrd) THEN
-         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: ng should be at least', ngrd 
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setNodalVelocityModel64f: ng should be at least', ngrd 
          ierr = 1
          RETURN
       ENDIF
       IF (ng < 1) THEN
-         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: No points in model', ng
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setNodalVelocityModel64f: No points in model', ng
          ierr = 1
          RETURN
       ENDIF
       vmin = MINVAL(vel(1:ng))
       IF (vmin <= zero) THEN
-         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: vmin must be positive', vmin
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setNodalVelocityModel64f: vmin must be positive', vmin
          ierr = 1
          RETURN
       ENDIF
@@ -393,7 +390,8 @@ MODULE FTEIK_MODEL64F
          ELSE
             IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
                 verbose > 0) THEN
-               WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Defaulting ot zxy' 
+               WRITE(OUTPUT_UNIT,*) &
+               'fteik_model_setNodalVelocityModel64f: Defaulting ot zxy' 
             ENDIF 
             DO iy=1,ny-1
                DO ix=1,nx-1
@@ -428,7 +426,8 @@ MODULE FTEIK_MODEL64F
          ELSE
             IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
                 verbose > 0) THEN
-               WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Defaulting ot zx'
+               WRITE(OUTPUT_UNIT,*) &
+               'fteik_model_setNodalVelocityModel64f: Defaulting to zx'
             ENDIF
             DO iz=1,nz-1
                DO ix=1,nx-1
@@ -443,7 +442,7 @@ MODULE FTEIK_MODEL64F
          ENDIF
       ENDIF
       IF (MINVAL(slow(1:ncell)) <= zero) THEN
-         WRITE(*,*) 'fteik_model_setNodalVelocityModel64f: Internal error'
+         WRITE(ERROR_UNIT,*) 'fteik_model_setNodalVelocityModel64f: Internal error'
          ierr = 1
          RETURN
       ENDIF
@@ -478,8 +477,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setCellVelocityModel64f(nc, order, vel, ierr)  &
       BIND(C, NAME='fteik_model_setCellVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
@@ -492,18 +490,21 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (nc < ncell) THEN
-         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: nc should be at least', ncell
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setCellVelocityModel64f: nc should be at least', ncell
          ierr = 1
          RETURN
       ENDIF
       IF (nc < 1) THEN
-         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: No points in model', nc
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setCellVelocityModel64f: No points in model', nc
          ierr = 1
          RETURN
       ENDIF
       vmin = MINVAL(vel(1:nc))
       IF (vmin <= zero) THEN
-         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: vmin must be positive', vmin
+         WRITE(ERROR_UNIT,*) &
+         'fteik_model_setCellVelocityModel64f: vmin must be positive', vmin
          ierr = 1
          RETURN
       ENDIF
@@ -531,7 +532,8 @@ MODULE FTEIK_MODEL64F
          ELSE
             IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
                 verbose > 0) THEN
-               WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Defaulting ot zxy'
+               WRITE(OUTPUT_UNIT,*) &
+               'fteik_model_setCellVelocityModel64f: Defaulting ot zxy'
             ENDIF
             slow(1:ncell) = one/vel(1:ncell)
             lhaveModel = .TRUE.
@@ -550,7 +552,8 @@ MODULE FTEIK_MODEL64F
          ELSE
             IF ((order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING).AND. &
                 verbose > 0) THEN
-               WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Defaulting ot zx' 
+               WRITE(OUTPUT_UNIT,*) &
+               'fteik_model_setCellVelocityModel64f: Defaulting ot zx' 
             ENDIF
             slow(1:ncell) = one/vel(1:ncell)
             lhaveModel = .TRUE.
@@ -558,7 +561,7 @@ MODULE FTEIK_MODEL64F
          ENDIF
       ENDIF
       IF (MINVAL(slow(1:ncell)) <= zero) THEN
-         WRITE(*,*) 'fteik_model_setCellVelocityModel64f: Internal error'
+         WRITE(ERROR_UNIT,*) 'fteik_model_setCellVelocityModel64f: Internal error'
          ierr = 1 
          RETURN
       ENDIF
@@ -579,10 +582,7 @@ MODULE FTEIK_MODEL64F
 !>
 !>    @param[out] ierr  0 indicates success.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setVelocityModel64f(nv, vel, ierr) &
                  BIND(C, NAME='fteik_model_setVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
@@ -595,17 +595,17 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (nv /= ncell) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64f: ERROR - ncell /= nv', ncell, nv
+         WRITE(ERROR_UNIT,900) ncell, nv 
          ierr = 1 
          RETURN
       ENDIF
       IF (nv < 1) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64f: ERROR - no cells in vel', nv
+         WRITE(ERROR_UNIT,901) nv
          ierr = 1 
          RETURN
       ENDIF
       IF (MINVAL(vel) <= zero) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel64f: All velocities must be positive'
+         WRITE(ERROR_UNIT,902)
          ierr = 1
          RETURN
       ENDIF
@@ -614,6 +614,9 @@ MODULE FTEIK_MODEL64F
          slow(i) = one/vel(i)
     1 CONTINUE  
       lhaveModel = .TRUE.
+  900 FORMAT('fteik_model_setVelocityModel64f: ERROR - ncell /= nv', I0, I0)
+  901 FORMAT('fteik_model_setVelocityModel64f: ERROR - no cells in vel', I0)
+  902 FORMAT('fteik_model_setVelocityModel64f: All velocities must be positive')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -622,10 +625,7 @@ MODULE FTEIK_MODEL64F
 !>    @brief Finalizes the model module by releasing memory and setting variables to
 !>           undefined types.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_free() &
                  BIND(C, NAME='fteik_model_free')
       USE FTEIK_CONSTANTS64F, ONLY : zero
@@ -663,10 +663,7 @@ MODULE FTEIK_MODEL64F
 !>                         If nwork > nv then the velocity model is in vel(1:nv).
 !>    @param[out] ierr     0 indicates usccess. 
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_getVelocityModel64f(nwork, nv, vel, ierr) &
                  BIND(C, NAME='fteik_model_getVelocityModel64f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
@@ -683,12 +680,12 @@ MODULE FTEIK_MODEL64F
          RETURN
       ENDIF
       IF (nwork < ncell) THEN
-         WRITE(*,*) 'fteik_model_getVelocityModel64f: nv < ncell'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (.NOT.lhaveModel) THEN
-         WRITE(*,*) 'fteik_model_getVelocityModel64f: Velocity model not yet set'
+         WRITE(ERROR_UNIT,901)
          ierr = 1
          vel(:) = zero
          RETURN
@@ -697,18 +694,17 @@ MODULE FTEIK_MODEL64F
       DO 1 i=1,ncell
          vel(i) = one/slow(i) 
     1 CONTINUE
+  900 FORMAT('fteik_model_getVelocityModel64f: nv < ncell')
+  901 FORMAT('fteik_model_getVelocityModel64f: Velocity model not yet set')
       RETURN
       END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
 !>    @brief Determines if the model is 2D or 3D.
-!>
 !>    @param[out] lis3d    If true then the model is 3D.
 !>    @param[out] ierr     0 indicates usccess.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_isModel3D(lis3d, ierr) &
       BIND(C, NAME='fteik_model_isModel3D')
       USE ISO_C_BINDING
@@ -717,10 +713,11 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lis3d = lis3dModel
       IF (nx < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_model_isModel3D: Model not yet initialized'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
+  900 FORMAT('fteik_model_isModel3D: Model not yet initialized')
       RETURN
       END
 !                                                                                        !
@@ -735,11 +732,7 @@ MODULE FTEIK_MODEL64F
 !>                      and leading dimension 2 of (nx-1).
 !>
 !>    @param[out] ierr  0 indicates success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_setVelocityModel32f(nv, vel4, ierr) &
                  BIND(C, NAME='fteik_model_setVelocityModel32f')
       USE FTEIK_CONSTANTS64F, ONLY : one, zero
@@ -752,17 +745,17 @@ MODULE FTEIK_MODEL64F
       ierr = 0
       lhaveModel = .FALSE.
       IF (nv /= ncell) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel32f: ERROR - ncell /= nv', ncell, nv
+         WRITE(ERROR_UNIT,900) ncell, nv
          ierr = 1
          RETURN
       ENDIF
       IF (nv < 1) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel32f: ERROR - no cells in vel', nv
+         WRITE(ERROR_UNIT,901) nv
          ierr = 1
          RETURN
       ENDIF
       IF (MINVAL(vel4) <= 0.0) THEN
-         WRITE(*,*) 'fteik_model_setVelocityModel32f: All velocities must be positive'
+         WRITE(ERROR_UNIT,902)
          ierr = 1
          RETURN
       ENDIF
@@ -771,6 +764,9 @@ MODULE FTEIK_MODEL64F
          slow(i) = one/DBLE(vel4(i))
     1 CONTINUE
       lhaveModel = .TRUE.
+  900 FORMAT('fteik_model_setVelocityModel64f: ERROR - ncell /= nv', I0, I0) 
+  901 FORMAT('fteik_model_setVelocityModel64f: ERROR - no cells in vel', I0) 
+  902 FORMAT('fteik_model_setVelocityModel64f: All velocities must be positive')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -788,14 +784,11 @@ MODULE FTEIK_MODEL64F
 !>    @result The grid point, g = (k-1)*nx*nz + (j-1)*nz + i, corresponiding to the
 !>            (i, j, k)'th grid indices.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       INTEGER(C_INT) FUNCTION fteik_model_grid2indexF(i, j, k, nz, nzx) &
       BIND(C, NAME='fteik_model_grid2indexF')                           &
       RESULT(grid2indexF)
-      !$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
+      !!$OMP DECLARE SIMD(fteik_model_grid2indexF) UNIFORM(nz, nzx)
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx
@@ -814,13 +807,10 @@ MODULE FTEIK_MODEL64F
 !>    @param[out] k     iy'th grid point.  This is Fortran indexed.
 !>    @param[out] ierr  0 indicates success.
 !>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       SUBROUTINE fteik_model_index2gridF(igrd, i, j, k, ierr) &
       BIND(C, NAME='fteik_model_index2gridF')
-      !$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
+      !!$OMP DECLARE SIMD(fteik_model_index2gridF) UNIFORM(ierr)
       USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
       INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
@@ -850,15 +840,11 @@ MODULE FTEIK_MODEL64F
 !>    @param[in] nzm1_nxm1   (nz - 1)*(nx - 1)
 !>
 !>    @result The velocity cell corresponding to the (i, j, k)'th model index.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup model
       INTEGER(C_INT) FUNCTION fteik_model_velGrid2indexF(i, j, k, nzm1, nzm1_nxm1)   &
       BIND(C, NAME='fteik_model_velGrid2indexF')                                     &
       RESULT(velGrid2IndexF)
-      !$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
+      !!$OMP DECLARE SIMD(fteik_model_velGrid2indexF) UNIFORM(nzm1, nzm1_nxm1)
       USE ISO_C_BINDING
       IMPLICIT NONE 
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nzm1, nzm1_nxm1

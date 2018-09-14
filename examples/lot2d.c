@@ -121,6 +121,7 @@ printf("calling lsm\n");
     fteik_solver2d_free();
     // Free resources
     free(vel);
+free(ttimes);
     return EXIT_SUCCESS;
 }
 //============================================================================//
@@ -145,10 +146,7 @@ int create2DLayeredVelocityModel(const int nlayer, const int nz, const int nx,
     for (iz=0; iz<ncellz; iz++)
     {
         z = (double) iz*dz;
-        for (k=0; k<nlayer; k++)
-        {
-            ix*ncellz + iz;
-        }
+        //for (k=0; k<nlayer; k++){ix*ncellz + iz;}
         v = v1d[0];
         for (k=0; k<nlayer-1; k++)
         {

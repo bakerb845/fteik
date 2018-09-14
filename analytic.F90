@@ -614,15 +614,14 @@ MODULE FTEIK_ANALYTIC64F
       SUBROUTINE solveConstantVelocity64f(job,                    &
                                           zsrc, xsrc, ysrc,       &
                                           nrec, zrec, xrec, yrec, &
-                                          ierr)                   &
-      BIND(C, NAME='solveConstantVelocity64f')
+                                          ierr)
       USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: job, nrec
-      REAL(C_DOUBLE), VALUE, INTENT(IN) :: xsrc, ysrc, zsrc
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: zrec, xrec, yrec
-      INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) x, y, z
-      INTEGER(C_INT) i, igrd, j, k
+      INTEGER, VALUE, INTENT(IN) :: job, nrec
+      DOUBLE PRECISION, INTENT(IN) :: xsrc, ysrc, zsrc
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: zrec, xrec, yrec
+      INTEGER, INTENT(OUT) :: ierr
+      DOUBLE PRECISION x, y, z
+      INTEGER i, igrd, j, k
       ierr = 0
       IF (.NOT.linit) THEN
          WRITE(*,*) 'fteik_analytic_solveConstantVelocity64f: Not initialized'
@@ -839,7 +838,7 @@ MODULE FTEIK_ANALYTIC64F
 !                                   Private Functions                                    !
 !========================================================================================!
       REAL(C_DOUBLE) FUNCTION ttimeInConstantVelocity(x, y, z, xsrc, ysrc, zsrc, vel)
-      !$OMP DECLARE SIMD(ttimeInConstantVelocity) UNIFORM(xsrc, ysrc, zsrc, vel)
+      !!$OMP DECLARE SIMD(ttimeInConstantVelocity) UNIFORM(xsrc, ysrc, zsrc, vel)
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x, y, z, xsrc, ysrc, zsrc, vel
       REAL(C_DOUBLE) dist
       dist = SQRT( (x - xsrc)**2 + (y - ysrc)**2 + (z - zsrc)**2 )
@@ -850,8 +849,8 @@ MODULE FTEIK_ANALYTIC64F
       SUBROUTINE acoshArg(x, y, z, xsrc, ysrc, zsrc,          &
                           vel0, vGradInX, vGradInY, vGradInZ, &
                           arg)
-      !$OMP DECLARE SIMD(acoshArg) &
-      !$OMP UNIFORM(xsrc, ysrc, zsrc, vel0, vGradInX, vGradInY, vGradInZ) 
+      !!$OMP DECLARE SIMD(acoshArg) &
+      !!$OMP UNIFORM(xsrc, ysrc, zsrc, vel0, vGradInX, vGradInY, vGradInZ) 
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x, y, z, xsrc, ysrc, zsrc
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: vel0, vGradInX, vGradInY, vGradInZ
       REAL(C_DOUBLE), INTENT(OUT) :: arg

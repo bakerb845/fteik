@@ -423,8 +423,8 @@ MODULE FTEIK_LOCALSOLVER64F
       FUNCTION fteik_localSolver_tAna64fF(i, j, k, dz, dx, dy,   &
                                           zsa, xsa, ysa, szero)  &
       BIND(C, NAME='fteik_localSolver_tAna64fF')
-      !$OMP DECLARE SIMD(fteik_localSolver_tAna64fF) &
-      !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+      !!$OMP DECLARE SIMD(fteik_localSolver_tAna64fF) &
+      !!$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, szero, zsa, xsa, ysa
@@ -477,8 +477,8 @@ MODULE FTEIK_LOCALSOLVER64F
                                                   zsa, xsa, ysa, &
                                                   szero)         &
       BIND(C, NAME='fteik_localSolver_tAnaD64fF')
-      !$OMP DECLARE SIMD(fteik_localSolver_tAnaD64fF) &
-      !$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
+      !!$OMP DECLARE SIMD(fteik_localSolver_tAnaD64fF) &
+      !!$OMP UNIFORM(dz, dx, dy, zsa, xsa, ysa, szero)
       USE ISO_C_BINDING
       IMPLICIT NONE
       REAL(C_DOUBLE), INTENT(IN), VALUE :: dz, dx, dy, zsa, xsa, ysa, szero
@@ -620,7 +620,7 @@ MODULE FTEIK_LOCALSOLVER64F
       PURE INTEGER(C_INT)                                             &
       FUNCTION fteik_localSolver_grid2indexF(i, j, k, nz, nzx)        &
       BIND(C, NAME='fteik_localSolver_grid2indexF') RESULT(grid2indexF)
-      !$OMP DECLARE SIMD(fteik_localSolver_grid2indexF) UNIFORM(nz, nzx)
+      !!$OMP DECLARE SIMD(fteik_localSolver_grid2indexF) UNIFORM(nz, nzx)
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), INTENT(IN), VALUE :: i, j, k, nz, nzx 

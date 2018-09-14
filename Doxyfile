@@ -38,7 +38,7 @@ PROJECT_NAME           = fteik
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = v0.01
+PROJECT_NUMBER         = 1.1.1
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -793,11 +793,13 @@ INPUT                  = fteik.wiki/Home.md \
                          model.F90 \
                          memory.F90 \
                          locate.F90 \
-                         receiver.F90 \ 
+                         receiver.F90 \
                          source.F90 \
                          solver.F90 \
                          solver2D.F90 \
+                         solver3D.F90 \
                          modules.F90 \
+                         rays.F90 \
                          localSolver.F90 \
                          h5io.F90 \
                          fteik.c \
