@@ -62,6 +62,7 @@ MODULE FTEIK_SOLVER64F
   PUBLIC :: fteik_solver3d_setCellVelocityModel64f
   PUBLIC :: fteik_solver3d_setSources64f
   PUBLIC :: fteik_solver3d_getTravelTimeField64f
+  PUBLIC :: fteik_solver3d_getTravelTimeFieldCell64f
   PUBLIC :: fteik_solver3d_getTravelTimes64f
   PUBLIC :: fteik_solver3d_getNumberOfSources
   PUBLIC :: fteik_solver3d_getNumberOfReceivers
@@ -753,26 +754,22 @@ MODULE FTEIK_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Returns the travel time field.
-!>
+!>    @brief Returns the nodal travel time field.
 !>    @param[in] ngin    Number of input grid points.  This must equal [nz x nx x ny].
-!>    @param[in] order   Desired ordering of output. \n
-!>                       If order == FTEIK_NATURAL_ORDERING or FTEIK_ZXY_ORDERING then
-!>                       ttimes will be [nz x nx ny] with first leading dimension nz
-!>                       and second leading dimension nx. \n
-!>                       If order == FTEIK_XYZ_ORDERING then ttimes will be [nx x ny x nz]
+!>    @param[in] order   Desired ordering of output.
+!>    @param[in] order   If order == FTEIK_NATURAL_ORDERING or FTEIK_ZXY_ORDERING then
+!>                       ttimes will be [nz x nx x ny] with first leading dimension nz
+!>                       and second leading dimension nx.
+!>    @param[in] order   If order == FTEIK_XYZ_ORDERING then ttimes will be [nx x ny x nz]
 !>                       with first leading dimension nx and second leading
-!>                       dimension ny. \n
-!>                       If order == FTEIK_ZYX_ORDERING Then ttimes will be [nz x ny x nx]
+!>                       dimension ny.
+!>    @param[in] order   If order == FTEIK_ZYX_ORDERING Then ttimes will be [nz x ny x nx]
 !>                       with first leading dimension nz and second leading 
-!>                       dimension ny. \n
-!>
+!>                       dimension ny.
 !>    @param[out] ttout  Travel time field (seconds) at the grid points.  This is 
 !>                       a [nz x nx x ny] vector.  The ordering is defined by order.
 !>    @param[out] ierr   0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d 
       SUBROUTINE fteik_solver3d_getTravelTimeField64f(ngin, order, ttout, ierr) &
       BIND(C, NAME='fteik_solver3d_getTravelTimeField64f')
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz, nzx
@@ -826,6 +823,90 @@ MODULE FTEIK_SOLVER64F
   800 FORMAT('fteik_solver3d_getTravelTimeField64f: Defaulting to natural order')
   900 FORMAT('fteik_solver3d_getTravelTimeField64f: Travel times not yet computed')
   901 FORMAT('fteik_solver3d_getTravelTimeField64f: ngin=', I0, ' /= ngrd =', I0)
+      RETURN
+      END
+!>    @brief Returns the cell-based travel time field.  This is computed by averaging
+!>           the nodal based travel time field.
+!>    @param[in] ncin    Number of input cells.  This must equal [nz-1 x nx-1 x ny-1].
+!>    @param[in] order   Desired ordering of output.
+!>    @param[in] order   If order == FTEIK_NATURAL_ORDERING or FTEIK_ZXY_ORDERING then
+!>                       ttimes will be [nz-1 x nx-1 x ny-1] with first leading dimension
+!>                       nz and second leading dimension nx.
+!>    @param[in] order   If order == FTEIK_XYZ_ORDERING then ttimes will be
+!>                       [nx-1 x ny-1 x nz-1] with first leading dimension nx-1 and
+!>                       second leading dimension ny-1.
+!>    @param[in] order   If order == FTEIK_ZYX_ORDERING Then ttimes will be
+!>                       [nz-1 x ny-1 x nx-1] with first leading dimension nz-1 and second
+!>                       leading dimension ny-1.
+!>    @param[out] ttout  Travel time field (seconds) at the grid points.  This is 
+!>                       a [nz-1 x nx-1 x ny-1] vector.  The ordering is defined by order.
+!>    @param[out] ierr   0 indicates success.
+!>    @ingroup solver3d
+      SUBROUTINE fteik_solver3d_getTravelTimeFieldCell64f(ncin, order, ttout, ierr) &
+      BIND(C, NAME='fteik_solver3d_getTravelTimeFieldCell64f')
+      USE FTEIK_MODEL64F, ONLY : ncell, nx, ny, nz, nzx
+      USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ncin, order
+      REAL(C_DOUBLE), DIMENSION(ncin), INTENT(OUT) :: ttout
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      INTEGER indx(8), ix, iy, iz, jndx 
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN 
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ncin /= ncell) THEN 
+         WRITE(ERROR_UNIT,901) ncin, ncell
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (order == FTEIK_XYZ_ORDERING) THEN 
+         DO iz=1,nz-1
+            DO iy=1,ny-1
+               !$OMP SIMD
+               DO ix=1,nx-1
+                  indx(1) = (iy - 1)*nzx + (ix - 1)*nz + iz 
+                  indx(2) = (iy - 1)*nzx + (ix - 1)*nz + iz + 1
+                  indx(3) = (iy - 1)*nzx + (ix - 0)*nz + iz 
+                  indx(4) = (iy - 1)*nzx + (ix - 0)*nz + iz + 1
+                  indx(5) = (iy - 0)*nzx + (ix - 1)*nz + iz
+                  indx(6) = (iy - 0)*nzx + (ix - 1)*nz + iz + 1
+                  indx(7) = (iy - 0)*nzx + (ix - 0)*nz + iz
+                  indx(8) = (iy - 0)*nzx + (ix - 0)*nz + iz + 1
+                  jndx = (iz - 1)*(nx - 1)*(ny - 1) + (iy - 1)*(nx - 1) + ix 
+                  ttout(jndx) = 0.125d0*SUM(ttimes(indx(1:8))) ! Compute average
+               ENDDO
+            ENDDO
+         ENDDO
+      ELSEIF (order == FTEIK_ZYX_ORDERING) THEN 
+         DO ix=1,nx-1
+            DO iy=1,ny-1
+               !$OMP SIMD
+               DO iz=1,nz-1
+                  indx(1) = (iy - 1)*nzx + (ix - 1)*nz + iz
+                  indx(2) = (iy - 1)*nzx + (ix - 1)*nz + iz + 1
+                  indx(3) = (iy - 1)*nzx + (ix - 0)*nz + iz
+                  indx(4) = (iy - 1)*nzx + (ix - 0)*nz + iz + 1
+                  indx(5) = (iy - 0)*nzx + (ix - 1)*nz + iz 
+                  indx(6) = (iy - 0)*nzx + (ix - 1)*nz + iz + 1
+                  indx(7) = (iy - 0)*nzx + (ix - 0)*nz + iz 
+                  indx(8) = (iy - 0)*nzx + (ix - 0)*nz + iz + 1
+                  jndx = (ix - 1)*(nz - 1)*(ny - 1) + (iy - 1)*(nz - 1) + iz 
+                  ttout(jndx) = 0.125d0*SUM(ttimes(indx(1:8))) ! Compute average
+               ENDDO
+            ENDDO
+         ENDDO
+      ELSE 
+         IF (order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING) THEN 
+            WRITE(ERROR_UNIT,800)
+         ENDIF
+         ttout(:) = ttimes(:)
+      ENDIF
+  800 FORMAT('fteik_solver3d_getTravelTimeFieldCell64f: Defaulting to natural order')
+  900 FORMAT('fteik_solver3d_getTravelTimeFieldCell64f: Travel times not yet computed')
+  901 FORMAT('fteik_solver3d_getTravelTimeFieldCell64f: ncin=', I0, ' /= ncell =', I0)
       RETURN
       END
 !                                                                                        !

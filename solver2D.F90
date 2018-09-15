@@ -63,6 +63,7 @@ MODULE FTEIK2D_SOLVER64F
   PUBLIC :: fteik_solver2d_solveSourceLSM
   PUBLIC :: fteik_solver2d_solveSourceFSM
   PUBLIC :: fteik_solver2d_getTravelTimeField64f
+  PUBLIC :: fteik_solver2d_getTravelTimeFieldCell64f
   PUBLIC :: fteik_solver2d_getTravelTimes64f
   PUBLIC :: fteik_solver2d_setNumberOfSweeps
   PUBLIC :: fteik_solver2d_setReceivers64f
@@ -1182,15 +1183,13 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief Returns the travel time field.
-!>
+!>    @brief Returns the nodal travel time field.
 !>    @param[in] ngin    Number of input grid points.  This must equal [nz x nx].
-!>    @param[in] order   Desired ordering of output. \n
-!>                       If order == FTEIK_NATURAL_ORDERING or FTEIK_ZX_ORDERING then
-!>                       ttimes will be [nz x nx] with leading dimension nz. \n
-!>                       If order == FTEIK_XZ_ORDERING then ttimes will be [nx x nz]
+!>    @param[in] order   Desired ordering of output.
+!>    @param[in] order   If order == FTEIK_NATURAL_ORDERING or FTEIK_ZX_ORDERING then
+!>                       ttimes will be [nz x nx] with leading dimension nz.
+!>    @param[in] order   If order == FTEIK_XZ_ORDERING then ttimes will be [nx x nz]
 !>                       with leading dimension nx.
-!>
 !>    @param[out] ttout  Travel time field at the grid points.  This is a [nz x nx]
 !>                       vector with leading dimension nz.
 !>    @param[out] ierr   0 indicates success.
@@ -1232,6 +1231,60 @@ MODULE FTEIK2D_SOLVER64F
   800 FORMAT('fteik_solver2d_getTravelTimeField64f: Defaulting to natural order')
   900 FORMAT('fteik_solver2d_getTravelTimeField64f: Travel times not yet computed')
   901 FORMAT('fteik_solver2d_getTravelTimeField64f: ngin=', I0, ' /= ngrd =', I0)
+      RETURN
+      END
+!>    @brief Returns the cell-based travel time field.  The values are computed by
+!>           averaging the nodal values of the travel time field.
+!>    @param[in] ngin    Number of input grid points.  This must equal [nz-1 x nx-1].
+!>    @param[in] order   Desired ordering of output.
+!>    @param[in] order   If order == FTEIK_NATURAL_ORDERING or FTEIK_ZX_ORDERING then
+!>                       ttimes will be [nz-1 x nx-1] with leading dimension nz-1.
+!>    @param[in] order   If order == FTEIK_XZ_ORDERING then ttimes will be [nx-1 x nz-1]
+!>                       with leading dimension nx-1.
+!>    @param[out] ttout  Travel time field at the grid points.  This is a [nz-1 x nx-1]
+!>                       vector with leading dimension nz-1.
+!>    @param[out] ierr   0 indicates success.
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_getTravelTimeFieldCell64f(ncin, order, ttout, ierr) &
+      BIND(C, NAME='fteik_solver2d_getTravelTimeFieldCell64f')
+      USE FTEIK_MODEL64F, ONLY : ncell, nx, nz
+      USE ISO_C_BINDING
+      INTEGER(C_INT), VALUE, INTENT(IN) :: ncin, order
+      REAL(C_DOUBLE), DIMENSION(ncin), INTENT(OUT) :: ttout
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER(C_INT) indx(4), ix, iz, jndx
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN 
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (ncin /= ncell) THEN 
+         WRITE(ERROR_UNIT,901) ncin, ncell
+         ierr = 1
+         RETURN
+      ENDIF
+      IF (order == FTEIK_XZ_ORDERING) THEN 
+         DO iz=1,nz-1
+            !$OMP SIMD
+            DO ix=1,nx-1
+               indx(1) = (ix - 1)*nz + iz 
+               indx(2) = (ix - 1)*nz + iz + 1
+               indx(3) = (ix - 0)*nz + iz
+               indx(4) = (ix - 0)*nz + iz + 1
+               jndx = (iz - 1)*(nx - 1) + ix 
+               ttout(jndx) = 0.25d0*SUM(ttimes(indx(1:4))) ! Compute average
+            ENDDO
+         ENDDO
+      ELSE 
+         IF (order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZX_ORDERING) THEN 
+            WRITE(OUTPUT_UNIT,800)
+         ENDIF
+         ttout(:) = ttimes(:)
+      ENDIF
+  800 FORMAT('fteik_solver2d_getTravelTimeFieldCell64f: Defaulting to natural order')
+  900 FORMAT('fteik_solver2d_getTravelTimeFieldCell64f: Travel times not yet computed')
+  901 FORMAT('fteik_solver2d_getTravelTimeFieldCell64f: ncin=', I0, ' /= ncell =', I0)
       RETURN
       END
 !                                                                                        !

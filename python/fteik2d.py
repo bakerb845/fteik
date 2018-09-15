@@ -73,6 +73,11 @@ class fteik2d:
                                                              POINTER(c_double), #ttimes
                                                              POINTER(c_int)     #ierr
                                                             )
+        lib.fteik_solver2d_getTravelTimeFieldCell64f.argtypes = (c_int,             #ncell
+                                                                 c_int,             #order
+                                                                 POINTER(c_double), #ttimes
+                                                                 POINTER(c_int)     #ierr
+                                                                )
         lib.fteik_solver2d_setSources64f.argtypes = (c_int,             #nsrc
                                                      POINTER(c_double), #zsrc
                                                      POINTER(c_double), #xsrc
@@ -244,26 +249,43 @@ class fteik2d:
         #        errorAll = errorAll + 1
         #return errorAll
 
-    def getTravelTimeField(self):
+    def getTravelTimeField(self, wantCell=False):
         """
         Extracts the travel time field from the solver.
 
+        Input
+        wantCell : bool
+            If false (default) then the nodal based field is returned.
+            If true then the cell-based travel time field is returned.
+
         Result
         ttimes : numpy matrix
-           A [nz x nx] matrix containing the travel times (seconds)
-           from the source to each node in the model.
+           A [nz x nx] or [nz-1 x nx-1] matrix containing the travel times
+           seconds from the source to each node in the model.
         """
-        ngrd = self.nx*self.nz
-        ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
+        if (wantCell):
+           ncell = (self.nx-1)*(self.nz-1)
+           ttimes = ascontiguousarray(zeros(ncell), dtype='float64')
+        else:
+           ngrd = self.nx*self.nz
+           ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
         ttimesPointer = ttimes.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
         order = int(0) # FTEIK_ZX_ORDERING 
-        self.fteik2d.fteik_solver2d_getTravelTimeField64f(ngrd, order,
-                                                          ttimesPointer, ierr)
-        if (ierr.value != 0):
-            print("Error getting travel time field")
-            return None
-        ttimes = reshape(ttimes, [self.nz, self.nx], order='F')
+        if (wantCell):
+            self.fteik2d.fteik_solver2d_getTravelTimeFieldCell64f(ncell, order,
+                                                              ttimesPointer, ierr)
+            if (ierr.value != 0):
+               print("Error getting travel time field")
+               return None
+            ttimes = reshape(ttimes, [self.nz-1, self.nx-1], order='F')
+        else:
+            self.fteik2d.fteik_solver2d_getTravelTimeField64f(ngrd, order,
+                                                              ttimesPointer, ierr)
+            if (ierr.value != 0):
+               print("Error getting travel time field")
+               return None
+            ttimes = reshape(ttimes, [self.nz, self.nx], order='F')
         return ttimes
 
     def getTravelTimes(self):

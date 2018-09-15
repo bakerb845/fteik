@@ -68,6 +68,11 @@ class fteik3d:
                                                              POINTER(c_double), #ttimes
                                                              POINTER(c_int)     #ierr
                                                             )
+        lib.fteik_solver3d_getTravelTimeFieldCell64f.argtypes = (c_int,             #ncell
+                                                                 c_int,             #order
+                                                                 POINTER(c_double), #ttimes
+                                                                 POINTER(c_int)     #ierr
+                                                                )
         lib.fteik_solver3d_setCellVelocityModel64f.argtypes = (c_int,             #ncell
                                                                c_int,             #order
                                                                POINTER(c_double), #velocity
@@ -259,26 +264,45 @@ class fteik3d:
                 errorAll = errorAll + 1
         return errorAll
 
-    def getTravelTimeField(self):
+    def getTravelTimeField(self, wantCell=False):
         """
         Extracts the travel time field from the solver.
 
+        Input
+        wantCell : bool
+            If false (default) then the nodal based field is returned.
+            If true then the cell-based travel time field is returned.
+           
         Result
         ttimes : numpy matrix
-            A [nz x ny x nx] matrix containing the travel times (seconds)
-            from the source to each node in the model.
+            A [nz x ny x nx] or [nz-1 x ny-1 x nx-1] matrix containing
+            the travel times (seconds) from the source to each node in
+            the model.
+   
         """
-        ngrd = self.nz*self.nx*self.ny
-        ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
+        if (wantCell):
+           ncell = (self.nz-1)*(self.nx-1)*(self.ny-1)
+           ttimes = ascontiguousarray(zeros(ncell), dtype='float64')
+        else:
+           ngrd = self.nz*self.nx*self.ny
+           ttimes = ascontiguousarray(zeros(ngrd), dtype='float64')
         ttimesPointer = ttimes.ctypes.data_as(POINTER(c_double))
         ierr = c_int(1)
         order = int(2) # FTEIK_ZYX_ORDERING 
-        self.fteik3d.fteik_solver3d_getTravelTimeField64f(ngrd, order,
-                                                          ttimesPointer, ierr)
-        if (ierr.value != 0):
-            print("Error getting travel time field")
-            return None
-        ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
+        if (wantCell):
+           self.fteik3d.fteik_solver3d_getTravelTimeFieldCell64f(ncell, order,
+                                                                 ttimesPointer, ierr)
+           if (ierr.value != 0):
+               print("Error getting cell-based travel time field")
+               return None
+           ttimes = reshape(ttimes, [self.nz-1, self.ny-1, self.nx-1], order='F')
+        else:
+           self.fteik3d.fteik_solver3d_getTravelTimeField64f(ngrd, order,
+                                                             ttimesPointer, ierr)
+           if (ierr.value != 0):
+               print("Error getting travel time field")
+               return None
+           ttimes = reshape(ttimes, [self.nz, self.ny, self.nx], order='F')
         return ttimes
 
     def getTravelTimes(self):
