@@ -125,7 +125,7 @@ MODULE FTEIK_RAYS64F
             WRITE(ERROR_UNIT,906) ir, xr(ir), xmin, xmax
             ierr = 1
          ENDIF
-         IF (lis3d .AND. (yr(ir) < ymin .OR. yr(ir) > ymax)) THEN
+         IF (lis3dModel .AND. (yr(ir) < ymin .OR. yr(ir) > ymax)) THEN
             WRITE(ERROR_UNIT,907) ir, yr(ir), ymin, ymax
             ierr = 1
          ENDIF
