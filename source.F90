@@ -9,7 +9,7 @@ MODULE FTEIK_SOURCE64F
   USE ISO_C_BINDING
   IMPLICIT NONE 
   !> True source locations.
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ztrue(:), xtrue(:), ytrue(:)
+  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zstrue(:), xstrue(:), ystrue(:)
   !> Double precision versions of the source grid points
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zsav(:), xsav(:), ysav(:)
   !> Source locations
@@ -48,18 +48,18 @@ MODULE FTEIK_SOURCE64F
       lhaveSource = .FALSE.
       nsrc = 0 
       verbose = 0
-      IF (ALLOCATED(zsrc))  DEALLOCATE(zsrc)
-      IF (ALLOCATED(xsrc))  DEALLOCATE(xsrc)
-      IF (ALLOCATED(ysrc))  DEALLOCATE(ysrc)
-      IF (ALLOCATED(zsiv))  DEALLOCATE(zsiv)
-      IF (ALLOCATED(xsiv))  DEALLOCATE(xsiv)
-      IF (ALLOCATED(ysiv))  DEALLOCATE(ysiv)
-      IF (ALLOCATED(zsav))  DEALLOCATE(zsav)
-      IF (ALLOCATED(xsav))  DEALLOCATE(xsav)
-      IF (ALLOCATED(ysav))  DEALLOCATE(ysav)
-      IF (ALLOCATED(ztrue)) DEALLOCATE(ztrue)
-      IF (ALLOCATED(xtrue)) DEALLOCATE(xtrue)
-      IF (ALLOCATED(ytrue)) DEALLOCATE(ytrue)
+      IF (ALLOCATED(zsrc))   DEALLOCATE(zsrc)
+      IF (ALLOCATED(xsrc))   DEALLOCATE(xsrc)
+      IF (ALLOCATED(ysrc))   DEALLOCATE(ysrc)
+      IF (ALLOCATED(zsiv))   DEALLOCATE(zsiv)
+      IF (ALLOCATED(xsiv))   DEALLOCATE(xsiv)
+      IF (ALLOCATED(ysiv))   DEALLOCATE(ysiv)
+      IF (ALLOCATED(zsav))   DEALLOCATE(zsav)
+      IF (ALLOCATED(xsav))   DEALLOCATE(xsav)
+      IF (ALLOCATED(ysav))   DEALLOCATE(ysav)
+      IF (ALLOCATED(zstrue)) DEALLOCATE(zstrue)
+      IF (ALLOCATED(xstrue)) DEALLOCATE(xstrue)
+      IF (ALLOCATED(ystrue)) DEALLOCATE(ystrue)
       RETURN
       END 
 !                                                                                        !
@@ -116,18 +116,18 @@ MODULE FTEIK_SOURCE64F
       ALLOCATE(zsav(nsrc))
       ALLOCATE(xsav(nsrc))
       ALLOCATE(ysav(nsrc))
-      ALLOCATE(ztrue(nsrc))
-      ALLOCATE(xtrue(nsrc))
-      ALLOCATE(ytrue(nsrc))
+      ALLOCATE(zstrue(nsrc))
+      ALLOCATE(xstrue(nsrc))
+      ALLOCATE(ystrue(nsrc))
       zsiv(:) = 0
       xsiv(:) = 0
       ysiv(:) = 0
       zsav(:) =-one
       xsav(:) =-one
       ysav(:) =-one
-      ztrue(1:nsrc) = zsrcIn(1:nsrc)
-      xtrue(1:nsrc) = xsrcIn(1:nsrc)
-      ytrue(1:nsrc) = ysrcIn(1:nsrc)
+      zstrue(1:nsrc) = zsrcIn(1:nsrc)
+      xstrue(1:nsrc) = xsrcIn(1:nsrc)
+      ystrue(1:nsrc) = ysrcIn(1:nsrc)
       ! Compute max of grid
       zmax = DBLE(nz - 1)*dz
       xmax = DBLE(nx - 1)*dx
@@ -170,7 +170,7 @@ MODULE FTEIK_SOURCE64F
              xsi < 1 .OR. xsi > nx .OR. &
              (lis3dModel .AND. (ysi < 1 .OR. ysi > ny))) THEN
             WRITE(ERROR_UNIT,903) zsi,xsi,ysi
-            ierr = 1 
+            ierr = 1
             RETURN
          ENDIF
          IF (zsi > nz - 1 .OR. xsi > nx - 1 .OR. (lis3dModel .AND. ysi > ny - 1)) &
@@ -223,11 +223,11 @@ MODULE FTEIK_SOURCE64F
   812 FORMAT('fteik_source_initialize64f: Source translation: (dz,dx)=', &
              2F12.2, ' (m)')
   813 FORMAT('fteik_source_initialize64f: Source grid point: (iz,ix)=', 2I6)
-  900 FORMAT('fteik_source_initialize64ff: src=', I0, ' zsrc=', E12.5, &
+  900 FORMAT('fteik_source_initialize64f: src=', I0, ' zsrc=', E12.5, &
              ' must be in range [', E12.5, E12.5, ']')
-  901 FORMAT('fteik_source_initialize64ff: src=', I0, ' xsrc=', E12.5, &
+  901 FORMAT('fteik_source_initialize64f: src=', I0, ' xsrc=', E12.5, &
              ' must be in range [', E12.5, E12.5, ']')
-  902 FORMAT('fteik_source_initialize64ff: src=', I0, ' ysrc=', E12.5, &
+  902 FORMAT('fteik_source_initialize64f: src=', I0, ' ysrc=', E12.5, &
              ' must be in range [', E12.5, E12.5, ']')
   903 FORMAT('fteik_source_initialize64f: Point (', 3I0, ') out of bounds')
   904 FORMAT('fteik_source_initialize64f: Warning solver may segfault for source = ', I0)

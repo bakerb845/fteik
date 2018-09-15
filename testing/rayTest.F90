@@ -12,12 +12,13 @@
                                     fteik_solver2d_setNodalVelocityModel64f, &
                                     fteik_solver2d_setSources64f,            &
                                     fteik_solver2d_solveSourceLSM,           &
+                                    fteik_solver2d_computeRaysToPoints,      &
                                     fteik_solver2d_free
       USE FTEIK2D_SOLVER64F, ONLY : FTEIK_ZX_ORDERING
       IMPLICIT NONE
       INTEGER, INTENT(OUT) :: ierr
-      INTEGER, PARAMETER :: nx = 101
-      INTEGER, PARAMETER :: nz = 51
+      INTEGER, PARAMETER :: nx = 201
+      INTEGER, PARAMETER :: nz = 101
       INTEGER, PARAMETER :: ncellx = nx - 1
       INTEGER, PARAMETER :: ncellz = nz - 1
       DOUBLE PRECISION, PARAMETER :: x0 = 0.d0
@@ -32,7 +33,7 @@
       INTEGER, PARAMETER :: verb = 3
       INTEGER, PARAMETER :: nsrc = 1
       DOUBLE PRECISION z
-      DOUBLE PRECISION xsrc(nsrc), zsrc(nsrc)
+      DOUBLE PRECISION xsrc(nsrc), zsrc(nsrc), xr(1), zr(1)
       INTEGER isrc, iz, ix
       ierr = 0
       dx = (x1 - x0)/DBLE(nx - 1)
@@ -61,8 +62,8 @@
          RETURN
       ENDIF
       ! TODO put source where analytic computation can be done
-      xsrc(1) = (x1 + x0)/2.d0
-      zsrc(1) = (z1 + z0)/2.d0
+      xsrc(1) = x0 + (x1 + x0)/2.d0 + 5.d0
+      zsrc(1) = z0 + (z1 + z0)/2.d0
       CALL fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,*) 'test_rays2d: Failed to set sources'
@@ -74,8 +75,10 @@
             WRITE(ERROR_UNIT,*) 'test_rays2d: Failed to solve source', isrc 
             RETURN 
          ENDIF
+         xr(1) = x0 + (x1 + x0)/4.d0 
+         zr(1) = z0 
+         CALL fteik_solver2d_computeRaysToPoints(1, xr, zr, ierr)
       ENDDO
- 
       CALL fteik_solver2d_free()
       IF (ALLOCATED(vel)) DEALLOCATE(vel)
       RETURN

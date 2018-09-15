@@ -53,6 +53,7 @@ MODULE FTEIK2D_SOLVER64F
   REAL(C_DOUBLE), SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), tupdWork(:), &
                                                 ttold(:)
   LOGICAL(C_BOOL), SAVE, PRIVATE, ALLOCATABLE :: lupdWork(:)
+  INTEGER, PRIVATE, SAVE :: srcNumber = -1
   ! Label the subroutines/functions
   PUBLIC :: fteik_solver2d_setVelocityModel64f
   PUBLIC :: fteik_solver2d_setNodalVelocityModel64f
@@ -152,6 +153,11 @@ MODULE FTEIK2D_SOLVER64F
          WRITE(ERROR_UNIT,903)
          RETURN
       ENDIF
+      CALL fteik_rays_initialize(ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,904)
+         RETURN
+      ENDIF 
       ! Compute the number of levels
       nLevels = nxIn + nzIn
       maxLevelSize = MIN(nxIn, nzIn) + padLength64F(alignment, MIN(nxIn, nzIn))
@@ -170,6 +176,7 @@ MODULE FTEIK2D_SOLVER64F
   901 FORMAT('fteik_solver2d_initialize64f: Error setting grid geometry')
   902 FORMAT('fteik_solver2d_initialize64f: Failed to set max number of sweeps')
   903 FORMAT('fteik_solver2d_initialize64f: Failed to set epsilon')
+  904 FORMAT('fteik_solver2d_initialize64f: Failed to initialize ray tracer')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -223,6 +230,7 @@ MODULE FTEIK2D_SOLVER64F
       nsweep = 0
       nLevels = 0
       verbose = 0
+      srcNumber =-1
       IF (ALLOCATED(ttimesRec))  DEALLOCATE(ttimesRec)
       IF (ALLOCATED(ttimes))     DEALLOCATE(ttimes)
       IF (ALLOCATED(ttold))      DEALLOCATE(ttold)
@@ -252,6 +260,71 @@ MODULE FTEIK2D_SOLVER64F
       INTEGER(C_INT), INTENT(OUT) :: nrec, ierr
       ierr = 0 
       CALL fteik_receiver_getNumberOfReceivers(nrec, ierr)
+      RETURN
+      END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Computes the ray paths to receivers from the current source in the
+!>           corresponding travel time field.
+!>    @param[out] ierr   0 indicates success.
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_computeRaysToReceivers(ierr) &
+      BIND(C, NAME='fteik_solver2d_computeRaysToReceivers')
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, zrec
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (nrec < 1) THEN
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL fteik_solver2d_computeRaysToPoints(nrec, xrec, zrec, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_uNIT,901)
+         ierr = 1
+         RETURN
+      ENDIF
+  900 FORMAT('fteik_solver2d_computeRaysToReceivers: No receivers set')
+  901 FORMAT('fteik_solver2d_computeRaysToReceivers: Failed to compute rays')
+      RETURN
+      END
+!>    @brief Computes the ray paths from the current source to the given (xr,zr)
+!>           points in the travel time field.
+!>    @param[in] np     Number of points.
+!>    @param[in] xp     x destinations of rays.  This has dimension [nr].
+!>    @param[in] zp     z destinations of rays.  This has dimension [nr].
+!>    @param[out] ierr  0 indicates success.
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_computeRaysToPoints(np, xp, zp, ierr) &
+      BIND(C, NAME='fteik_solver2d_computeRaysToPoints')
+      USE FTEIK_MODEL64F, ONLY : ngrd
+      USE FTEIK_SOURCE64F, ONLY : xstrue, zstrue
+      USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations2D, fteik_rays_trace
+      INTEGER(C_INT), VALUE, INTENT(IN) :: np
+      REAL(C_DOUBLE), DIMENSION(np), INTENT(IN) :: xp, zp
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL fteik_rays_setRayDestinations2D(np, xp, zp, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,901)
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL fteik_rays_trace(ngrd, ttimes, xstrue(srcNumber), 0.d0, zstrue(srcNumber), ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,902)
+         ierr = 1
+         RETURN
+      ENDIF
+  900 FORMAT('fteik_solver2d_computeRaysToPoints: Travel time field not yet computed')
+  901 FORMAT('fteik_solver2d_computeRaysToPoints: Failed to set ray origins')
+  902 FORMAT('fteik_solver2d_computeRaysToPoints: Failed to compute rays')
       RETURN
       END
 !                                                                                        !
@@ -713,6 +786,7 @@ MODULE FTEIK2D_SOLVER64F
       INTEGER(C_INT) iz, ix
       ierr = 0
       lhaveTimes = FALSE
+      srcNumber =-1
       IF (.NOT.lhaveModel) THEN
          WRITE(ERROR_UNIT,900)
          ierr = 1
@@ -843,6 +917,7 @@ MODULE FTEIK2D_SOLVER64F
          IF (tdiff < convTol) EXIT
       ENDDO
       lhaveTimes = TRUE
+      srcNumber = isrc
       CALL solver2d_extractTravelTimes(isrc, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,903)
@@ -855,6 +930,7 @@ MODULE FTEIK2D_SOLVER64F
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = FALSE
+         srcNumber =-1
       ENDIF
   800 FORMAT('fteik_solver2d_solveSourceLSM: (iteration,ttmin,ttmax)=', &
              I4, 2F14.8) 
@@ -891,6 +967,7 @@ MODULE FTEIK2D_SOLVER64F
       INTEGER(C_INT) indx1, indx2, indx3, indx4, indx5
       ierr = 0 
       lhaveTimes = FALSE
+      srcNumber =-1
       IF (.NOT.lhaveModel) THEN
          WRITE(ERROR_UNIT,900)
          ierr = 1
@@ -1090,6 +1167,7 @@ MODULE FTEIK2D_SOLVER64F
 !print *, 'p4:', minval(ttimes), maxval(ttimes)
       ENDDO
       lhaveTimes = TRUE
+      srcNumber =-1
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
@@ -1132,7 +1210,8 @@ MODULE FTEIK2D_SOLVER64F
          RETURN
       ENDIF
       IF (ngin /= ngrd) THEN
-         WRITE(ERROR_UNIT,901)
+         WRITE(ERROR_UNIT,901) ngin, ngrd
+         ierr = 1
          RETURN
       ENDIF
       IF (order == FTEIK_XZ_ORDERING) THEN
@@ -1152,7 +1231,7 @@ MODULE FTEIK2D_SOLVER64F
       ENDIF
   800 FORMAT('fteik_solver2d_getTravelTimeField64f: Defaulting to natural order')
   900 FORMAT('fteik_solver2d_getTravelTimeField64f: Travel times not yet computed')
-  901 FORMAT('fteik_solver2d_getTravelTimeField64f: No receivers')
+  901 FORMAT('fteik_solver2d_getTravelTimeField64f: ngin=', I0, ' /= ngrd =', I0)
       RETURN
       END
 !                                                                                        !
@@ -1551,8 +1630,8 @@ MODULE FTEIK2D_SOLVER64F
          IF (ALLOCATED(ttimesRec)) DEALLOCATE(ttimesRec)
          ALLOCATE(ttimesRec(nrec*nsrc))
       ENDIF
-  800 FORMAT('fteik_solver_setReceivers64f: No receivers to set')
-  901 FORMAT('fteik_solver_setReceivers64f: Failed to set receivers')
+  800 FORMAT('fteik_solver2d_setReceivers64f: No receivers to set')
+  901 FORMAT('fteik_solver2d_setReceivers64f: Failed to set receivers')
       RETURN
       END
 !                                                                                        !
@@ -1630,7 +1709,7 @@ MODULE FTEIK2D_SOLVER64F
          RETURN
       ENDIF
       epsS2C = epsIn
-  900 FORMAT('fteik_solver_setSphereToCartEpsilon: Grid not yet set')
+  900 FORMAT('fteik_solver2d_setSphereToCartEpsilon: Grid not yet set')
   901 FORMAT('fteik_solver2d_setSphereToCartEpsilon: eps=', I0, ' bigger than nz =',I0)
   902 FORMAT('fteik_solver2d_setSphereToCartEpsilon: eps=', I0, ' bigger than nx =',I0)
       RETURN

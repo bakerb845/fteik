@@ -6,6 +6,7 @@
 !> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_RECEIVER64F
    USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
+   USE ISO_FORTRAN_ENV
    USE ISO_C_BINDING
    !> Receiver index in z.  This is a vector of dimension [nrec]. 
    INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE :: zri(:)
@@ -74,13 +75,13 @@ MODULE FTEIK_RECEIVER64F
       CALL fteik_receiver_setVerobosity(verboseIn)
       ! Check that the model has been initialized
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_receiver_initialize64f: Grid not yet set'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       ! Verify the inputs
       IF (nrecIn < 1) THEN
-         WRITE(*,*) 'fteik_receiver_initialize64f: No receivers'
+         WRITE(ERROR_UNIT,901)
          ierr = 1
          RETURN
       ENDIF
@@ -101,18 +102,15 @@ MODULE FTEIK_RECEIVER64F
       ! Collocate the receivers
       DO 1 irec=1,nrecIn
          IF (z(irec) < z0 .OR. z(irec) > z0 + dz*DBLE(nz - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64f: z position is out of bounds', &
-                       z(irec), z0, z0 + dz*DBLE(nz - 1)
+            WRITE(ERROR_UNIT,902) z(irec), z0, z0 + dz*DBLE(nz - 1)
             ierr = ierr + 1
          ENDIF
          IF (x(irec) < x0 .OR. x(irec) > x0 + dx*DBLE(nx - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64f: x position is out of bounds', &
-                       x(irec), x0, x0 + dx*DBLE(nx - 1)
+            WRITE(ERROR_UNIT,903) x(irec), x0, x0 + dx*DBLE(nx - 1)
             ierr = ierr + 1
          ENDIF
          IF (y(irec) < y0 .OR. y(irec) > y0 + dy*DBLE(ny - 1)) THEN
-            WRITE(*,*) 'fteik_receiver_initialize64f: y position is out of bounds', &
-                       y(irec), y0, y0 + dy*DBLE(ny - 1)
+            WRITE(ERROR_UNIT,904) y(irec), y0, y0 + dy*DBLE(ny - 1)
             ierr = ierr + 1
          ENDIF
          ! Get the grid point position
@@ -136,24 +134,32 @@ MODULE FTEIK_RECEIVER64F
          IF (.NOT.lis3dModel) ydr(irec) = 0.d0
          IF (verbose > 0) THEN
             IF (lis3dModel) THEN
-               WRITE(*,900) z(irec), x(irec), y(irec)
-               WRITE(*,901) iz, ix, iy               
+               WRITE(OUTPUT_UNIT,800) z(irec), x(irec), y(irec)
+               WRITE(OUTPUT_UNIT,801) iz, ix, iy               
             ELSE
-               WRITE(*,910) z(irec), x(irec)
-               WRITE(*,911) iz, ix
+               WRITE(OUTPUT_UNIT,810) z(irec), x(irec)
+               WRITE(OUTPUT_UNIT,811) iz, ix
             ENDIF
             WRITE(*,*)
          ENDIF
     1 CONTINUE
       linit = .TRUE.
-  900 FORMAT(' fteik_receiver_initialize64f: Original receiver coordinates (z,x,y)=', &
+  800 FORMAT('fteik_receiver_initialize64f: Original receiver coordinates (z,x,y)=', &
              3F12.2, ' (m)')
-  901 FORMAT(' fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0,iy0)=', &
+  801 FORMAT('fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0,iy0)=', &
              I6, I6, I6)
-  910 FORMAT(' fteik_receiver_initialize64f: Original receiver coordinates (z,x)=', &
+  810 FORMAT('fteik_receiver_initialize64f: Original receiver coordinates (z,x)=', &
              2F12.2, ' (m)')
-  911 FORMAT(' fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0)=', &
+  811 FORMAT('fteik_receiver_initialize64f: Interpolation grid point (iz0,ix0)=', &
              I6, I6)
+  900 FORMAT('fteik_receiver_initialize64f: Grid not yet set')
+  901 FORMAT('fteik_receiver_initialize64f: No receivers')
+  902 FORMAT('fteik_receiver_initialize64f: z position = ', E12.5, ' is out of bounds', &
+             '[', E12.5, E12.5, ']')
+  903 FORMAT('fteik_receiver_initialize64f: x position = ', E12.5, ' is out of bounds', &
+             '[', E12.5, E12.5, ']')
+  904 FORMAT('fteik_receiver_initialize64f: y position = ', E12.5, ' is out of bounds', &
+             '[', E12.5, E12.5, ']')
       RETURN
       END
 !                                                                                        !
@@ -185,11 +191,12 @@ MODULE FTEIK_RECEIVER64F
       ierr = 0
       nrecOut = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_receiver_getNumberOfReceivers: Module not initialized'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       nrecOut = nrec
+  900 FORMAT('fteik_receiver_getNumberOfReceivers: Module not initialized')
       RETURN
       END
 !                                                                                        !
@@ -224,17 +231,16 @@ MODULE FTEIK_RECEIVER64F
       INTEGER(C_INT) i, i0, i1, i2, i3, i4, i5, i6, i7
       ierr = 0
       IF (.NOT.linit) THEN
-         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Module not initialized'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (nrecIn < 1 .AND. verbose > 0) THEN
-         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: No receivers'
+         WRITE(OUTPUT_UNIT,800)
          RETURN
       ENDIF
       IF (nrecIn /= nrec .AND. verbose > 0) THEN
-         WRITE(*,*) 'fteik_receiver_getTravelTimes64fF: Warning nrecIn /= nrec', &
-                    nrecIn, nrec
+         WRITE(OUTPUT_UNIT,801) nrecIn, nrec
          ttr(1:nrecIn) = FTEIK_HUGE
       ENDIF
       IF (lis3dModel) THEN
@@ -299,6 +305,10 @@ MODULE FTEIK_RECEIVER64F
                    + tt11*zd      *xd
     2    CONTINUE
       ENDIF
+  800 FORMAT('fteik_receiver_getTravelTimes64f: No receivers')
+  801 FORMAT('fteik_receiver_getTravelTimes64fF: Warning nrecIn = ', &
+             I0, ' /= nrec = ', I0)
+  900 FORMAT('fteik_receiver_getTravelTimes64f: Module not initialized')
       RETURN
       END
 !                                                                                        !

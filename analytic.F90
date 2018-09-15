@@ -535,7 +535,7 @@ MODULE FTEIK_ANALYTIC64F
 !>
       SUBROUTINE fteik_analytic_solveSourceConstantVelocity64f(isrc, ierr) &
       BIND(C, NAME='fteik_analytic_solveSourceConstantVelocity64f')
-      USE FTEIK_SOURCE64F, ONLY : nsrc, ztrue, xtrue, ytrue
+      USE FTEIK_SOURCE64F, ONLY : nsrc, zstrue, xstrue, ystrue
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
@@ -549,9 +549,9 @@ MODULE FTEIK_ANALYTIC64F
          ierr = 1
          RETURN
       ENDIF
-      CALL solveConstantVelocity64f(1,                                     &
-                                    ztrue(isrc), xtrue(isrc), ytrue(isrc), &
-                                    nrecDum, zdum, xdum, ydum,             &
+      CALL solveConstantVelocity64f(1,                                        &
+                                    zstrue(isrc), xstrue(isrc), ystrue(isrc), &
+                                    nrecDum, zdum, xdum, ydum,                &
                                     ierr)
       IF (ierr /= 0) THEN
          WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Error solving'
@@ -569,7 +569,7 @@ MODULE FTEIK_ANALYTIC64F
 !>
       SUBROUTINE fteik_analytic_solveSourceLinearVelocityGradient64f(isrc, ierr) &
       BIND(C, NAME='fteik_analytic_solveSourceLinearVelocityGradient64f')
-      USE FTEIK_SOURCE64F, ONLY : nsrc, ztrue, xtrue, ytrue
+      USE FTEIK_SOURCE64F, ONLY : nsrc, zstrue, xstrue, ystrue
       USE ISO_C_BINDING
       IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
@@ -584,7 +584,7 @@ MODULE FTEIK_ANALYTIC64F
          RETURN
       ENDIF
       CALL solveLinearVelocityGradient64f(1,                                     &
-                                          ztrue(isrc), xtrue(isrc), ytrue(isrc), &
+                                          zstrue(isrc), xstrue(isrc), ystrue(isrc), &
                                           nrecDum, zdum, xdum, ydum,             &
                                           ierr)
       IF (ierr /= 0) THEN
@@ -743,9 +743,9 @@ MODULE FTEIK_ANALYTIC64F
       SUBROUTINE fteik_analytic_getTravelTimesConstantVel64f(ldr, trecOut, ierr) &
       BIND(C, NAME='fteik_analytic_getTravelTimesConstantVel64f')
       USE FTEIK_SOURCE64F, ONLY : nsrc
-      USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
-      USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
-      USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
+      USE FTEIK_SOURCE64F, ONLY : zsrc => zstrue
+      USE FTEIK_SOURCE64F, ONLY : xsrc => xstrue
+      USE FTEIK_SOURCE64F, ONly : ysrc => ystrue
       USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -791,9 +791,9 @@ MODULE FTEIK_ANALYTIC64F
       SUBROUTINE fteik_analytic_getTravelTimesGradientVel64f(ldr, trecOut, ierr) &
       BIND(C, NAME='fteik_analytic_getTravelTimesGradientVel64f')
       USE FTEIK_SOURCE64F, ONLY : nsrc
-      USE FTEIK_SOURCE64F, ONLY : zsrc => ztrue
-      USE FTEIK_SOURCE64F, ONLY : xsrc => xtrue
-      USE FTEIK_SOURCE64F, ONly : ysrc => ytrue
+      USE FTEIK_SOURCE64F, ONLY : zsrc => zstrue
+      USE FTEIK_SOURCE64F, ONLY : xsrc => xstrue
+      USE FTEIK_SOURCE64F, ONly : ysrc => ystrue
       USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
       USE ISO_C_BINDING
       IMPLICIT NONE

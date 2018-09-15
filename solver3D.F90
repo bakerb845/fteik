@@ -44,6 +44,7 @@ MODULE FTEIK_SOLVER64F
   INTEGER(C_INT), PROTECTED, SAVE :: nsweep = 0 
   !> Flag indicating whether or not the travel times were computed.
   LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveTimes = .FALSE. 
+  INTEGER, PRIVATE, SAVE :: srcNumber =-1
   !> Number of levels in level scheduling method.
 ! INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
   !> The number of nodes in the largest level.
@@ -122,7 +123,7 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nyIn, nzIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      WRITE(*,*) 'fteik_solver3d_initialize64f: Initializing...'
+      WRITE(OUTPUT_UNIT,800)
       CALL fteik_solver3d_free()
       CALL fteik_solver3d_setVerobosity(verboseIn)
       CALL fteik_solver3d_setConvergenceTolerance(convTolIn)
@@ -132,26 +133,31 @@ MODULE FTEIK_SOLVER64F
                                           dzIn, dxIn, dyIn, &
                                           ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_initialize64f: Error setting grid geometry'
+         WRITE(ERROR_UNIT,900)
          RETURN
       ENDIF
       CALL fteik_solver3d_setNumberOfSweeps(nsweepIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_initialize64f: Failed to set max number of sweeps'
+         WRITE(ERROR_UNIT,901)
          RETURN
       ENDIF
       CALL fteik_solver3d_setSphereToCartEpsilon(epsIn, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_initialize64f: Failed to set epsilon'
+         WRITE(ERROR_UNIT,902)
          RETURN
       ENDIF
       CALL fteik_solver3d_computeGraph(ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_initialize64f: Failed to compute graph'
+         WRITE(ERROR_UNIT,903)
          RETURN
       ENDIF
       ! Set space for the travel-times
       IF (.NOT.ALLOCATED(ttimes)) ALLOCATE(ttimes(ngrd))
+  800 FORMAT('fteik_solver3d_initialize64f: Initializing...')
+  900 FORMAT('fteik_solver3d_initialize64f: Error setting grid geometry')
+  901 FORMAT('fteik_solver3d_initialize64f: Failed to set max number of sweeps')
+  902 FORMAT('fteik_solver3d_initialize64f: Failed to set epsilon')
+  903 FORMAT('fteik_solver3d_initialize64f: Failed to compute graph')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -203,20 +209,20 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT) ierrs(8)
       ierr = 0
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1 .OR. ngrd < 1) THEN
-         WRITE(*,*) 'fteik_solver3d_computeGraph: Error grid not yet set'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       ! Compute the graph
       CALL fteik_graph3d_initialize(nz, nx, ny, verbose, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_computeGraph: Error initializing graph'
+         WRITE(ERROR_UNIT,901)
          ierr = 1
          RETURN
       ENDIF
       CALL fteik_graph3d_makeLevelStructures(ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_computeGraph: Error making level structures'
+         WRITE(ERROR_UNIT,902)
          ierr = 1
          RETURN
       ENDIF
@@ -296,9 +302,13 @@ MODULE FTEIK_SOLVER64F
       CALL fteik_solver3d_setUpdateNodes(8, nlevels, FALSE, 0, levelPtr, &
                                          ijkv8, lupd8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_computeGraph: Error setting update nodes'
+         WRITE(ERROR_UNIT,903)
          ierr = 1
       ENDIF
+  900 FORMAT('fteik_solver3d_computeGraph: Error grid not yet set')
+  901 FORMAT('fteik_solver3d_computeGraph: Error initializing graph')
+  902 FORMAT('fteik_solver3d_computeGraph: Error making level structures')
+  903 FORMAT('fteik_solver3d_computeGraph: Error setting update nodes')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -353,10 +363,11 @@ MODULE FTEIK_SOLVER64F
       CALL fteik_solver3d_setUpdateNodes(8, nlevels, TRUE, isrc, levelPtr, &
                                          ijkv8, lupdInit8, ierrs(8))
       IF (MAXVAL(ABS(ierrs)) /= 0) THEN
-         WRITE(*,*) 'fteik_source3d_setInitialUpdateNodes: Error setting update nodes'
+         WRITE(ERROR_UNIT,900)
          ierr = 1 
          RETURN
       ENDIF
+  900 FORMAT('fteik_source3d_setInitialUpdateNodes: Error setting update nodes')
       RETURN
       END
 !                                                                                        !
@@ -408,7 +419,7 @@ MODULE FTEIK_SOLVER64F
       IF (linitk) THEN
          CALL fteik_source_getSourceIndices32iF(isrc, zsi, xsi, ysi, ierr)
          IF (ierr /= 0) THEN
-            WRITE(*,*) 'fteik_solver3d_setUpdateNodes: Error with source node init'
+            WRITE(ERROR_UNIT,900)
             ierr = 1
             RETURN
          ENDIF
@@ -419,7 +430,7 @@ MODULE FTEIK_SOLVER64F
                                          z1, z2, x1, x2, y1, y2, &
                                          ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_setUpdateNodes: Invalid sweep', sweep
+         WRITE(ERROR_UNIT,901) sweep
          ierr = 1
          RETURN
       ENDIF
@@ -429,8 +440,8 @@ MODULE FTEIK_SOLVER64F
       maxx = MAX(x1, x2)
       miny = MIN(y1, y2)
       maxy = MAX(y1, y2)
-      DO 1 i=1,nLevels
-         DO 2 node=levelPtr(i),levelPtr(i+1)-1 
+      DO i=1,nLevels
+         DO node=levelPtr(i),levelPtr(i+1)-1 
             iz   = ijkv(4*(node - 1) + 1)
             ix   = ijkv(4*(node - 1) + 2)
             iy   = ijkv(4*(node - 1) + 3)
@@ -439,8 +450,10 @@ MODULE FTEIK_SOLVER64F
                 iy >= miny .AND. iy <= maxy) THEN
                lupd(node) = .TRUE.
             ENDIF 
-    2    CONTINUE
-    1 CONTINUE
+         ENDDO
+      ENDDO
+  900 FORMAT('fteik_solver3d_setUpdateNodes: Error with source node init')
+  901 FORMAT('fteik_solver3d_setUpdateNodes: Invalid sweep ', I0)
       RETURN
       END
 !                                                                                        !
@@ -542,9 +555,10 @@ MODULE FTEIK_SOLVER64F
             y2 = 1;           x2 = 1;           z2 = 1;
          ENDIF
       ELSE
-         WRITE(*,*) 'fteik_solver3d_getSweepLimits: Invalid sweep', sweep
+         WRITE(ERROR_UNIT,900)
          ierr = 1
-      ENDIF 
+      ENDIF
+  900 FORMAT('fteik_solver3d_getSweepLimits: Invalid sweep ', I0)
       RETURN
       END
 !                                                                                        !
@@ -568,6 +582,7 @@ MODULE FTEIK_SOLVER64F
       convTol = zero
       nsweep = 0
       verbose = 0
+      srcNumber =-1
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
       IF (ALLOCATED(lupd1)) DEALLOCATE(lupd1)
       IF (ALLOCATED(lupd2)) DEALLOCATE(lupd2)
@@ -630,27 +645,22 @@ MODULE FTEIK_SOLVER64F
       ierr = 0
       epsS2C = zero
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1) THEN
-         WRITE(*,*) 'fteik_solver3d_setSphereToCartEpsilon: Grid not yet set'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (INT(epsIn) > nz .OR. INT(epsIn) > nx .OR. INT(epsIn) > ny) THEN
-         IF (INT(epsIn) > nz) THEN
-            WRITE(*,*) 'fteik_solver3d_setSphereToCartEpsilon: eps bigger than nz', &
-                       INT(epsIn), nz
-         ENDIF
-         IF (INT(epsIn) > nx) THEN
-            WRITE(*,*) 'fteik_solver3d_setSphereToCartEpsilon: eps bigger than nx', &
-                       INT(epsIn), nx
-         ENDIF
-         IF (INT(epsIn) > ny) THEN
-            WRITE(*,*) 'fteik_solver3d_setSphereToCartEpsilon: eps bigger than ny', &
-                       INT(epsIn), ny
-         ENDIF
+         IF (INT(epsIn) > nz) WRITE(ERROR_UNIT,901) INT(epsIn), nz
+         IF (INT(epsIn) > nx) WRITE(ERROR_UNIT,902) INT(epsIn), nx
+         IF (INT(epsIn) > ny) WRITE(ERROR_UNIT,903) INT(epsIn), ny
          ierr = 1
          RETURN
       ENDIF
       epsS2C = epsIn
+  900 FORMAT('fteik_solver3d_setSphereToCartEpsilon: Grid not yet set')
+  901 FORMAT('fteik_solver3d_setSphereToCartEpsilon: eps=', I0, ' bigger than nz =',I0)
+  902 FORMAT('fteik_solver3d_setSphereToCartEpsilon: eps=', I0, ' bigger than nx =',I0)
+  903 FORMAT('fteik_solver3d_setSphereToCartEpsilon: eps=', I0, ' bigger than ny =',I0)
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -676,11 +686,12 @@ MODULE FTEIK_SOLVER64F
       ierr = 0
       nsweep = 0
       IF (nsweepIn < 0) THEN
-         WRITE(*,*) 'fteik_solver3d_setNumberOfSweeps: nsweep must be positive', nsweep
+         WRITE(ERROR_UNIT,900) nsweep
          ierr = 1
          RETURN
       ENDIF
       nsweep = nsweepIn
+  900 FORMAT('fteik_solver3d_setNumberOfSweeps: nsweep = ', I0, ' must be positive')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -711,7 +722,8 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver3d_setSources64f: Failed to set source'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,900)
+  900 FORMAT('fteik_solver3d_setSources64f: Failed to set source')
       RETURN
       END
 !                                                                                        !
@@ -732,9 +744,10 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT), INTENT(OUT) :: nsrc, ierr
       CALL fteik_source_getNumberOfSources(nsrc, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_getNumberOfSources: No sources initialized!'
+         WRITE(ERROR_UNIT,900)
          RETURN
       ENDIF 
+  900 FORMAT('fteik_solver3d_getNumberOfSources: No sources initialized!')
       RETURN
       END
 !                                                                                        !
@@ -771,12 +784,13 @@ MODULE FTEIK_SOLVER64F
       INTEGER indx, ix, iy, iz, jndx
       ierr = 0
       IF (.NOT.lhaveTimes) THEN 
-         WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: Travel times not yet computed'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (ngin /= ngrd) THEN 
-         WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: No receivers'
+         WRITE(ERROR_UNIT,901) ngin, ngrd
+         ierr = 1
          RETURN
       ENDIF
       IF (order == FTEIK_XYZ_ORDERING) THEN
@@ -805,10 +819,13 @@ MODULE FTEIK_SOLVER64F
          ENDDO
       ELSE
          IF (order /= FTEIK_NATURAL_ORDERING .AND. order /= FTEIK_ZXY_ORDERING) THEN
-            WRITE(*,*) 'fteik_solver3d_getTravelTimeField64f: Defaulting to natural order'
+            WRITE(ERROR_UNIT,800)
          ENDIF
          ttout(:) = ttimes(:)
       ENDIF
+  800 FORMAT('fteik_solver3d_getTravelTimeField64f: Defaulting to natural order')
+  900 FORMAT('fteik_solver3d_getTravelTimeField64f: Travel times not yet computed')
+  901 FORMAT('fteik_solver3d_getTravelTimeField64f: ngin=', I0, ' /= ngrd =', I0)
       RETURN
       END
 !                                                                                        !
@@ -835,19 +852,22 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (nrec <= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_getTravelTimes64f: No receivers'
+         WRITE(OUTPUT_UNIT,800)
          RETURN
       ENDIF
       IF (.NOT.lhaveTimes) THEN
-         WRITE(*,*) 'fteik_solver3d_getTravelTimes64f: Travel times not yet computed'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       CALL fteik_receiver_getTravelTimes64f(nrec, ngrd, ttimes, ttr, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_getTravelTimes64f: Error getting travel times'
+         WRITE(ERROR_UNIT,901)
          ierr = 1
       ENDIF
+  800 FORMAT('fteik_solver2d_getTravelTimes64f: No receivers')
+  900 FORMAT('fteik_solver2d_getTravelTimes64f: Travel times not yet computed')
+  901 FORMAT('fteik_solver3d_getTravelTimes64f: Error getting travel times')
       RETURN
       END
 !                                                                                        !
@@ -897,11 +917,13 @@ MODULE FTEIK_SOLVER64F
       ! It's actually safe to have no receivers
       ierr = 0
       IF (nrec < 1) THEN
-         WRITE(*,*) 'fteik_solver3d_setReceivers64f: No receivers to set'
+         WRITE(OUTPUT_UNIT,800)
          RETURN
       ENDIF
       CALL fteik_receiver_initialize64f(nrec, zrec, xrec, yrec, verbose, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_solver3d_setReceivers64f: Failed to set receivers'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,901)
+  800 FORMAT('fteik_solver3d_setReceivers64f: No receivers to set')
+  901 FORMAT('fteik_solver3d_setReceivers64f: Failed to set receivers')
       RETURN
       END
 !                                                                                        !
@@ -936,8 +958,8 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       CALL fteik_model_setNodalVelocityModel64f(ng, order, vel, ierr)
-      IF (ierr /= 0) & 
-      WRITE(*,*) 'fteik_solver3d_setNodalVelocityModel64f: Error setting velocity model'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,900)
+  900 FORMAT('fteik_solver3d_setNodalVelocityModel64f: Error setting velocity model')
       RETURN
       END
 !                                                                                        !
@@ -973,8 +995,8 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
       INTEGER(C_INT), INTENT(OUT) :: ierr 
       CALL fteik_model_setCellVelocityModel64f(nc, order, vel, ierr)
-      IF (ierr /= 0) & 
-      WRITE(*,*) 'fteik_solver3d_setCellVelocityModel64f: Error setting velocity model'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,900)
+  900 FORMAT('fteik_solver3d_setCellVelocityModel64f: Error setting velocity model')
       RETURN
       END
 !                                                                                        !
@@ -1003,8 +1025,8 @@ MODULE FTEIK_SOLVER64F
       REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
       INTEGER(C_INT), INTENT(OUT) :: ierr
       CALL fteik_model_setVelocityModel64f(ncell, vel, ierr)
-      IF (ierr /= 0) &
-      WRITE(*,*) 'fteik_solver3d_setVelocityModel64f: Error setting velocity model'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,900)
+  900 FORMAT('fteik_solver3d_setVelocityModel64f: Error setting velocity model')
       RETURN
       END
 !                                                                                        !
@@ -1042,26 +1064,27 @@ MODULE FTEIK_SOLVER64F
       INTEGER(C_INT) dest(8), kiter
       ierr = 0
       lhaveTimes = FALSE
+      srcNumber =-1
       IF (.NOT.lhaveModel) THEN
-         WRITE(*,*) 'fteik_solver3d_solveSourceLSM: Model not yet set'
+         WRITE(ERROR_UNIT,900) 'fteik_solver3d_solveSourceLSM: Model not yet set'
          ierr = 1
          GOTO 500
       ENDIF
       IF (isrc < 1 .OR. isrc > nsrc) THEN
-         WRITE(*,*) 'fteik_solver3d_solveSourceLSM: Invalid source number:', isrc, 1, nsrc
+         WRITE(ERROR_UNIT,901) isrc, nsrc
          ierr = 1
          GOTO 500
       ENDIF
       ! Set the update nodes for the first iteration
       CALL fteik_solver3d_setInitialUpdateNodes(isrc, ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_solveSourceLSM: Error setting initial nodes'
+         WRITE(ERROR_UNIT,902)
          GOTO 500
       ENDIF
       ! Define the mesh constants and get the travel-times near the source
       CALL fteik_localSolver_initialize64fF(isrc, epsS2C, dest, ts8, ierr) 
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_solver3d_solveSourceLSM: Error setting mesh constants'
+         WRITE(ERROR_UNIT,903)
          GOTO 500
       ENDIF
       CALL CPU_TIME(t0)
@@ -1089,16 +1112,22 @@ MODULE FTEIK_SOLVER64F
       ENDDO 
       IF (verbose > 2) THEN
          CALL CPU_TIME(t1)
-         WRITE(*,902) t1 - t0 
+         WRITE(OUTPUT_UNIT,802) t1 - t0 
          !print *, minval(ttimes), maxval(ttimes)
       ENDIF
       lhaveTimes = .TRUE.
+      srcNumber = isrc
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = .FALSE.
       ENDIF
-  902 FORMAT(' fteik_solver3d_solveSourceLSM: Solver time in seconds=', F14.8)
+  802 FORMAT('fteik_solver3d_solveSourceLSM: Solver time in seconds=', F14.8)
+  900 FORMAT('fteik_solver3d_solveSourceLSM: Model not yet set')
+  901 FORMAT('fteik_solver3d_solveSourceLSM: Source number = ', I0, &
+             ' must be in range [1,', I0, ']')
+  902 FORMAT('fteik_solver3d_solveSourceLSM: Error setting initial nodes')
+  903 FORMAT('fteik_solver3d_solveSourceLSM: Error setting mesh constants')
       RETURN
       END
 !----------------------------------------------------------------------------------------!
