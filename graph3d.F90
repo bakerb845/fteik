@@ -5,6 +5,7 @@
 !> @author Ben Baker
 !> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_GRAPH3D
+   USE ISO_FORTRAN_ENV
    USE ISO_C_BINDING
    IMPLICIT NONE
    !> Maps from start index of level'th level to corresponding node.
@@ -86,7 +87,7 @@ MODULE FTEIK_GRAPH3D
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
       IF (nzIn < 3 .OR. nxIn < 3 .OR. nyIn < 3) THEN
-         WRITE(*,*) 'fteik_graph3d_initializeF: Insufficient number of grid points'
+         WRITE(ERROR_UNIT,900)
          ierr =-1
          RETURN
       ENDIF
@@ -95,6 +96,7 @@ MODULE FTEIK_GRAPH3D
       nx = nxIn
       ny = nyIn
       ngrd = nz*nx*ny
+  900 FORMAT('fteik_graph3d_initialize: Insufficient number of grid points')
       RETURN
       END SUBROUTINE  
 !                                                                                        !
@@ -130,7 +132,7 @@ MODULE FTEIK_GRAPH3D
       INTEGER, ALLOCATABLE :: linit(:), work(:)
       ierr = 0
       IF (nz < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Graph not initalized'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
@@ -183,8 +185,8 @@ MODULE FTEIK_GRAPH3D
          IF (np > 1) THEN
             ierr = sorting_sort32i_finter(np, work, SORT_ASCENDING)
             IF (ierr /= 0) THEN
-               WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Sort failed'
-               EXIT
+               WRITE(ERROR_UNIT,901)
+               RETURN
             ENDIF
          ENDIF
          ! Insert the nodes into ijkv
@@ -200,21 +202,20 @@ MODULE FTEIK_GRAPH3D
             ijkv1(4*(np-1)+4) = work(node)
          ENDDO
          IF (ierr /= 0) THEN
-            WRITE(*,*) 'fteik_graph3d_index2grid: Failed to convert grid to (iz,ix,iy)'
-            EXIT
+            WRITE(ERROR_UNIT,902)
+            RETURN
          ENDIF 
       ENDDO
       IF (MINVAL(linit) < 1 .OR. MAXVAL(linit) > 1) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Algorithm failure', &
-         MINVAL(linit), MAXVAL(linit)
+         WRITE(ERROR_UNIT,903) MINVAL(linit), MAXVAL(linit)
          ierr = 1
       ENDIF
       IF (MINVAL(ijkv1) < 1 .OR. MAXVAL(ijkv1) > ngrd) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Failed to make ijkv1'
+         WRITE(ERROR_UNIT,904)
          ierr = 1
       ENDIF
       IF (MINVAL(node2level) < 1 .OR. MAXVAL(node2level) > nLevels) THEN
-         WRITE(*,*) 'fteik_graph3d_makeLevelStructures: Failed to map node2leve'
+         WRITE(ERROR_UNIT,905)
          ierr = 1
       ENDIF
       IF (ALLOCATED(linit)) DEALLOCATE(linit)
@@ -232,6 +233,12 @@ MODULE FTEIK_GRAPH3D
          IF (sweep == 7) CALL fteik_graph3d_generateIJKV(7, ijkv7, ierr)
          IF (sweep == 8) CALL fteik_graph3d_generateIJKV(8, ijkv8, ierr)
       ENDDO
+  900 FORMAT('fteik_graph3d_makeLevelStructures: Graph not initalized')
+  901 FORMAT('fteik_graph3d_makeLevelStructures: Sort failed')
+  902 FORMAT('fteik_graph3d_index2grid: Failed to convert grid to (iz,ix,iy)')
+  903 FORMAT('fteik_graph3d_makeLevelStructures: Algorithm failure ', I0, I0)
+  904 FORMAT('fteik_graph3d_makeLevelStructures: Failed to make ijkv1')
+  905 FORMAT('fteik_graph3d_makeLevelStructures: Failed to map node2level')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -257,12 +264,12 @@ MODULE FTEIK_GRAPH3D
       INTEGER ierrLoc, il, indx, iz, ix, iy, j, jz, jx, jy, node, nsort
       ierr = 0
       IF (ngrd < 1 .OR. .NOT.ALLOCATED(levelPtr)) THEN
-         WRITE(*,*) 'fteik_graph3d_generateIJKV: Invalid initialization'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (sweep < 1 .OR. sweep > 8) THEN
-         WRITE(*,*) 'fteik_graph3d_generateIJKV: Invalid sweep:', sweep
+         WRITE(ERROR_UNIT,901) sweep
          ierr = 1
          RETURN
       ENDIF
@@ -318,15 +325,14 @@ MODULE FTEIK_GRAPH3D
          ! Sort the nodes in this level
          nsort = j
          IF (levelPtr(il+1) - levelPtr(il) /= nsort) THEN
-            WRITE(*,*) 'fteik_graph3d_generateIJKV: levelPtr not set correctly', &
-                       nsort, levelPtr(il+1) - levelPtr(il)
+            WRITE(ERROR_UNIT,902) nsort, levelPtr(il+1) - levelPtr(il)
             ierr = 1
             EXIT
          ENDIF
          IF (nsort > 1) THEN
             ierr = sorting_sort32i_finter(nsort, work, SORT_ASCENDING)
             IF (ierr /= 0) THEN
-               WRITE(*,*) 'fteik_graph3d_generateIJKV: Failed to sort work'
+               WRITE(ERROR_UNIT,903)
                EXIT
             ENDIF
          ENDIF
@@ -344,24 +350,27 @@ MODULE FTEIK_GRAPH3D
       ENDDO ! loop on levels
       IF (ALLOCATED(work)) DEALLOCATE(work)
       IF (MINVAL(ijkvOut) < 1 .OR. MAXVAL(ijkvOut) > ngrd) THEN
-         WRITE(*,*) 'fteik_graph3d_generateIJKV: Failed to make ijkv for sweep', sweep
+         WRITE(ERROR_UNIT,904) sweep
          ierr = 1
       ENDIF
+  900 FORMAT('fteik_graph3d_generateIJKV: Invalid initialization')
+  901 FORMAT('fteik_graph3d_generateIJKV: Invalid sweep = ', I0)
+  902 FORMAT('fteik_graph3d_generateIJKV: levelPtr not set correctly', I0, I0, I0)
+  903 FORMAT('fteik_graph3d_generateIJKV: Failed to sort work')
+  904 FORMAT('fteik_graph3d_generateIJKV: Failed to make ijkv for sweep ', I0)
       RETURN
       END
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
 !>    @brief Frees/releases memory for the 3D graph.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup graph
       SUBROUTINE fteik_graph3d_free()  &
       BIND(C, NAME='fteik_graph3d_free')
       USE ISO_C_BINDING
       IMPLICIT NONE
       IF (ngrd < 1 .AND. verbose > 0) THEN
-         WRITE(*,*) 'fteik_graph3d_free: Graph never intialized'
+         WRITE(OUTPUT_UNIT,800)
          RETURN
       ENDIF
       nz = 0
@@ -380,6 +389,7 @@ MODULE FTEIK_GRAPH3D
       IF (ALLOCATED(ijkv6))      DEALLOCATE(ijkv6)
       IF (ALLOCATED(ijkv7))      DEALLOCATE(ijkv7)
       IF (ALLOCATED(ijkv8))      DEALLOCATE(ijkv8)
+  800 FORMAT('fteik_graph3d_free: Graph never initialized')
       RETURN
       END SUBROUTINE
 
@@ -389,20 +399,20 @@ MODULE FTEIK_GRAPH3D
       INTEGER(C_INT), INTENT(OUT) :: ijkv(nwork), ierr
       ierr = 0
       IF (sweep < 1 .OR. sweep > 8) THEN
-         WRITE(*,*) 'fteik_graph3d_getIJKVF: Invalid sweep', sweep
+         WRITE(ERROR_UNIT,900) sweep
          ierr = 1
          RETURN
       ENDIF
       IF (nwork /= 4*ngrd) THEN
          IF (nwork < 4*ngrd) THEN
-            WRITE(*,*) 'fteik_graph3d_getIJKVF: Insufficient space'
+            WRITE(ERROR_UNIT,901)
             ierr = 1
             RETURN
          ENDIF
          ijkv(:) = 0
       ENDIF
       IF (.NOT.ALLOCATED(ijkv1)) THEN
-         WRITE(*,*) 'fteik_graph3d_getIJKVF: ijkv not yet computed'
+         WRITE(ERROR_UNIT,902)
          ierr = 1
          RETURN
       ENDIF
@@ -414,6 +424,9 @@ MODULE FTEIK_GRAPH3D
       IF (sweep == 6) ijkv(1:4*ngrd) = ijkv6(1:4*ngrd)
       IF (sweep == 7) ijkv(1:4*ngrd) = ijkv7(1:4*ngrd)
       IF (sweep == 8) ijkv(1:4*ngrd) = ijkv8(1:4*ngrd)
+  900 FORMAT('fteik_graph3d_getIJKVF: Invalid sweep = ', I0)
+  901 FORMAT('fteik_graph3d_getIJKVF: Insufficient space')
+  902 FORMAT('fteik_graph3d_getIJKVF: ijkv not yet computed')
       RETURN
       END
 
@@ -425,9 +438,10 @@ MODULE FTEIK_GRAPH3D
       ierr = 0 
       fteik_graph3d_getMaxLevelSize = maxLevelSize
       IF (maxLevelSize < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_getMaxLevelSize: maxLevelSize not yet computed'
+         WRITE(ERROR_UNIT,900)
          ierr = 1 
       ENDIF
+  900 FORMAT('fteik_graph3d_getMaxLevelSize: maxLevelSize not yet computed')
       RETURN
       END
 
@@ -439,9 +453,10 @@ MODULE FTEIK_GRAPH3D
       ierr = 0
       fteik_graph3d_getNumberOfLevels = nLevels
       IF (nLevels < 1) THEN
-         WRITE(*,*) 'fteik_graph3d_getNumberOfLevels: nLevels not yet computed'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
       ENDIF
+  900 FORMAT('fteik_graph3d_getNumberOfLevels: nLevels not yet computed')
       RETURN
       END
 
@@ -453,17 +468,19 @@ MODULE FTEIK_GRAPH3D
       INTEGER(C_INT), INTENT(OUT) :: levelPtrOut(nwork), ierr
       ierr = 0
       IF (.NOT.ALLOCATED(levelPtr)) THEN
-         WRITE(*,*) 'fteik_graph3d_getLevelPointerF: levelPtr not yet made'
+         WRITE(ERROR_UNIT,900)
          ierr = 1
          RETURN
       ENDIF
       IF (nwork < nLevels + 1) THEN
-         WRITE(*,*) 'fteik_graph3d_getLevelPointerF: Insufficient space'
+         WRITE(ERROR_UNIT,901)
          ierr = 1
          RETURN
       ENDIF
       levelPtrOut(1:nLevels+1) = levelPtr(1:nLevels+1)
       IF (nwork > nLevels) levelPtrOut(nLevels+2:nwork) = 0
+  900 FORMAT('fteik_graph3d_getLevelPointerF: levelPtr not yet made')
+  901 FORMAT('fteik_graph3d_getLevelPointerF: Insufficient space')
       RETURN
       END
 !                                                                                        !
