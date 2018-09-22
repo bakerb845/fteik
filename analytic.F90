@@ -10,6 +10,7 @@ MODULE FTEIK_ANALYTIC64F
                               fteik_source_free
   USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_initialize64f, &
                                 fteik_receiver_free
+  USE ISO_FORTRAN_ENV
   USE ISO_C_BINDING
   IMPLICIT NONE
   INTEGER(C_INT), PROTECTED, SAVE :: nx = 0    !< Number of grid points in x.
@@ -29,25 +30,25 @@ MODULE FTEIK_ANALYTIC64F
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
 
   !INTEGER(C_INT), PROTECTED, SAVE :: nrec !< Number of receivers.
-  INTEGER(C_INT), PROTECTED, SAVE :: verbose !< Verbosity.
+  INTEGER, PROTECTED, SAVE :: verbose !< Verbosity.
   !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: xrec(:) !< Receiver positions (m) in x.
   !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: yrec(:) !< Receiver positions (m) in y.
   !REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: zrec(:) !< Receiver positions (m) in z. 
   REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: trec(:) !< Travel time (s) at receiver.
   !-----------------------------------Private Variables----------------------------------!
   !> Workspace for vectorizing acosh calls
-  REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: work(:)
-  REAL(C_DOUBLE), PRIVATE, ALLOCATABLE, SAVE :: wrec(:)
+  DOUBLE PRECISION, PRIVATE, ALLOCATABLE, SAVE :: work(:)
+  DOUBLE PRECISION, PRIVATE, ALLOCATABLE, SAVE :: wrec(:)
   ! Private variables
-  INTEGER(C_INT), PRIVATE, SAVE :: ngrd = 0 
+  INTEGER, PRIVATE, SAVE :: ngrd = 0 
   !> Velocity gradient in principle directions.
-  REAL(C_DOUBLE), PRIVATE, SAVE :: vGradInX = 0.d0
-  REAL(C_DOUBLE), PRIVATE, SAVE :: vGradInY = 0.d0
-  REAL(C_DOUBLE), PRIVATE, SAVE :: vGradInZ = 0.d0
-  REAL(C_DOUBLE), PRIVATE, SAVE :: slow0 = 1.d0 !< Slowness (s/m) at source depth.
-  REAL(C_DOUBLE), PRIVATE, SAVE :: vel0  = 1.d0 !< Velocity (m/s) at source depth.
-  REAL(C_DOUBLE), PRIVATE, SAVE :: absG2 = 0.d0 !< Magnitude^2 of velocity gradient.
-  REAL(C_DOUBLE), PRIVATE, SAVE :: absG  = 0.D0 !< Magnitude of velocity gradient.
+  DOUBLE PRECISION, PRIVATE, SAVE :: vGradInX = 0.d0
+  DOUBLE PRECISION, PRIVATE, SAVE :: vGradInY = 0.d0
+  DOUBLE PRECISION, PRIVATE, SAVE :: vGradInZ = 0.d0
+  DOUBLE PRECISION, PRIVATE, SAVE :: slow0 = 1.d0 !< Slowness (s/m) at source depth.
+  DOUBLE PRECISION, PRIVATE, SAVE :: vel0  = 1.d0 !< Velocity (m/s) at source depth.
+  DOUBLE PRECISION, PRIVATE, SAVE :: absG2 = 0.d0 !< Magnitude^2 of velocity gradient.
+  DOUBLE PRECISION, PRIVATE, SAVE :: absG  = 0.D0 !< Magnitude of velocity gradient.
   !> Flag indicating the module is initialized.
   LOGICAL, PRIVATE, SAVE :: linit = .FALSE.
   !-----------------------------Label the Subroutines/Functions--------------------------!
@@ -179,7 +180,8 @@ MODULE FTEIK_ANALYTIC64F
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr 
       CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
-      IF (ierr /= 0) WRITE(*,*) 'fteik_analytic_setSources64f: Failed to set source'
+      IF (ierr /= 0) WRITE(ERROR_UNIT,900)
+  900 FORMAT('fteik_analytic_setSources64f: Failed to set source')
       RETURN
       END
 !                                                                                        !
@@ -544,8 +546,7 @@ MODULE FTEIK_ANALYTIC64F
       REAL(C_DOUBLE) zdum(1), xdum(1), ydum(1)
       ierr = 0
       IF (isrc < 1 .OR. isrc > nsrc) THEN
-         WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Invalid source', &
-                    isrc, 1, nsrc
+         WRITE(ERROR_UNIT,900) isrc, 1, nsrc
          ierr = 1
          RETURN
       ENDIF
@@ -554,8 +555,11 @@ MODULE FTEIK_ANALYTIC64F
                                     nrecDum, zdum, xdum, ydum,                &
                                     ierr)
       IF (ierr /= 0) THEN
-         WRITE(*,*) 'fteik_analytic_solveSourceConstantVelocity64f: Error solving'
+         WRITE(ERROR_UNIT,901)
       ENDIF
+  900 FORMAT('fteik_analytic_solveSourceConstantVelocity64f: Source = ', I0, &
+             ' must be in range [1,', I0, ']')
+  901 FORMAT('fteik_analytic_solveSourceConstantVelocity64f: Error solving')
       RETURN
       END
 !                                                                                        !

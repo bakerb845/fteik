@@ -1,6 +1,7 @@
 !> @defgroup source Source
 !> @ingroup solver2d
 !> @ingroup solver3d
+!> @ingroup rays
 !> @brief Defines the source list and locations.
 !> @author Ben Baker
 !> @copyright Ben Baker distributed under the MIT license.

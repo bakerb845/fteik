@@ -23,35 +23,41 @@ MODULE FTEIK2D_SOLVER64F
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel times (seoncds) at receivers.  This has dimension [nrec x nsrc].
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimesRec(:)
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: ttimesRec(:)
   !> Holds the travel times (seconds).  This has dimension [ngrd].
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
   !!!!DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
+  !> The gradient of the travel times (s/m) in x.  This has dimension [ngrd].
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: tgradx(:)
+  !> The gradient of the travel times (s/m) in z.  This has dimension [ngrd].
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: tgradz(:)
+  
   !> Gauss-Seidel method converges when update is less than tol
-  REAL(C_DOUBLE), PROTECTED, SAVE :: convTol = zero 
+  DOUBLE PRECISION, PROTECTED, SAVE :: convTol = zero 
   !> Defines the number of levels.  For 2D that is nz + nx
-  INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0
+  INTEGER, PROTECTED, SAVE :: nLevels = 0
   !> Defines the max level size.
-  INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0
+  INTEGER, PROTECTED, SAVE :: maxLevelSize = 0
   !> Controls the verbosity
-  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0
+  INTEGER, PROTECTED, SAVE :: verbose = 0
   !> Defines the transition from the spherical to the Cartesian solver solver
   !> during the initialization phase.  This has units of grid points.
-  REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
+  DOUBLE PRECISION, PROTECTED, SAVE :: epsS2C = zero
   !> Defines the number of Gauss-Seidel iterations.
-  INTEGER(C_INT), PROTECTED, SAVE :: nsweep = 0
+  INTEGER, PROTECTED, SAVE :: nsweep = 1
   !> Flag indicating whether or not the travel times were computed.
-  LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveTimes = .FALSE.
-  !> 
-  LOGICAL(C_BOOL), PARAMETER :: lis3d = .FALSE.
+  LOGICAL, PROTECTED, SAVE :: lhaveTimes = .FALSE.
+  !> Flag indicating whether or not the gradients were computed.
+  LOGICAL, PROTECTED, SAVE :: lhaveGradient = .FALSE.
+  !> Enforces that this is for 2D only.
+  LOGICAL(C_BOOL), PRIVATE, PARAMETER :: lis3d = .FALSE.
   !> Private variables for the local solver
   INTEGER(C_SIZE_T), PARAMETER :: alignment = 64
-  REAL(C_DOUBLE), SAVE, PRIVATE :: zsa, xsa, szero, szero2, eps
-  INTEGER(C_INT), SAVE, PRIVATE :: zsi, xsi
-  REAL(C_DOUBLE), SAVE, PRIVATE :: dx, dxi, dz, dzi, dz2i, dx2i, dz2i_dx2i, &
-                                   dz2i_p_dx2i, dz2i_p_dx2i_inv
-  REAL(C_DOUBLE), SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), tupdWork(:), &
-                                                ttold(:)
+  !DOUBLE PRECISION, SAVE, PRIVATE :: zsa, xsa, szero
+  !INTEGER, SAVE, PRIVATE :: zsi, xsi
+  DOUBLE PRECISION, SAVE, PRIVATE, ALLOCATABLE :: slocWork(:), ttvecWork(:), &
+                                                  tupdWork(:), ttold(:),     &
+                                                  gxWork(:), gzWork(:)
   LOGICAL(C_BOOL), SAVE, PRIVATE, ALLOCATABLE :: lupdWork(:)
   INTEGER, PRIVATE, SAVE :: srcNumber = -1
   ! Label the subroutines/functions
@@ -71,15 +77,15 @@ MODULE FTEIK2D_SOLVER64F
   PUBLIC :: fteik_solver2d_setSphereToCartEpsilon
   PUBLIC :: fteik_solver2d_getNumberOfReceivers
   PUBLIC :: fteik_solver2d_setConvergenceTolerance
-  PRIVATE :: fteik_solver2d_isUpdateNodeF
-  PRIVATE :: fteik_solver2d_prefetchTravelTimes64fF
-  PRIVATE :: fteik_solver2d_prefetchSlowness64fF
-  PRIVATE :: fteik_solver2d_updateTravelTimes64fF
-  PRIVATE :: fteik_localSolver2d_noInit64fF
-  PRIVATE :: fteik_localSolver2d_init64fF
-  PRIVATE :: fteik_localSolver2d_tAna64fF
-  PRIVATE :: fteik_localSolver2d_tAnaD64fF
-  PRIVATE :: fteik_localSolver2d_initialize64f
+  PRIVATE :: fteik_solver2d_isUpdateNode
+  PRIVATE :: fteik_solver2d_prefetchTravelTimes64f
+  PRIVATE :: fteik_solver2d_prefetchSlowness64f
+  PRIVATE :: fteik_solver2d_updateTravelTimes64f
+  !PRIVATE :: fteik_localSolver2d_noInit64f
+  !PRIVATE :: fteik_localSolver2d_init64f
+
+  ! Fortran only routines
+  !PUBLIC :: fteik_localSolver2d_initialize64f
 
   PRIVATE :: padLength64F
   PRIVATE :: fteik_model_initializeGeometry
@@ -111,6 +117,7 @@ MODULE FTEIK2D_SOLVER64F
 !>                          to the travel time field are less than convTol (seconds).
 !>    @param[in] verboseIn  Controls the verbosity.  Less than 1 is quiet. 
 !>    @param[out] ierr      0 indicates success.
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_initialize64f(nzIn, nxIn,           &
                                               z0In, x0In,           &
                                               dzIn, dxIn,           &
@@ -118,19 +125,17 @@ MODULE FTEIK2D_SOLVER64F
                                               convTolIn, verboseIn, &
                                               ierr)                 &
       BIND(C, NAME='fteik_solver2d_initialize64f')
-      USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_CONSTANTS64F, ONLY : one, zero, FALSE
-      IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dzIn
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn, convtolIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nxIn, nzIn
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT), PARAMETER :: nyIn = 1
-      REAL(C_DOUBLE), PARAMETER :: y0In = zero
-      REAL(C_DOUBLE), PARAMETER :: dyIn = one
+      INTEGER, PARAMETER :: nyIn = 1
+      DOUBLE PRECISION, PARAMETER :: y0In = zero
+      DOUBLE PRECISION, PARAMETER :: dyIn = one
       IF (verboseIn > 0) WRITE(OUTPUT_UNIT,800)
       CALL fteik_solver2d_free()
       CALL fteik_solver2d_setVerobosity(verboseIn)
@@ -149,44 +154,49 @@ MODULE FTEIK2D_SOLVER64F
          WRITE(ERROR_UNIT,902)
          RETURN
       ENDIF
-      CALL fteik_solver2d_setSphereToCartEpsilon(epsIn, ierr)
-      IF (ierr /= 0) THEN
+      CALL fteik_rays_initialize(ierr)
+      IF (ierr /= 0) THEN 
          WRITE(ERROR_UNIT,903)
          RETURN
-      ENDIF
-      CALL fteik_rays_initialize(ierr)
+      ENDIF 
+      CALL fteik_solver2d_setSphereToCartEpsilon(epsIn, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,904)
          RETURN
-      ENDIF 
+      ENDIF
       ! Compute the number of levels
       nLevels = nxIn + nzIn
       maxLevelSize = MIN(nxIn, nzIn) + padLength64F(alignment, MIN(nxIn, nzIn))
       ! Set space for the travel-times
       IF (.NOT.ALLOCATED(ttimes)) ALLOCATE(ttimes(ngrd))
+      IF (.NOT.ALLOCATED(tgradx)) ALLOCATE(tgradx(ngrd))
+      IF (.NOT.ALLOCATED(tgradz)) ALLOCATE(tgradz(ngrd))
       ALLOCATE(lupdWork(maxLevelSize))
       ALLOCATE(slocWork(4*maxLevelSize))
       ALLOCATE(ttvecWork(4*maxLevelSize))
       ALLOCATE(tupdWork(maxLevelSize))
+      ALLOCATE(gxWork(maxLevelSize))
+      ALLOCATE(gzWork(maxLevelSize))
       ALLOCATE(ttold(ngrd))
       lupdWork(:) = FALSE
       slocWork(:) = zero
       ttvecWork(:) = zero
       tupdWork(:) = zero
+      gxWork(:) = zero
+      gzWork(:) = zero
   800 FORMAT('fteik_solver2d_initialize64f: Initializing...')
   901 FORMAT('fteik_solver2d_initialize64f: Error setting grid geometry')
   902 FORMAT('fteik_solver2d_initialize64f: Failed to set max number of sweeps')
-  903 FORMAT('fteik_solver2d_initialize64f: Failed to set epsilon')
-  904 FORMAT('fteik_solver2d_initialize64f: Failed to initialize ray tracer')
+  903 FORMAT('fteik_solver2d_initialize64f: Failed to initialize ray tracer')
+  904 FORMAT('fteik_solver2d_initialize64f: Failed to set epsilon')
       RETURN
       END SUBROUTINE
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the verbosity on the module.
-!>
 !>    @param[in] verboseIn   Verbosity level to set.  Less than 1 is quiet.
-!>
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_setVerobosity(verboseIn) &
       BIND(C, NAME='fteik_solver2d_setVerbosity')
       USE ISO_C_BINDING
@@ -198,12 +208,11 @@ MODULE FTEIK2D_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the convergence tolerance for the Gauss-Seidel sweeping.
-!>
 !>    @param[in] convTolIn   The Gauss-Seidel sweeping will terminate when the updated
 !>                           travel time perturbation is less than convTolIn (seconds).
 !>                           Note that if convTolin <= 0 then it will be disabled.
 !>
-!>
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_setConvergenceTolerance(convTolIn) &
       BIND(C, NAME='fteik_solver2d_setConvergenceTolerance')
       USE ISO_C_BINDING
@@ -215,17 +224,12 @@ MODULE FTEIK2D_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Releases all memory associated with the solver and resets all variables.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_free()   &
       BIND(C, NAME='fteik_solver2d_free')
-      USE FTEIK_CONSTANTS64F, ONLY : zero
-      USE ISO_C_BINDING
-      IMPLICIT NONE
+      !USE FTEIK_CONSTANTS64F, ONLY : zero
       lhaveTimes = .FALSE.
+      lhaveGradient = .FALSE.
       epsS2C = zero
       convTol = zero 
       nsweep = 0
@@ -234,11 +238,15 @@ MODULE FTEIK2D_SOLVER64F
       srcNumber =-1
       IF (ALLOCATED(ttimesRec))  DEALLOCATE(ttimesRec)
       IF (ALLOCATED(ttimes))     DEALLOCATE(ttimes)
+      IF (ALLOCATED(tgradx))     DEALLOCATE(tgradx)
+      IF (ALLOCATED(tgradz))     DEALLOCATE(tgradz)
       IF (ALLOCATED(ttold))      DEALLOCATE(ttold)
       IF (ALLOCATED(lupdWork))   DEALLOCATE(lupdWork)
       IF (ALLOCATED(slocWork))   DEALLOCATE(slocWork)
       IF (ALLOCATED(ttvecWork))  DEALLOCATE(ttvecWork)
       IF (ALLOCATED(tupdWork))   DEALLOCATE(tupdWork)
+      IF (ALLOCATED(gxWork))     DEALLOCATE(gxWork)
+      IF (ALLOCATED(gzWork))     DEALLOCATE(gzWork)
       CALL fteik_receiver_free()
       CALL fteik_source_free()
       CALL fteik_model_free()
@@ -249,12 +257,9 @@ MODULE FTEIK2D_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Utility routine to return the number of receivers.
-!>
 !>    @param[out] nrec   Number of receivers.
 !>    @param[out] ierr   0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_getNumberOfReceivers(nrec, ierr) &
       BIND(C, NAME='fteik_solver2d_getNumberOfReceivers')
       USE ISO_C_BINDING
@@ -300,8 +305,10 @@ MODULE FTEIK2D_SOLVER64F
       SUBROUTINE fteik_solver2d_computeRaysToPoints(np, xp, zp, ierr) &
       BIND(C, NAME='fteik_solver2d_computeRaysToPoints')
       USE FTEIK_MODEL64F, ONLY : ngrd
-      USE FTEIK_SOURCE64F, ONLY : xstrue, zstrue
-      USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations2D, fteik_rays_trace
+      USE FTEIK_SOURCE64F, ONLY : xstrue, zstrue, xsrc, zsrc
+      USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations2D, &
+                                fteik_rays_setSource, fteik_rays_trace
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi, zsa, xsa, szero
       INTEGER(C_INT), VALUE, INTENT(IN) :: np
       REAL(C_DOUBLE), DIMENSION(np), INTENT(IN) :: xp, zp
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -311,13 +318,21 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          RETURN
       ENDIF
+      ! Set the source information
+      CALL fteik_rays_setSource(zstrue(srcNumber), xstrue(srcNumber), 0.d0, &
+                                zsrc(srcNumber),   xsrc(srcNumber),   0.d0, & 
+                                zsa, xsa, 0.d0,                             &
+                                zsi, xsi, 0,                                &
+                                szero)
+      ! Set the ray destinations 
       CALL fteik_rays_setRayDestinations2D(np, xp, zp, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,901)
          ierr = 1
          RETURN
       ENDIF
-      CALL fteik_rays_trace(ngrd, ttimes, xstrue(srcNumber), 0.d0, zstrue(srcNumber), ierr)
+      ! Compute the raypaths
+      CALL fteik_rays_trace(ngrd, ttimes, tgradx, tgradz, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,902)
          ierr = 1
@@ -347,18 +362,14 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] xsi        Source index in x.  This is only used if linit is true.
 !>
 !>    @param[out] lupd      If true then the k'th node in the level is to be updated.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
-      SUBROUTINE fteik_solver2d_isUpdateNodeF(linit, level, sweep, nz, nx, &
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_isUpdateNode(linit, level, sweep, nz, nx, &
                                              i1, i2, zsi, xsi, lupd)
       USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linit
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep, xsi, zsi
+      LOGICAL, INTENT(IN) :: linit
+      INTEGER, INTENT(IN) :: i1, i2, level, nx, nz, sweep, xsi, zsi
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(OUT) :: lupd
-      INTEGER(C_INT) i, ix, iz
+      INTEGER i, ix, iz
       IF (.NOT.linit) THEN
          IF (sweep == 1) THEN
             !$OMP SIMD
@@ -448,20 +459,16 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[out] sloc   Slownesses (s/m) for finite difference stencil in the V, WE, and
 !>                       home position respetively.  This is a vector of dimension
 !>                       [4 x maxLevelSize] with leading dimension 4. 
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
-      SUBROUTINE fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx, &
-                                                     i1, i2,               &
-                                                     lupd, slow, sloc)
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_prefetchSlowness64f(level, sweep, nz, nx, &
+                                                    i1, i2,               &
+                                                    lupd, slow, sloc)
       USE FTEIK_CONSTANTS64F, ONLY : zero
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep 
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: slow
+      INTEGER, INTENT(IN) :: i1, i2, level, nx, nz, sweep 
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: slow
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(IN) :: lupd
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(OUT) :: sloc
-      INTEGER(C_INT) i, ix, ixcell, indx1, indx2, indx3, indx4, indx5, iz, izcell
+      DOUBLE PRECISION, DIMENSION(:), INTENT(OUT) :: sloc
+      INTEGER i, ix, ixcell, indx1, indx2, indx3, indx4, indx5, iz, izcell
       ! Extract slownesses
       IF (sweep == 1) THEN
          !$OMP SIMD
@@ -568,21 +575,17 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[out] ttvec  Travel times for finite differencing and updating.  
 !>                       This is a vector of dimension [4, nnodes].  Each
 !>                       four-tuple is packed tv, te, tev, tt.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
-      SUBROUTINE fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx, &
-                                                        i1, i2,               &
-                                                        lupd, tt, ttvec)
+!>    @ingroup solver2d
+      SUBROUTINE fteik_solver2d_prefetchTravelTimes64f(level, sweep, nz, nx, &
+                                                       i1, i2,               &
+                                                       lupd, tt, ttvec)
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: tt
+      INTEGER, INTENT(IN) :: i1, i2, level, nx, nz, sweep
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: tt
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(IN) :: lupd
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(OUT) :: ttvec
-      REAL(C_DOUBLE) t, te, tev, tv
-      INTEGER(C_INT) i, ix, iz
+      DOUBLE PRECISION, DIMENSION(:), INTENT(OUT) :: ttvec
+      DOUBLE PRECISION t, te, tev, tv
+      INTEGER i, ix, iz
       IF (sweep == 1) THEN
          !$OMP SIMD
          DO i=i1,i2
@@ -671,14 +674,13 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !>    @brief Updates the travel time at each grid point in the sweep.
 !>    @ingroup solver2d
-      SUBROUTINE fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
-                                                      i1, i2, lupd,         &
-                                                      tupd, tt)
-      USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i1, i2, level, nx, nz, sweep
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: tupd
+      SUBROUTINE fteik_solver2d_updateTravelTimes64f(level, sweep, nz, nx, &
+                                                     i1, i2, lupd,         &
+                                                     tupd, tt)
+      INTEGER, INTENT(IN) :: i1, i2, level, nx, nz, sweep
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: tupd
       LOGICAL(C_BOOL), DIMENSION(:), INTENT(IN) :: lupd
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(INOUT) :: tt
+      DOUBLE PRECISION, DIMENSION(:), INTENT(INOUT) :: tt
 
       INTEGER i, indx, ix, iz
       IF (sweep == 1) THEN
@@ -688,9 +690,7 @@ MODULE FTEIK2D_SOLVER64F
             iz = level - i 
             indx = (ix - 1)*nz + iz
             !print *, level, ix, iz, indx, sngl(tt(indx)), lupd(i+1-i1)
-            IF (lupd(i+1-i1)) THEN
-               tt(indx) = MIN(tt(indx), tupd(i+1-i1))
-            ENDIF
+            IF (lupd(i+1-i1)) tt(indx) = MIN(tt(indx), tupd(i+1-i1))
          ENDDO
       ELSEIF (sweep == 2) THEN
          !$OMP SIMD
@@ -698,9 +698,7 @@ MODULE FTEIK2D_SOLVER64F
             ix = nx + 1 - i  !flip ix
             iz = level - i
             indx = (ix - 1)*nz + iz
-            IF (lupd(i+1-i1)) THEN
-               tt(indx) = MIN(tt(indx), tupd(i+1-i1))
-            ENDIF
+            IF (lupd(i+1-i1)) tt(indx) = MIN(tt(indx), tupd(i+1-i1))
          ENDDO
       ELSEIF (sweep == 3) THEN
          !$OMP SIMD
@@ -708,9 +706,7 @@ MODULE FTEIK2D_SOLVER64F
             ix = i 
             iz = nz + 1 - (level - i) ! flip iz
             indx = (ix - 1)*nz + iz
-            IF (lupd(i+1-i1)) THEN
-               tt(indx) = MIN(tt(indx), tupd(i+1-i1))
-            ENDIF
+            IF (lupd(i+1-i1)) tt(indx) = MIN(tt(indx), tupd(i+1-i1))
          ENDDO
       ELSE
          !$OMP SIMD
@@ -718,9 +714,7 @@ MODULE FTEIK2D_SOLVER64F
             ix = nx + 1 - i           ! flip ix
             iz = nz + 1 - (level - i) ! flip iz
             indx = (ix - 1)*nz + iz
-            IF (lupd(i+1-i1)) THEN
-               tt(indx) = MIN(tt(indx), tupd(i+1-i1)) 
-            ENDIF
+            IF (lupd(i+1-i1)) tt(indx) = MIN(tt(indx), tupd(i+1-i1)) 
          ENDDO
       ENDIF
       RETURN
@@ -779,14 +773,19 @@ MODULE FTEIK2D_SOLVER64F
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel, ngrd, nx, nz, slow
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
-      USE ISO_C_BINDING
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : fteik_localSolver2d_initialize64f, &
+                                         fteik_localSolver2d_init64f,       &
+                                         fteik_localSolver2d_noInit64f,     &
+                                         fteik_localSolver2d_getSweepSigns
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) ts4(4), t0, t1, tdiff
-      INTEGER(C_INT) dest(4), i, i1, i2, kiter, level, nnodes, sweep
-      INTEGER(C_INT) iz, ix
+      DOUBLE PRECISION ts4(4), t0, t1, tdiff
+      INTEGER dest(4), i, i1, i2, indx, kiter, level, nnodes, sweep
+      INTEGER iz, ix, sgntz, sgntx, sgnvz, sgnvx
       ierr = 0
-      lhaveTimes = FALSE
+      lhaveTimes = .FALSE.
+      lhaveGradient = .FALSE.
       srcNumber =-1
       IF (.NOT.lhaveModel) THEN
          WRITE(ERROR_UNIT,900)
@@ -798,7 +797,7 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          GOTO 500
       ENDIF
-      CALL fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
+      CALL fteik_localSolver2d_initialize64f(isrc, epsS2C, dest, ts4, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,902)
          GOTO 500
@@ -806,43 +805,58 @@ MODULE FTEIK2D_SOLVER64F
       t0 = 0.d0
       CALL CPU_TIME(t0)
       ttimes(:) = FTEIK_HUGE
+      tgradx(:) = 0.d0
+      tgradz(:) = 0.d0 
       ttimes(dest(1:4)) = ts4(1:4)
 !print *, dest
 !print *, ts4
 !return
       ! Initialization
       ! First sweeping: Top->Bottom ; West->East
+      CALL fteik_localSolver2d_getSweepSigns(1, sgntz, sgntx, sgnvz, sgnvx, ierr)
       DO ix=MAX(2,xsi),nx
          DO iz=MAX(2,zsi),nz
-            CALL fteik_localSolver2d_init64fF(1, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
       ! Second sweeping: Top->Bottom ; East->West
+      CALL fteik_localSolver2d_getSweepSigns(2, sgntz, sgntx, sgnvz, sgnvx, ierr)
       DO ix=xsi+1,1,-1
          DO iz=MAX(2,zsi),nz
-            CALL fteik_localSolver2d_init64fF(2, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
       ! Third sweep: Bottom->Top ; West->East
+      CALL fteik_localSolver2d_getSweepSigns(3, sgntz, sgntx, sgnvz, sgnvx, ierr)
       DO ix=MAX(2,xsi),nx
          DO iz=zsi+1,1,-1
-            CALL fteik_localSolver2d_init64fF(3, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
       ! Fourth sweeping: Bottom->Top ; East->West
+      CALL fteik_localSolver2d_getSweepSigns(4, sgntz, sgntx, sgnvz, sgnvx, ierr)
       DO ix=xsi+1,1,-1
          DO iz=zsi+1,1,-1
-            CALL fteik_localSolver2d_init64fF(4, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
+!print *, 'hey', minval(ttimes), maxval(ttimes)
 !     ! Initialize
 !     DO sweep=1,4
 !        ! Loop on the levels
@@ -851,22 +865,22 @@ MODULE FTEIK2D_SOLVER64F
 !           i2 = MIN(nx, level - 1) 
 !           nnodes = i2 - i1 + 1
 !           ! Get the update nodes
-!           CALL fteik_solver2d_isUpdateNodeF(TRUE, level, sweep, nz, nx, &
-!                                             i1, i2, zsi, xsi, lupdWork)
+!           CALL fteik_solver2d_isUpdateNode(.TRUE., level, sweep, nz, nx, &
+!                                            i1, i2, zsi, xsi, lupdWork)
 !           ! Prefetch the slowness
-!           CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
-!                                                    i1, i2,                 &
-!                                                    lupdWork, slow, slocWork)
+!           CALL fteik_solver2d_prefetchSlowness64f(level, sweep, nz, nx,   &
+!                                                   i1, i2,                 &
+!                                                   lupdWork, slow, slocWork)
 !           ! Prefetch travel times
-!           CALL fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx,      &
-!                                                       i1, i2,                    &
-!                                                       lupdWork, ttimes, ttvecWork)
+!           CALL fteik_solver2d_prefetchTravelTimes64f(level, sweep, nz, nx,      &
+!                                                      i1, i2,                    &
+!                                                      lupdWork, ttimes, ttvecWork)
 !           ! Compute the candidate travel times at each node in level set
-!           !CALL fteik_localSolver2d_noInit64fF(nnodes, ttvecWork, slocWork, tupdWork)
+!           !CALL fteik_localSolver2d_noInit64f(nnodes, ttvecWork, slocWork, tupdWork)
 !           ! And update
-!           !CALL fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
-!           !                                          i1, i2, lupdWork,     &
-!           !                                          tupdWork, ttimes)
+!           !CALL fteik_solver2d_updateTravelTimes64f(level, sweep, nz, nx, &
+!           !                                         i1, i2, lupdWork,     &
+!           !                                         tupdWork, ttimes)
 !        ENDDO
 !     ENDDO
       IF (convTol > zero) ttold(1:ngrd) = ttimes(1:ngrd)
@@ -874,28 +888,31 @@ MODULE FTEIK2D_SOLVER64F
       DO kiter=1,nsweep
          ! Loop on sweeping directions
          DO sweep=1,4
+            CALL fteik_localSolver2d_getSweepSigns(sweep, sgntz, sgntx, sgnvz, sgnvx, &
+                                                   ierr)
             ! Loop on the levels
             DO level=2,nlevels
                i1 = MAX(1, level - nz)
                i2 = MIN(nx, level - 1)
                nnodes = i2 - i1 + 1
                ! Get the update nodes
-               CALL fteik_solver2d_isUpdateNodeF(FALSE, level, sweep, nz, nx, &
-                                                 i1, i2, zsi, xsi, lupdWork)
+               CALL fteik_solver2d_isUpdateNode(.FALSE., level, sweep, nz, nx, &
+                                                i1, i2, zsi, xsi, lupdWork)
                ! Prefetch the slowness
-               CALL fteik_solver2d_prefetchSlowness64fF(level, sweep, nz, nx,   &
-                                                        i1, i2,                 &
-                                                        lupdWork, slow, slocWork)
+               CALL fteik_solver2d_prefetchSlowness64f(level, sweep, nz, nx,   &
+                                                       i1, i2,                 &
+                                                       lupdWork, slow, slocWork)
                ! Prefetch travel times
-               CALL fteik_solver2d_prefetchTravelTimes64fF(level, sweep, nz, nx,      &
-                                                           i1, i2,            &
-                                                           lupdWork, ttimes, ttvecWork)
+               CALL fteik_solver2d_prefetchTravelTimes64f(level, sweep, nz, nx,      &
+                                                          i1, i2,                    &
+                                                          lupdWork, ttimes, ttvecWork)
                ! Compute the candidate travel times at each node in level set
-               CALL fteik_localSolver2d_noInit64fF(nnodes, ttvecWork, slocWork, tupdWork)
+               CALL fteik_localSolver2d_noInit64f(nnodes, ttvecWork,  &
+                                                  slocWork, tupdWork)
                ! And update
-               CALL fteik_solver2d_updateTravelTimes64fF(level, sweep, nz, nx, &
-                                                         i1, i2, lupdWork, &
-                                                         tupdWork, ttimes)
+               CALL fteik_solver2d_updateTravelTimes64f(level, sweep, nz, nx,    &
+                                                        i1, i2, lupdWork,        &
+                                                        tupdWork, ttimes)
             ENDDO
             !do i2=1,nx*nz
             !   print *, i2, ttimes(i2)
@@ -915,10 +932,16 @@ MODULE FTEIK2D_SOLVER64F
             ENDDO
             IF (verbose > 3) WRITE(OUTPUT_UNIT,803) tdiff 
          ENDIF
-         IF (tdiff < convTol) EXIT
+         IF (tdiff < convTol) THEN
+            EXIT
+         ENDIF
       ENDDO
-      lhaveTimes = TRUE
+      lhaveTimes = .TRUE.
       srcNumber = isrc
+      ! Differenate the travel times
+      CALL fteik_solver2d_finiteDifferenceGradient()
+      lhaveGradient = .TRUE.
+      ! Extract the travel time solutions
       CALL solver2d_extractTravelTimes(isrc, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,903)
@@ -930,7 +953,8 @@ MODULE FTEIK2D_SOLVER64F
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
-         lhaveTimes = FALSE
+         lhaveTimes = .FALSE.
+         lhaveGradient = .FALSE.
          srcNumber =-1
       ENDIF
   800 FORMAT('fteik_solver2d_solveSourceLSM: (iteration,ttmin,ttmax)=', &
@@ -947,6 +971,55 @@ MODULE FTEIK2D_SOLVER64F
 !print *, lhaveTimes
       RETURN
       END
+
+      SUBROUTINE fteik_solver2d_finiteDifferenceGradient()
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi
+      USE FTEIK_MODEL64F, ONLY : dx, dz, nx, nz
+      INTEGER ix, iz, m1, m2, m3
+      ! Do the heavy lifting and forward difference the field 
+      DO ix=1,nx
+         DO iz=2,nz-1
+            m1 = (ix-1)*nz + iz - 1
+            m2 = (ix-1)*nz + iz
+            m3 = (ix-1)*nz + iz + 1
+            !tgradz(m2) = (ttimes(m3) - ttimes(m1))/(2.d0*dz)
+            tgradz(m2) = (ttimes(m2) - ttimes(m1))/dz
+         ENDDO
+      ENDDO
+      DO ix=2,nx-1
+         DO iz=1,nz
+            m1 = (ix-2)*nz + iz
+            m2 = (ix-1)*nz + iz
+            m3 = (ix-0)*nz + iz
+            !tgradx(m2) = (ttimes(m3) - ttimes(m1))/(2.d0*dx)
+            tgradx(m2) = (ttimes(m2) - ttimes(m1))/dx
+         ENDDO
+      ENDDO
+      ! Top/bottom boundaries
+      DO ix=1,nx
+         ! Forward difference top boundary
+         m1 = (ix-1)*nz + 1     ! home
+         m2 = (ix-1)*nz + 2 ! ahead
+         tgradz(m1) = (ttimes(m2) - ttimes(m1))/dz
+         ! Backwards difference bottom boundary
+         m1 = (ix-1)*nz + nz - 1 ! behind
+         m2 = (ix-1)*nz + nz     ! home 
+         tgradz(m2) = (ttimes(m2) - ttimes(m1))/dz
+      ENDDO
+      ! Left/right boundaries
+      DO iz=1,nz
+         ! Forward difference left
+         m1 = (1-1)*nz + iz ! home
+         m2 = (2-1)*nz + iz ! ahead
+         tgradx(m1) = (ttimes(m2) - ttimes(m1))/dx
+         ! Backwards difference the righ boundary
+         m1 = (nx-2)*nz + iz ! behind
+         m2 = (nx-1)*nz + iz ! home 
+         tgradx(m2) = (ttimes(m2) - ttimes(m1))/dx
+      ENDDO
+      RETURN
+      END
+
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -960,14 +1033,18 @@ MODULE FTEIK2D_SOLVER64F
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel, nx, nz, slow
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
-      USE ISO_C_BINDING
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi
+      USE FTEIK_LOCALSOLVER2D64F, ONLY : fteik_localSolver2d_initialize64f, &
+                                         fteik_localSolver2d_init64f,       &
+                                         fteik_localSolver2d_noInit64f
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) ts4(4), t0
-      INTEGER(C_INT) dest(4), i, i1, ix, iz, j, j1, kiter, level, sgntx, sgntz, sgnvx, sgnvz 
-      INTEGER(C_INT) indx1, indx2, indx3, indx4, indx5
+      DOUBLE PRECISION ts4(4), t0
+      INTEGER dest(4), i, i1, ix, iz, j, j1, kiter, level, sgntx, sgntz, sgnvx, sgnvz 
+      INTEGER indx1, indx2, indx3, indx4, indx5
       ierr = 0 
-      lhaveTimes = FALSE
+      lhaveTimes = .FALSE.
+      lhaveGradient = .FALSE.
       srcNumber =-1
       IF (.NOT.lhaveModel) THEN
          WRITE(ERROR_UNIT,900)
@@ -979,7 +1056,7 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          GOTO 500
       ENDIF
-      CALL fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
+      CALL fteik_localSolver2d_initialize64f(isrc, epsS2C, dest, ts4, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,902)
          GOTO 500
@@ -995,8 +1072,11 @@ MODULE FTEIK2D_SOLVER64F
       sgnvx = 1
       DO ix=MAX(2,xsi),nx
          DO iz=MAX(2,zsi),nz
-            CALL fteik_localSolver2d_init64fF(1, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx, &
+                                             sgnvz, sgnvx,  &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
+!print *, iz, ix, ttimes((ix-1)*nz + iz), tupdWork(1)
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
@@ -1007,8 +1087,10 @@ MODULE FTEIK2D_SOLVER64F
       sgnvx = 0
       DO ix=MIN(nx-1,xsi+1),1,-1
          DO iz=MAX(2,zsi),nz
-            CALL fteik_localSolver2d_init64fF(2, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
@@ -1019,8 +1101,10 @@ MODULE FTEIK2D_SOLVER64F
       sgnvx = 1
       DO ix=MAX(2,xsi),nx
          DO iz=MIN(nz-1,zsi+1),1,-1
-            CALL fteik_localSolver2d_init64fF(3, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO
@@ -1031,21 +1115,24 @@ MODULE FTEIK2D_SOLVER64F
       sgnvx = 0
       DO ix=MIN(nx-1,xsi+1),1,-1
          DO iz=MIN(nz-1,zsi+1),1,-1
-            CALL fteik_localSolver2d_init64fF(4, nz, nx, iz, ix, &
-                                              slow, ttimes, tupdWork(1))
+            CALL fteik_localSolver2d_init64f(sgntz, sgntx,   &
+                                             sgnvz, sgnvx,   &
+                                             nz, nx, iz, ix, &
+                                             slow, ttimes, tupdWork(1))
             ttimes((ix-1)*nz + iz) = MIN(ttimes((ix-1)*nz + iz), tupdWork(1))
          ENDDO
       ENDDO 
-      ! Gauss-Seidel iterations 
+!print *, 'begin', minval(ttimes), maxval(ttimes)
+      ! Gauss-Seidel iterations
       DO kiter=1,nsweep
          ! First sweeping: Top->Bottom ; West->East
-         sgntz = 1 
+         sgntz = 1
          sgntx = 1 
          sgnvz = 1 
          sgnvx = 1 
          DO j = 2, nx
             DO i = 2, nz
-               i1 = i - sgnvz 
+               i1 = i - sgnvz
                j1 = j - sgnvx
 
                ix = i
@@ -1054,7 +1141,7 @@ MODULE FTEIK2D_SOLVER64F
                ttvecWork(1) = ttimes((j - 1)*nz         + i - sgntz)
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
-               ttvecWork(4) = ttimes((j - 1)*nz         + i) 
+               ttvecWork(4) = ttimes((j - 1)*nz         + i)
                indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
                indx2 = (MIN(j,nx-1) - 1)*(nz - 1) + i - sgnvz ! V Plane
                indx3 = (j - sgnvx - 1)*(nz - 1) + MAX(i-1,1)  ! WE Plane
@@ -1064,7 +1151,7 @@ MODULE FTEIK2D_SOLVER64F
                slocWork(2) = MIN(slow(indx3), slow(indx4))
                slocWork(3) = slow(indx5)
                !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
-               CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
+               CALL fteik_localSolver2d_noInit64f(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
          ENDDO
@@ -1073,24 +1160,24 @@ MODULE FTEIK2D_SOLVER64F
 !enddo
 !print *, 'p1:', minval(ttimes), maxval(ttimes)
          ! Second sweeping: Top->Bottom ; East->West
-         sgntz = 1 
+         sgntz = 1
          sgntx =-1
          sgnvz = 1 
          sgnvx = 0 
          DO j = nx-1, 1, -1
             DO i = 2, nz
-               i1 = i - sgnvz 
+               i1 = i - sgnvz
                j1 = j - sgnvx
 
                ix = i
                iz = i
                level = iz + ix
-!              CALL fteik_solver2d_prefetchTravelTimes64fF(level, 2, nz, nx,  &
-!                                                          1, ix, ix,         &
-!                                                          lupd, ttimes, ttvec)
-!              CALL fteik_solver2d_prefetchSlowness64fF(level, 2, nz, nx, &
-!                                                       1, ix, ix,        &
-!                                                       lupd, slow, sloc)
+!              CALL fteik_solver2d_prefetchTravelTimes64f(level, 2, nz, nx,  &
+!                                                         1, ix, ix,         &
+!                                                         lupd, ttimes, ttvec)
+!              CALL fteik_solver2d_prefetchSlowness64f(level, 2, nz, nx, &
+!                                                      1, ix, ix,        &
+!                                                      lupd, slow, sloc)
 !print *, sngl(ttvec(1:4))
                ttvecWork(1) = ttimes((j - 1)*nz         + i - sgntz)
                ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
@@ -1107,7 +1194,7 @@ MODULE FTEIK2D_SOLVER64F
                slocWork(2) = MIN(slow(indx3), slow(indx4))
                slocWork(3) = slow(indx5)
                !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1) 
-               CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
+               CALL fteik_localSolver2d_noInit64f(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
          ENDDO
@@ -1119,10 +1206,10 @@ MODULE FTEIK2D_SOLVER64F
          sgnvx = 1
          DO j = 2, nx
             DO i = nz-1, 1, -1
-               i1 = i - sgnvz 
+               i1 = i - sgnvz
                j1 = j - sgnvx
                ttvecWork(1) = ttimes((j - 1)*nz         + i - sgntz)
-               ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i) 
+               ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
                ttvecWork(4) = ttimes((j - 1)*nz         + i)
                indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
@@ -1134,7 +1221,7 @@ MODULE FTEIK2D_SOLVER64F
                slocWork(2) = MIN(slow(indx3), slow(indx4))
                slocWork(3) = slow(indx5)
                !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
-               CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
+               CALL fteik_localSolver2d_noInit64f(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
          ENDDO
@@ -1146,10 +1233,10 @@ MODULE FTEIK2D_SOLVER64F
          sgnvx = 0
          DO j = nx-1, 1, -1
             DO i = nz-1, 1, -1
-               i1 = i - sgnvz 
+               i1 = i - sgnvz
                j1 = j - sgnvx
                ttvecWork(1) = ttimes((j - 1)*nz         + i - sgntz)
-               ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i) 
+               ttvecWork(2) = ttimes((j - sgntx - 1)*nz + i)
                ttvecWork(3) = ttimes((j - sgntx - 1)*nz + i - sgntz)
                ttvecWork(4) = ttimes((j - 1)*nz         + i)
                indx1 = (MAX(j-1,1)  - 1)*(nz - 1) + i - sgnvz ! V Plane
@@ -1161,18 +1248,18 @@ MODULE FTEIK2D_SOLVER64F
                slocWork(2) = MIN(slow(indx3), slow(indx4))
                slocWork(3) = slow(indx5)
                !slocWork(1) = slow((j1 - 1)*(nz - 1) + i1)
-               CALL fteik_localSolver2d_noInit64fF(1, ttvecWork, slocWork, tupdWork)
+               CALL fteik_localSolver2d_noInit64f(1, ttvecWork, slocWork, tupdWork)
                ttimes((j-1)*nz + i) = MIN(ttimes((j-1)*nz + i), tupdWork(1))
             ENDDO
          ENDDO
 !print *, 'p4:', minval(ttimes), maxval(ttimes)
       ENDDO
-      lhaveTimes = TRUE
+      lhaveTimes = .TRUE.
       srcNumber =-1
   500 CONTINUE
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
-         lhaveTimes = FALSE
+         lhaveTimes = .FALSE.
       ENDIF
   900 FORMAT('fteik_solver2d_solveSourceFSM: Model not yet set')
   901 FORMAT('fteik_solver2d_solveSourceFSM: Source number =',I0, &
@@ -1197,11 +1284,10 @@ MODULE FTEIK2D_SOLVER64F
       SUBROUTINE fteik_solver2d_getTravelTimeField64f(ngin, order, ttout, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimeField64f')
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, nz
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngin, order
       REAL(C_DOUBLE), INTENT(OUT) :: ttout(ngin)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) indx, ix, iz, jndx
+      INTEGER indx, ix, iz, jndx
       ierr = 0
       IF (.NOT.lhaveTimes) THEN 
          WRITE(ERROR_UNIT,900)
@@ -1248,11 +1334,10 @@ MODULE FTEIK2D_SOLVER64F
       SUBROUTINE fteik_solver2d_getTravelTimeFieldCell64f(ncin, order, ttout, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimeFieldCell64f')
       USE FTEIK_MODEL64F, ONLY : ncell, nx, nz
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncin, order
       REAL(C_DOUBLE), DIMENSION(ncin), INTENT(OUT) :: ttout
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) indx(4), ix, iz, jndx
+      INTEGER indx(4), ix, iz, jndx
       ierr = 0
       IF (.NOT.lhaveTimes) THEN 
          WRITE(ERROR_UNIT,900)
@@ -1301,15 +1386,12 @@ MODULE FTEIK2D_SOLVER64F
 !>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_getTravelTimes64f(ldr, ttr, ierr) &
       BIND(C, NAME='fteik_solver2d_getTravelTimes64f')
-!     USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_RECEIVER64F, ONLY : nrec 
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ldr
       REAL(C_DOUBLE), INTENT(OUT) :: ttr(ldr*nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) i1, i2, isrc, j1, j2
+      INTEGER i1, i2, isrc, j1, j2
       ierr = 0
       IF (nrec < 1) THEN
          WRITE(OUTPUT_UNIT,800)
@@ -1358,10 +1440,9 @@ MODULE FTEIK2D_SOLVER64F
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_RECEIVER64F, ONLY : nrec
       USE FTEIK_SOURCE64F, ONLY : nsrc
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) i1, i2
+      INTEGER i1, i2
       ierr = 0
       IF (nrec < 1) RETURN
       IF (nsrc < 1) RETURN
@@ -1384,242 +1465,6 @@ MODULE FTEIK2D_SOLVER64F
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
-!>    @brief 2D local solver for Cartesian frame only.
-!>
-!>    @param[in] n       Number of nodes to update. 
-!>    @param[in] ttvec   The local travel times (seconds) surrounding the point.  This is
-!>                       a vector of dimension [4 x n] with leading dimemsion 4.  Each
-!>                       four-tuple is packed [tv, te, tev, tt].
-!>    @param[in] sloc    Slowness (s/m) at the finite difference points.  This is a vector
-!>                       of dimension [n].
-!>    @param[out] tupd   Updated travel times (seconds) at each node (seconds).  This is
-!>                       a vector of dimension [n].
-!>    @ingroup solver2d
-      PURE SUBROUTINE fteik_localSolver2d_noInit64fF(n, ttvec, sloc, tupd)
-      USE ISO_C_BINDING
-      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, four, chunkSize
-      IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN) :: n
-      REAL(C_DOUBLE), INTENT(IN) :: ttvec(4*n), sloc(4*n)
-      REAL(C_DOUBLE), INTENT(OUT) :: tupd(n)
-      REAL(C_DOUBLE) four_sref2, s1, s2, s3, sref2, t1_2d, t12min, ta, tb, tab, &
-                     tab2, temtv, te, tev, tv, tt
-      INTEGER(C_INT) i
-      ! Loop on nodes in update
-      DO i=1,n
-         s1 = sloc(4*(i-1)+1)
-         s2 = sloc(4*(i-1)+2)
-         s3 = sloc(4*(i-1)+3)
-         tv  = ttvec(4*(i-1)+1)
-         te  = ttvec(4*(i-1)+2)
-         tev = ttvec(4*(i-1)+3)
-         tt  = ttvec(4*(i-1)+4)
-         temtv = te - tv
-         ! 1D operators (refracted times)
-         t12min = MIN(tv + dz*s1, te + dx*s2)
-         ! 2D operator
-         t1_2d = FTEIK_HUGE
-         IF (temtv < dz*s3 .AND. -temtv < dx*s3) THEN
-            sref2 = s3*s3
-            ta = tev + temtv
-            tb = tev - temtv
-            tab = ta - tb
-            tab2 = tab*tab
-            four_sref2 = four*sref2
-            t1_2d = ( (tb*dz2i + ta*dx2i) &
-                     + SQRT(four_sref2*dz2i_p_dx2i - dz2i_dx2i*tab2) )*dz2i_p_dx2i_inv
-         ENDIF
-         tupd(i) = MIN(t12min, t1_2d)
-      ENDDO
-      RETURN
-      END
-
-      SUBROUTINE fteik_localSolver2d_init64fF(sweep, nz, nx, iz, ix, &
-                                              slow, tt, tupd)
-      USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, four
-      USE ISO_C_BINDING
-      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nz, nx, iz, ix
-      REAL(C_DOUBLE), INTENT(OUT) :: tupd
-      REAL(C_DOUBLE), DIMENSION(:), INTENT(IN) :: tt, slow
-      REAL(C_DOUBLE) apoly, bpoly, cpoly, dpoly, &
-                     ta, tb, taue, tauev, tauv, tdiag, tv, te, tev, t, &
-                     t1, t2, t3, t1d, t2d, &
-                     sref1, sref2, sref3, sgnrx, sgnrz, &
-                     sgnrx_txc, sgnrz_tzc, sgnrx_txc_dxi, sgnrz_tzc_dzi, t0c, txc, tzc
-      INTEGER(C_INT) i1, indx, indxv, indxe, indxev, j1
-      INTEGER(C_INT) indx1, indx2, indx3, indx4, indx5
-      INTEGER(C_INT) sgntx, sgntz, sgnvx, sgnvz
-      !LOGICAL, PARAMETER :: linitk = .TRUE.
-      IF (sweep == 1) THEN
-         sgntz = 1
-         sgntx = 1
-         sgnvz = 1
-         sgnvx = 1
-      ELSE IF (sweep == 2) THEN
-         sgntz = 1
-         sgntx =-1
-         sgnvz = 1
-         sgnvx = 0
-      ELSE IF (sweep == 3) THEN
-         sgntz =-1
-         sgntx = 1
-         sgnvz = 0
-         sgnvx = 1
-      ELSE
-         sgntz =-1
-         sgntx =-1
-         sgnvz = 0
-         sgnvx = 0
-      ENDIF
-      sgnrz = DBLE(sgntz)
-      sgnrx = DBLE(sgntx)
-      indxv  = (ix - 1)*nz         + iz - sgntz
-      indxe  = (ix - sgntx - 1)*nz + iz
-      indxev = (ix - sgntx - 1)*nz + iz - sgntz 
-      indx   = (ix - 1)*nz         + iz
-      tv  = tt(indxv)  !dble( tt(i-sgntz,j,k) )
-      te  = tt(indxe)  !dble( tt(i,j-sgntx,k) )
-      tev = tt(indxev) !dble( tt(i-sgntz,j-sgntx,k) )
-      t   = tt(indx)
-      ! Extract slownesses
-      i1 = iz - sgnvz
-      j1 = ix - sgnvx
-      indx1 = (MAX(ix-1,1)  - 1)*(nz - 1) + i1 ! V Plane
-      indx2 = (MIN(ix,nx-1) - 1)*(nz - 1) + i1 ! V Plane
-      indx3 = (j1 - 1)*(nz - 1) + MAX(iz-1,1)  ! WE Plane
-      indx4 = (j1 - 1)*(nz - 1) + MIN(iz,nz-1) ! WE Plane
-      indx5 = (j1 - 1)*(nz - 1) + i1
-      sref1 = MIN(slow(indx1), slow(indx2))
-      sref2 = MIN(slow(indx3), slow(indx4))
-      sref3 = slow(indx5)
-      t1d = MIN(tv + dz*sref1, te + dx*sref2) ! min(V, WE) planes
-      ! 2D and diagonal operators
-      CALL fteik_localSolver2d_tAnaD64fF(t0c,              &
-                                         tzc, txc, iz, ix, &
-                                         dz, dx, zsa, xsa, &
-                                         szero)
-      tauv = tv   - fteik_localSolver2d_tAna64fF(iz-sgntz,   ix,        &
-                                                 dz, dx, zsa, xsa, szero)
-      taue = te   - fteik_localSolver2d_tAna64fF(iz, ix-sgntx,          &
-                                                 dz, dx, zsa, xsa, szero)
-      tauev = tev - fteik_localSolver2d_tAna64fF(iz-sgntz,   ix-sgntx,  &
-                                                 dz, dx, zsa, xsa, szero)
-      sgnrz_tzc = sgnrz*tzc
-      sgnrx_txc = sgnrx*txc
-      sgnrz_tzc_dzi = sgnrz_tzc*dzi
-      sgnrx_txc_dxi = sgnrx_txc*dxi
-      ! Diagonal operator
-      tdiag = tev + sref3*SQRT(dx*dx + dz*dz)
-      ! Choose spherical or plane wave
-      t1 = FTEIK_HUGE
-      t2 = FTEIK_HUGE
-      t3 = FTEIK_HUGE
-      ! Choose spherical or plane wave; first test for Plane wave
-      IF ( ( ABS(iz - zsi) > epsS2C .OR. ABS(ix - xsi) > epsS2C ) ) THEN
-         ! 4 Point operator, if possible otherwise do three points
-         IF (tv <= te + dx*sref3 .AND. te <= tv + dz*sref3 .AND. &
-             te >= tev .AND. tv >= tev ) THEN
-            ta = tev + te - tv
-            tb = tev - te + tv
-            t1 = ( ( tb * dz2i + ta * dx2i ) + SQRT( 4.d0 * sref3*sref3 * ( dz2i + dx2i ) &
-                 - dz2i * dx2i * ( ta - tb ) * ( ta - tb ) ) ) / ( dz2i + dx2i )
-         ! Two 3 point operators
-         ELSEIF (( te - tev ) <= dz*dz*sref3/SQRT(dx*dx + dz*dz) .AND. te > tev) THEN
-            t2 = te + dx*SQRT(sref3*sref3 - ((te - tev)/dz)**2)
-         ELSEIF (( tv - tev ) <= dx*dx*sref3/SQRT(dx*dx + dz*dz) .AND. tv > tev) THEN
-            t3 = tv + dz*SQRT(sref3*sref3 - ((tv - tev)/dx)**2)
-         ENDIF
-      ELSE
-         ! Do spherical operator if conditions ok
-         IF ( tv < te + dx*sref3 .AND. te < tv + dz*sref3 .AND. &
-             te >= tev .AND. tv >= tev) THEN
-            ta = tauev + taue - tauv   ! X
-            tb = tauev - taue + tauv   ! Z
-            apoly = dz2i + dx2i
-            bpoly = 4.d0 * ( sgnrx * txc * dxi + sgnrz * tzc * dzi ) &
-                  - 2.d0 * ( ta * dx2i + tb * dz2i )
-            cpoly = ( ta*ta * dx2i ) + ( tb*tb * dz2i ) &
-                  - 4.d0 * ( sgnrx * txc * dxi * ta + sgnrz * tzc * dzi * tb ) &
-                  + 4.d0 * ( szero*szero - sref3*sref3)
-            dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-            IF (dpoly >= 0.d0) t1 = 0.5d0*(SQRT(dpoly) - bpoly )/apoly + t0c
-            IF (t1 < tv .OR. t1 < te) t1 = FTEIK_HUGE
-         ENDIF
-      ENDIF
-      t2d  = MIN(t1, t2, t3)
-      tupd = MIN(t, t1d, t2d)
-      RETURN
-      END
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
-!>    @brief Initializes parameters for the local solver and computes initial travel 
-!>           times around the source.
-!>
-!>    @param[in] isrc   Source number.
-!>
-!>    @param[out] dest  Indices in travel time field where ts4 should be inserted.
-!>    @param[out] ts4   Analytic travel times computed at grid points around source.
-!>    @param[out] ierr  0 indicates success.
-!>    @ingroup solver2d
-      SUBROUTINE fteik_localSolver2d_initialize64f(isrc, dest, ts4, ierr)
-      USE FTEIK_SOURCE64F, ONLY : fteik_source_getSolverInfo64fF
-      USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
-      USE FTEIK_MODEL64F, ONLY : nz, nzx
-      USE FTEIK_MODEL64F, ONLY : dzIn => dz
-      USE FTEIK_MODEL64F, ONLY : dxIn => dx
-      USE FTEIK_CONSTANTS64F, ONLY : one
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
-      REAL(C_DOUBLE), INTENT(OUT) :: ts4(4)
-      INTEGER(C_INT), INTENT(OUT) :: dest(4), ierr
-      REAL(C_DOUBLE) dz2, dx2
-      REAL(C_DOUBLE) ysa
-      INTEGER(C_INT) ysi 
-      ! Things to copy from model
-      ierr = 0
-      dz = dzIn
-      dx = dxIn
-      ! Things to grab from the source
-      CALL fteik_source_getSolverInfo64fF(isrc,          &
-                                          zsi, xsi, ysi, &
-                                          zsa, xsa, ysa, &
-                                          szero, szero2, &
-                                          ierr)
-      IF (ierr /= 0) THEN
-         WRITE(ERROR_UNIT,900)
-         RETURN
-      ENDIF
-      eps = epsS2C*szero*MIN(dz, dx)
-      ! Some constants
-      dz2 = dzIn*dzIn
-      dx2 = dxIn*dxIn
-      dzi = one/dzIn
-      dxi = one/dxIn
-      dz2i = one/dz2
-      dx2i = one/dx2
-      ! Some more constants 
-      dz2i = one/dz2
-      dx2i = one/dx2
-      dz2i_dx2i = dz2i*dx2i
-      dz2i_p_dx2i = dz2i + dx2i
-      dz2i_p_dx2i_inv = one/(dz2i + dx2i)
-      ! Initialize points around source
-      ts4(1) = fteik_localSolver2d_tAna64fF(zsi,   xsi,   dz, dx, zsa, xsa, szero)
-      ts4(2) = fteik_localSolver2d_tAna64fF(zsi+1, xsi,   dz, dx, zsa, xsa, szero)
-      ts4(3) = fteik_localSolver2d_tAna64fF(zsi,   xsi+1, dz, dx, zsa, xsa, szero)
-      ts4(4) = fteik_localSolver2d_tAna64fF(zsi+1, xsi+1, dz, dx, zsa, xsa, szero)
-      dest(1) = fteik_model_grid2indexF(zsi,   xsi  , 1, nz, nzx)
-      dest(2) = fteik_model_grid2indexF(zsi+1, xsi  , 1, nz, nzx)
-      dest(3) = fteik_model_grid2indexF(zsi  , xsi+1, 1, nz, nzx)
-      dest(4) = fteik_model_grid2indexF(zsi+1, xsi+1, 1, nz, nzx)
-  900 FORMAT('fteik_localSolver2d_initialize64f: Problem with source')
-      RETURN
-      END
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
 !>    @brief Sets the number of Gauss-Seidel iterations  in the fast sweeping method.
 !>
 !>    @param[in] nsweepIn    Number of sweeps.  This cannot be negative and 1 is
@@ -1628,15 +1473,13 @@ MODULE FTEIK2D_SOLVER64F
 !>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_setNumberOfSweeps(nsweepIn, ierr) &
       BIND(C, NAME='fteik_solver2d_setNumberOfSweeps')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn 
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      ierr = 0 
-      nsweep = 0 
+      ierr = 0
+      nsweep = 1
       IF (nsweepIn < 0) THEN
          WRITE(ERROR_UNIT,900) nsweep
-         ierr = 1 
+         ierr = 1
          RETURN
       ENDIF
       nsweep = nsweepIn
@@ -1660,12 +1503,10 @@ MODULE FTEIK2D_SOLVER64F
       USE FTEIK_RECEIVER64F, ONLY : nrec
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : y0
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrecIn
       REAL(C_DOUBLE), INTENT(IN) :: zrec(nrecIn), xrec(nrecIn)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE), ALLOCATABLE :: yrec(:)
+      DOUBLE PRECISION, ALLOCATABLE :: yrec(:)
       ! It's actually safe to have no receivers
       ierr = 0
       IF (nrecIn < 1) THEN
@@ -1703,12 +1544,10 @@ MODULE FTEIK2D_SOLVER64F
       BIND(C, NAME='fteik_solver2d_setSources64f')
       USE FTEIK_MODEL64F, ONLY : y0
       USE FTEIK_RECEIVER64F, ONLY : nrec
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE), ALLOCATABLE :: ysrc(:)
+      DOUBLE PRECISION, ALLOCATABLE :: ysrc(:)
       ALLOCATE(ysrc(MAX(1, nsrc)))
       ysrc(:) = y0
       CALL fteik_source_initialize64f(nsrc, zsrc, xsrc, ysrc, verbose, ierr)
@@ -1742,10 +1581,9 @@ MODULE FTEIK2D_SOLVER64F
 !>    This is now a subroutine and incorporated with the fteik Fortran modules.
       SUBROUTINE fteik_solver2d_setSphereToCartEpsilon(epsIn, ierr) &
       BIND(C, NAME='fteik_solver2d_setSphereToCartEpsilon')
-      USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx
       USE FTEIK_CONSTANTS64F, ONLY : zero
-      IMPLICIT NONE
+      USE FTEIK_RAYS64F, ONLY : fteik_rays_setEpsS2C
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
@@ -1762,6 +1600,7 @@ MODULE FTEIK2D_SOLVER64F
          RETURN
       ENDIF
       epsS2C = epsIn
+      CALL fteik_rays_setEpsS2C(epsS2C)
   900 FORMAT('fteik_solver2d_setSphereToCartEpsilon: Grid not yet set')
   901 FORMAT('fteik_solver2d_setSphereToCartEpsilon: eps=', I0, ' bigger than nz =',I0)
   902 FORMAT('fteik_solver2d_setSphereToCartEpsilon: eps=', I0, ' bigger than nx =',I0)
@@ -1783,11 +1622,10 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] vel    Nodal velocity model whose leading dimension are given
 !>                      by order.
 !>    @param[out] ierr  0 indicates success.
-!>    @copyright Ben Baker distributed under the MIT license.
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_setNodalVelocityModel64f(ng, order, vel, ierr)  &
       BIND(C, NAME='fteik_solver2d_setNodalVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setNodalVelocityModel64f
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ng, order
       REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
       INTEGER(C_INT), INTENT(OUT) :: ierr 
@@ -1816,7 +1654,6 @@ MODULE FTEIK2D_SOLVER64F
       SUBROUTINE fteik_solver2d_setCellVelocityModel64f(nc, order, vel, ierr)  &
       BIND(C, NAME='fteik_solver2d_setCellVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setCellVelocityModel64f 
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nc, order
       REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -1830,20 +1667,15 @@ MODULE FTEIK2D_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the velocity model on the solver.
-!>
 !>    @param[in] ncell    Number of cells in velocity model.  This should be 
 !>                        (nz-1)*(nx-1).
 !>    @param[in] vel      Velocity model (meters/second) in model cells.  This is
 !>                        a vector of dimension [ncell] whose fastest direction is
 !>                        z and whose slowest direction is y.
-!>
 !>    @param[out] ierr    0 indicates success.
-!>
 !>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_setVelocityModel64f(ncell, vel, ierr) &
       BIND(C, NAME='fteik_solver2d_setVelocityModel64f')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncell
       REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -1852,108 +1684,4 @@ MODULE FTEIK2D_SOLVER64F
   900 FORMAT('fteik_solver2d_setVelocityModel64f: Error setting velocity model')
       RETURN
       END
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
-!>    @brief Compute analytic travel time at the point (i, j) in a homogeneous model.
-!>
-!>    @param[in] i      iz'th grid point (Fortran numbered).
-!>    @param[in] j      ix'th grid point (Fortran numbered).
-!>    @param[in] dz     Grid spacing (meters) in z.
-!>    @param[in] dx     Grid spacing (meters) in x.
-!>    @param[in] zsa    Source offset (meters) in z.
-!>    @param[in] xsa    Source offset (meters) in x.
-!>    @param[in] szero  Slowness at source (s/m).  
-!>
-!>    @result The travel time from the source at (zsa,xsa) to the (i,j)'th grid
-!>            point given a constant slowness around the source.
-!>
-!>    @author Keurfon Luu, Mark Noble, Alexandrine Gesret, and Ben Baker.
-!>    @version 2
-!>    @date January 2018
-!>    @copyright MIT
-!>    @solver2d
-      PURE REAL(C_DOUBLE)                                    &
-      FUNCTION fteik_localSolver2d_tAna64fF(i, j, dz, dx,    &
-                                            zsa, xsa, szero)
-      !!$OMP DECLARE SIMD(fteik_localSolver2d_tAna64fF) &
-      !!$OMP UNIFORM(dz, dx, zsa, xsa, szero) 
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, zsa, xsa, szero
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i, j 
-      REAL(C_DOUBLE) diffx, diffz
-      diffz = (DBLE(i) - zsa)*dz
-      diffx = (DBLE(j) - xsa)*dx
-      fteik_localSolver2d_tAna64fF = szero*HYPOT(diffx, diffz)
-      !t_ana = vzero * ( ( ( dfloat(i) - zsa ) * dz )**2.d0 &
-      !                + ( ( dfloat(j) - xsa ) * dx )**2.d0 )**0.5d0
-      RETURN
-      END FUNCTION
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
-!>    @brief Compute derivative of analytic travel time and derivative of times
-!>           at point (i, j, k) in a homogeneous model.
-!>
-!>    @param[in] i      iz'th grid point (Fortran numbered).
-!>    @param[in] j      ix'th grid point (Fortran numbered).
-!>    @param[in] dz     Grid spacing (meters) in z.
-!>    @param[in] dx     Grid spacing (meters) in x.
-!>    @param[in] zsa    Source offset (meters) in z.
-!>    @param[in] xsa    Source offset (meters) in x.
-!>    @param[in] szero  Slowness at source (s/m).  
-!>
-!>    @param[out] t_anad   Derivative of analytic travel time at point (i,j).
-!>    @param[out] tzc      Derivative of analytic travel time in z.
-!>    @param[out] txc      Derivative of analytic travel time in x.
-!>
-!>    @author Keurfon Luu, Mark Noble, Alexandrine, Gesret, and Ben Baker.
-!>    @version 2
-!>    @date January 2018
-!>    @copyright MIT
-!>    @ingroup solver2d
-      PURE SUBROUTINE fteik_localSolver2d_tAnaD64fF(t_anad,           &
-                                                    tzc, txc, i, j,   &
-                                                    dz, dx, zsa, xsa, &
-                                                    szero)
-      !!$OMP DECLARE SIMD(fteik_localSolver2d_tAnaD64fF) &
-      !!$OMP UNIFORM(dz, dx, zsa, xsa, szero) 
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      REAL(C_DOUBLE), VALUE, INTENT(IN) :: dz, dx, zsa, xsa, szero
-      INTEGER(C_INT), VALUE, INTENT(IN) :: i, j
-      REAL(C_DOUBLE), INTENT(OUT) :: t_anad, tzc, txc
-      REAL(C_DOUBLE) d0, d0i_szero, diffx, diffx2, diffz, diffz2, sqrtd0
-      REAL(C_DOUBLE), PARAMETER :: zero = 0.d0
-      diffz = (DBLE(i) - zsa)*dz
-      diffx = (DBLE(j) - xsa)*dx
-      diffz2 = diffz*diffz
-      diffx2 = diffx*diffx
-      d0 = diffz2 + diffx2
-
-      d0i_szero = zero
-      t_anad = zero
-      IF (d0 > zero) THEN
-         sqrtd0 = SQRT(d0)
-         t_anad = szero*sqrtd0
-         d0i_szero = szero/sqrtd0
-      ENDIF
-      tzc = d0i_szero*diffz
-      txc = d0i_szero*diffx
-!     d0 = ( ( dfloat(i) - zsa ) *dz )**2.d0 &
-!          + ( ( dfloat(j) - xsa ) *dx )**2.d0
-!     t_anad = vzero * (d0**0.5d0)
-!     if ( d0 .gt. 0.d0 ) then
-!       tzc = ( d0**(-0.5d0) ) * ( dfloat(i) - zsa ) * dz * vzero
-!       txc = ( d0**(-0.5d0) ) * ( dfloat(j) - xsa ) * dx * vzero
-!     else
-!       tzc = 0.d0
-!       txc = 0.d0
-!     end if
-      RETURN
-      END SUBROUTINE 
-
-
-
 END MODULE

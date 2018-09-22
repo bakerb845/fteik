@@ -64,6 +64,8 @@ contains
          .or. xsrc .lt. 0.d0 .or. xsrc .gt. dfloat(nx-1) * dx ) &
       stop "Error: source out of bounds"
 
+    ttz(:,:) = 0.d0
+    ttx(:,:) = 0.d0
     ! Convert src to grid position and try and take into account machine precision
     zsa = zsrc / dz + 1.d0
     xsa = xsrc / dx + 1.d0
@@ -138,8 +140,10 @@ DO j=MAX(2,xsi),nx
       sgnrz = dfloat(sgntz)
       sgnrx = dfloat(sgntx)
       INCLUDE 'Include_FTeik2d.f'
+!print *, i, j, t1d, t2d
    ENDDO
 ENDDO
+print *, minval(tt), maxval(tt)
 DO j=xsi+1,1,-1 
    DO i=MAX(2,zsi),nz
       sgntz = 1
@@ -151,6 +155,7 @@ DO j=xsi+1,1,-1
       INCLUDE 'Include_FTeik2d.f'
    ENDDO
 ENDDO
+print *, minval(tt), maxval(tt)
 ! Third sweep: Bottom->Top ; West->East
 DO j=MAX(2,xsi),nx
    DO i=zsi+1,1,-1
@@ -163,6 +168,7 @@ DO j=MAX(2,xsi),nx
       INCLUDE 'Include_FTeik2d.f'
    ENDDO
 ENDDO
+print *, minval(tt), maxval(tt)
 ! Fourth sweeping: Bottom->Top ; East->West
 DO j=xsi+1,1,-1
    DO i=zsi+1,1,-1
@@ -176,9 +182,7 @@ DO j=xsi+1,1,-1
    ENDDO
 ENDDO
 
-
-
-
+print *, minval(tt), maxval(tt)
 
     ! We know where src is - start first propagation
     select case(iflag)
@@ -223,7 +227,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dx * ta + sgnrz * tzc / dzd * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(zsi+1,j) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(zsi+1,j) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
 
         sgntz = -1
         sgntx = 1
@@ -240,7 +244,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dx * ta + sgnrz * tzc / dzu * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(zsi,j) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(zsi,j) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
       end do
 
       td(xsi) = vzero * dxw * dx
@@ -265,7 +269,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dx * ta + sgnrz * tzc / dzd * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(zsi+1,j) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(zsi+1,j) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
 
         sgntz = -1
         sgntx = -1
@@ -282,7 +286,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dx * ta + sgnrz * tzc / dzu * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(zsi,j) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(zsi,j) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
       end do
 
       td = Big
@@ -309,7 +313,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dxe * ta + sgnrz * tzc / dz * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(i,xsi+1) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(i,xsi+1) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
 
         sgntz = 1
         sgntx = -1
@@ -326,7 +330,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dxw * ta + sgnrz * tzc / dz * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(i,xsi) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(i,xsi) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
       end do
 
       td(zsi) = vzero * dzu * dz
@@ -351,7 +355,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dxe * ta + sgnrz * tzc / dz * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(i,xsi+1) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(i,xsi+1) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
 
         sgntz = -1
         sgntx = -1
@@ -368,7 +372,7 @@ ENDDO
                 - 4.d0 * ( sgnrx * txc / dxw * ta + sgnrz * tzc / dz * tb ) &
                 + 4.d0 * ( vzero*vzero - vref*vref )
         dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-        if ( dpoly .ge. 0.d0 ) tt(i,xsi) = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+        if ( dpoly .ge. 0.d0 ) tt(i,xsi) = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
       end do
     end select
 
@@ -379,6 +383,8 @@ ENDDO
     dx2i = 1.d0 / (dx*dx)
     dsum = dz2i + dx2i
     dz2dx2 = dz2i * dx2i
+
+print *, 'begin:', minval(tt), maxval(tt)
 
     ! Ready to do at least one global sweep
     do kk = 1, n_sweep

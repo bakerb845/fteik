@@ -640,6 +640,7 @@ MODULE FTEIK_SOLVER64F
       USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny
       USE FTEIK_CONSTANTS64F, ONLY : zero
+      USE FTEIK_RAYS64F, ONLY : fteik_rays_setEpsS2C
       IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -658,6 +659,7 @@ MODULE FTEIK_SOLVER64F
          RETURN
       ENDIF
       epsS2C = epsIn
+      CALL fteik_rays_setEpsS2C(epsS2C)
   900 FORMAT('fteik_solver3d_setSphereToCartEpsilon: Grid not yet set')
   901 FORMAT('fteik_solver3d_setSphereToCartEpsilon: eps=', I0, ' bigger than nz =',I0)
   902 FORMAT('fteik_solver3d_setSphereToCartEpsilon: eps=', I0, ' bigger than nx =',I0)

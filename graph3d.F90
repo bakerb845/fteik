@@ -9,42 +9,42 @@ MODULE FTEIK_GRAPH3D
    USE ISO_C_BINDING
    IMPLICIT NONE
    !> Maps from start index of level'th level to corresponding node.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: levelPtr(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: levelPtr(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the first sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 4.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv1(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv1(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the second sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 4.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv2(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv2(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the third sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 4.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv3(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv3(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the fourth sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 4.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv4(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv4(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the fifth sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 4.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv5(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv5(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the first sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 6.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv6(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv6(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the first sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 7.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv7(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv7(:)
    !> Maps from the n'th node to the (iz, ix, iy, indx) for the first sweep.  This is
    !> an array of dimension [4 x ngrd] with leading dimension 8.
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: ijkv8(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: ijkv8(:)
    !> Contains the level of the node'th node.  This is an array of dimension [ngrd].
-   INTEGER(C_INT), PROTECTED, SAVE, ALLOCATABLE :: node2level(:)
+   INTEGER, PROTECTED, SAVE, ALLOCATABLE :: node2level(:)
 
-   INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 !< Number of levels in solver.
-   INTEGER(C_INT), PROTECTED, SAVE :: maxLevelSize = 0 !< Max level size.
+   INTEGER, PROTECTED, SAVE :: nLevels = 0 !< Number of levels in solver.
+   INTEGER, PROTECTED, SAVE :: maxLevelSize = 0 !< Max level size.
  
-   INTEGER(C_INT), PRIVATE, SAVE :: nz = 0 !< Number of z grid points.
-   INTEGER(C_INT), PRIVATE, SAVE :: nx = 0 !< Number of x grid points.
-   INTEGER(C_INT), PRIVATE, SAVE :: ny = 0 !< Number of y grid points.
-   INTEGER(C_INT), PRIVATE, SAVE :: ngrd = 0 !< Number of grid points.
-   INTEGER(C_INT), PRIVATE, SAVE :: verbose = 0 !< Controls verbosity.
+   INTEGER, PRIVATE, SAVE :: nz = 0 !< Number of z grid points.
+   INTEGER, PRIVATE, SAVE :: nx = 0 !< Number of x grid points.
+   INTEGER, PRIVATE, SAVE :: ny = 0 !< Number of y grid points.
+   INTEGER, PRIVATE, SAVE :: ngrd = 0 !< Number of grid points.
+   INTEGER, PRIVATE, SAVE :: verbose = 0 !< Controls verbosity.
    INTEGER(C_INT32_T), PRIVATE, PARAMETER :: SORT_ASCENDING = 0
 
    INTERFACE
@@ -81,8 +81,6 @@ MODULE FTEIK_GRAPH3D
 !>
       SUBROUTINE fteik_graph3d_initialize(nzIn, nxIn, nyIn, verboseIn, ierr) &
       BIND(C, NAME='fteik_graph3d_initialize')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nzIn, nxIn, nyIn, verboseIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
@@ -108,7 +106,6 @@ MODULE FTEIK_GRAPH3D
 !>
       SUBROUTINE fteik_graph3d_setVerbosity(verboseIn) &
       BIND(C, NAME='fteik_graph3d_setVerbosity')
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
       verbose = verboseIn
       RETURN
@@ -124,8 +121,6 @@ MODULE FTEIK_GRAPH3D
 !>
       SUBROUTINE fteik_graph3d_makeLevelStructures(ierr) &
       BIND(C, NAME='fteik_graph3d_makeLevelStructures')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
       INTEGER(C_INT) ierrLoc, ijk, ix, iy, iz, i1, i2, j1, j2, k1, k2, level, node, np, &
                      sweep
@@ -249,14 +244,10 @@ MODULE FTEIK_GRAPH3D
 !>    @param[in] sweep     Sweep number.  This must be in the range [1,8].
 !>    @param[out] ijkvOut  IJKV ordering for the given sweep.   This is an array
 !>                         of dimension [4 x ngrd] with leading dimension 4.
-!>
 !>    @param[out] ierr     0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup graph
       SUBROUTINE fteik_graph3d_generateIJKV(sweep, ijkvOut, ierr) &
       BIND(C, NAME='fteik_graph3d_generateIJKV') 
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: sweep
       INTEGER(C_INT), INTENT(OUT) :: ijkvOut(4*ngrd)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -367,8 +358,6 @@ MODULE FTEIK_GRAPH3D
 !>    @ingroup graph
       SUBROUTINE fteik_graph3d_free()  &
       BIND(C, NAME='fteik_graph3d_free')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       IF (ngrd < 1 .AND. verbose > 0) THEN
          WRITE(OUTPUT_UNIT,800)
          RETURN
@@ -392,7 +381,14 @@ MODULE FTEIK_GRAPH3D
   800 FORMAT('fteik_graph3d_free: Graph never initialized')
       RETURN
       END SUBROUTINE
-
+!>    @brief Gets the Fortran numbered IJKV vector.
+!>    @param[in] nwork   Workspace alllocated to ijkv.  This should equal 4*ngrd.
+!>    @param[in] sweep   Sweep number.  This must be in the range [1,8].
+!>    @param[out] ijkv   Maps from the n'th node to the (iz, ix, iy, indx) for
+!>                       sweep'th sweep.  This is an array of dimension [4 x ngrd].
+!>                       stored in column major format.
+!>    @param[out] ierr   0 indicates success.
+!>    @ingroup graph
       SUBROUTINE fteik_graph3d_getIJKVF(nwork, sweep, ijkv, ierr) &
       BIND(C, NAME='fteik_graph3d_getIJKVF')
       INTEGER(C_INT), VALUE, INTENT(IN) :: nwork, sweep
@@ -429,11 +425,12 @@ MODULE FTEIK_GRAPH3D
   902 FORMAT('fteik_graph3d_getIJKVF: ijkv not yet computed')
       RETURN
       END
-
+!>    @brief Returns the max level size.
+!>    @param[out] ierr  0 indicates success.
+!>    @result The size of the largest level.
+!>    @ingroup graph
       INTEGER(C_INT) FUNCTION fteik_graph3d_getMaxLevelSize(ierr) &
       BIND(C, NAME='fteik_graph3d_getMaxLevelSize')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0 
       fteik_graph3d_getMaxLevelSize = maxLevelSize
@@ -444,7 +441,10 @@ MODULE FTEIK_GRAPH3D
   900 FORMAT('fteik_graph3d_getMaxLevelSize: maxLevelSize not yet computed')
       RETURN
       END
-
+!>    @brief Returns the number of levels in the level set method.
+!>    @param[out] ierr  0 indicates success.
+!>    @result The number of levels.
+!>    @ingroup graph
       INTEGER(C_INT) FUNCTION fteik_graph3d_getNumberOfLevels(ierr) &
       BIND(C, NAME='fteik_graph3d_getNumberOfLevels')
       USE ISO_C_BINDING
@@ -459,11 +459,17 @@ MODULE FTEIK_GRAPH3D
   900 FORMAT('fteik_graph3d_getNumberOfLevels: nLevels not yet computed')
       RETURN
       END
-
+!>    @brief Determines the start and end chunks of nodes comprising a level.
+!>    @param[in] nwork         Size of levelPtrOut.  This shoudld have dimension
+!>                             nLevels + 1. 
+!>    @param[out] levelPtrOut  The number of nodes in each level is defined by 
+!>                             levelPtrOut(level+1) - levelPtrOut(level).  The vertices
+!>                             are ijkv(levelPtrOut(level):levelPtrOut(level+1)-1).
+!>                             This has dimension [nwork].
+!>    @param[out] ierr         0 indicates success.
+!>    @ingroup graph
       SUBROUTINE fteik_graph3d_getLevelPointerF(nwork, levelPtrOut, ierr) &
       BIND(C, NAME='fteik_graph3d_getLevelPointerF')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nwork
       INTEGER(C_INT), INTENT(OUT) :: levelPtrOut(nwork), ierr
       ierr = 0
@@ -488,19 +494,14 @@ MODULE FTEIK_GRAPH3D
 !                                                                                        !
 !>    @brief Converts from the grid index in the travel time array to the (i, j, k)'th
 !>           grid indices.
-!>
 !>    @param[in] igrd   Fortran indxed grid point in travel time mesh to convert.
-!>
 !>    @param[out] i     iz'th grid point.  This is Fortran indexed.
 !>    @param[out] j     ix'th grid point.  This is Fortran indexed.
 !>    @param[out] k     iy'th grid point.  This is Fortran indexed.
 !>    @param[out] ierr  0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup graph
       PURE SUBROUTINE fteik_graph3d_index2grid(igrd, i, j, k, ierr)
       !!$OMP DECLARE SIMD(fteik_graph3d_index2grid) UNIFORM(ierr)
-      USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(IN), VALUE :: igrd
       INTEGER(C_INT), INTENT(OUT) :: i, j, k, ierr
       INTEGER(C_INT) igrd1, nzx

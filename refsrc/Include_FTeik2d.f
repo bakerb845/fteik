@@ -40,7 +40,7 @@ tdiag = Big
 vref = slow(i1,j1)                      ! Slowness
 
 ! Diagonal operator
-tdiag = tev + vref * sqrt( dx*dx + dz*dz )
+tdiag = tev + vref * dsqrt( dx*dx + dz*dz )
 
 ! Choose spherical or plane wave
 ! First test for Plane wave
@@ -51,17 +51,17 @@ if ( ( abs(i-zsi) .gt. epsin .or. abs(j-xsi) .gt. epsin ) ) then
     .and. te-tev .ge. 0.d0 .and. tv-tev .ge. 0.d0 ) then
     ta = tev + te - tv
     tb = tev - te + tv
-    t1 = ( ( tb * dz2i + ta * dx2i ) + sqrt( 4.d0 * vref*vref * ( dz2i + dx2i ) &
+    t1 = ( ( tb * dz2i + ta * dx2i ) + dsqrt( 4.d0 * vref*vref * ( dz2i + dx2i ) &
          - dz2i * dx2i * ( ta - tb ) * ( ta - tb ) ) ) / ( dz2i + dx2i )
 
   ! Two 3 point operators
-  else if ( ( te - tev ) .le. dz*dz * vref / sqrt( dx*dx + dz*dz ) &
+  else if ( ( te - tev ) .le. dz*dz * vref / dsqrt( dx*dx + dz*dz ) &
     .and. ( te - tev ) .gt. 0.d0 ) then
-    t2 = te + dx * sqrt( vref*vref - ( ( te - tev ) / dz )**2.d0 )
+    t2 = te + dx * dsqrt( vref*vref - ( ( te - tev ) / dz )**2.d0 )
 
-  else if ( ( tv - tev ) .le. dx*dx * vref / sqrt( dx*dx + dz*dz ) &
+  else if ( ( tv - tev ) .le. dx*dx * vref / dsqrt( dx*dx + dz*dz ) &
     .and. ( tv - tev ) .gt. 0.d0 ) then
-    t3 = tv + dz * sqrt( vref*vref - ( ( tv - tev ) / dx )**2.d0 )
+    t3 = tv + dz * dsqrt( vref*vref - ( ( tv - tev ) / dx )**2.d0 )
   end if
 ! Test for spherical
 else
@@ -77,7 +77,7 @@ else
             - 4.d0 * ( sgnrx * txc * dxi * ta + sgnrz * tzc * dzi * tb ) &
             + 4.d0 * ( vzero*vzero - vref*vref )
     dpoly = bpoly*bpoly - 4.d0 * apoly * cpoly
-    if ( dpoly .ge. 0.d0 ) t1 = 0.5d0 * ( sqrt(dpoly) - bpoly ) / apoly + t0c
+    if ( dpoly .ge. 0.d0 ) t1 = 0.5d0 * ( dsqrt(dpoly) - bpoly ) / apoly + t0c
     if ( t1-tv .lt. 0.d0 .or. t1-te .lt. 0.d0 ) t1 = Big
   end if
 end if

@@ -1,3 +1,8 @@
+!> @defgroup h5io HDF5 I/O
+!> @ingroup solver2d
+!> @ingroup solver3d
+!> @brief HDF5-based file input/output.
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_H5IO64F
     USE ISO_C_BINDING
     IMPLICIT NONE
@@ -99,17 +104,10 @@ MODULE FTEIK_H5IO64F
 !----------------------------------------------------------------------------------------!
 !                                 Begin the Code                                         !
 !----------------------------------------------------------------------------------------!
-!                                                                                        !
-!========================================================================================!
-!                                                                                        !
 !>    @brief Initializes the HDF5 archive.
-!>
 !>    @param[in] fileName   Name of HDF5 archive.
-!>
 !>    @result 0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_initializeF(fileName) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_initializeF')
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny, z0, x0, y0, dx, dy, dz, lhaveModel
@@ -141,11 +139,8 @@ MODULE FTEIK_H5IO64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Finalizes the HDF5 archive and writes the XDMF file.
-!>
 !>    @result 0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_finalizeF() &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_finalizeF')
       ierr = fteik_h5io_finalize()
@@ -167,13 +162,10 @@ MODULE FTEIK_H5IO64F
 !>    @param[in] ijkv      Contains the (i, j, k, level) of each node in the solver.
 !>                         This is a vector of dimension [4 x ngrd] with leading
 !>                         dimension 4.
-!>
 !>    @param[out] levels   The level of each grid point in the mesh.  This is a 
 !>                         vector of dimension [nz x ny x nx = ngrd] with leading
 !>                         dimension nz.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       PURE SUBROUTINE fteik_h5io_ijkv2levelsF(nx, ny, ngrd, nLevels, &
                                              levelPtr, ijkv, levels) &
       BIND(C, NAME='fteik_h5io_ijkv2levelsF')
@@ -200,11 +192,8 @@ MODULE FTEIK_H5IO64F
 !                                                                                        !
 !>    @brief Convenience function to write all the levels schedules in the solver
 !>           for all 8 sweeps to the archive.
-!>
 !>    @result 0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_writeLevelSchedulesF( ) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeLevelSchedulesF')
       USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
@@ -275,13 +264,9 @@ MODULE FTEIK_H5IO64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Writes the travel time field in the solver to the archive.
-!>
 !>    @param[in] dataName   Name of travel time field to write.
-!>
 !>    @result 0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_writeTravelTimesF(dataName) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
       !USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF !fteik_model_grid2indexF
@@ -367,11 +352,8 @@ MODULE FTEIK_H5IO64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Writes the velocity model in the solver to the archive.
-!>
 !>    @param[in] dataName   Name of velocity file to write.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_writeVelocityModelF(dataName) &
                      RESULT(ierr) BIND(C, NAME='fteik_h5io_writeVelocityModelF')
       USE FTEIK_MODEL64F, ONLY : slow, ncell, nx, ny, nz, nzm1, &
