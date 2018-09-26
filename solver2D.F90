@@ -318,6 +318,12 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          RETURN
       ENDIF
+      ! Make sure the gradient is computed
+      IF (.NOT.lhaveGradient) THEN
+         ! Differenate the travel times
+         CALL fteik_solver2d_finiteDifferenceGradient()
+         lhaveGradient = .TRUE.
+      ENDIF
       ! Set the source information
       CALL fteik_rays_setSource(zstrue(srcNumber), xstrue(srcNumber), 0.d0, &
                                 zsrc(srcNumber),   xsrc(srcNumber),   0.d0, & 
@@ -938,9 +944,6 @@ MODULE FTEIK2D_SOLVER64F
       ENDDO
       lhaveTimes = .TRUE.
       srcNumber = isrc
-      ! Differenate the travel times
-      CALL fteik_solver2d_finiteDifferenceGradient()
-      lhaveGradient = .TRUE.
       ! Extract the travel time solutions
       CALL solver2d_extractTravelTimes(isrc, ierr)
       IF (ierr /= 0) THEN
@@ -954,7 +957,6 @@ MODULE FTEIK2D_SOLVER64F
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = .FALSE.
-         lhaveGradient = .FALSE.
          srcNumber =-1
       ENDIF
   800 FORMAT('fteik_solver2d_solveSourceLSM: (iteration,ttmin,ttmax)=', &
