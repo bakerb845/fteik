@@ -1,14 +1,12 @@
 #ifndef FTEIK_H__
 #define FTEIK_H__ 1
+#include <stdbool.h>
 #include "fteik/fteik_config.h"
 #include "fteik/fteik_struct.h"
-#include "fteik/fteik_os.h"
-#include "fteik/fteik_io.h"
-#include "fteik/fteik_xdmf.h"
-#include "fteik/fteik_h5io.h"
 #include "fteik/fteik_fortran.h"
-#include "fteik/fteik_sorting.h"
-#include <stdbool.h>
+#ifdef FTEIK_USE_H5
+#include "fteik/fteik_h5io.h"
+#endif
 
 #ifdef __cplusplus
 extern "C"

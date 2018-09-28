@@ -783,7 +783,6 @@ MODULE FTEIK3D_SOLVER64F
 !>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_traceRaysToPoints(np, zp, xp, yp, ierr) &
       BIND(C, NAME='fteik_solver3d_traceRaysToPoints')
-      USE FTEIK_MODEL64F, ONLY : ngrd 
       USE FTEIK_SOURCE64F, ONLY : xstrue, ystrue, zstrue, xsrc, ysrc, zsrc 
       USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations3D, &
                                 fteik_rays_setSource, fteik_rays_trace
