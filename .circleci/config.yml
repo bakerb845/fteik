@@ -43,4 +43,9 @@ jobs:
       - run:
           name: Build
           command: make
-
+      - run:
+          name: Run cmake test
+          command: make test
+      - run:
+          name: Test intsall
+          command: make install
