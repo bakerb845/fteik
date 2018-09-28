@@ -33,7 +33,7 @@
                                  fteik_prefetchSweep6Slowness64fF, &
                                  fteik_prefetchSweep7Slowness64fF, &
                                  fteik_prefetchSweep8Slowness64fF
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF
       USE FTEIK_UTILS64F, ONLY : ttimes, slow, lhaveGrid, lhaveTravelTimes, nsweep, &
                                  nx, ny, nz, nzx, nzm1, nzm1_nxm1, xsi, ysi, zsi
       USE FTEIK_UTILS64F, ONLY : dxi, dyi, dzi

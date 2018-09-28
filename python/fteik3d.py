@@ -39,21 +39,21 @@ class fteik3d:
             print("Couldn't find %s"%fteik_library)
             return
         # Make the interfaces
-        lib.fteik_solver3d_initialize64f.argtypes = (c_int,     #nz
-                                                     c_int,     #nx
-                                                     c_int,     #ny
-                                                     c_double,  #z0
-                                                     c_double,  #x0
-                                                     c_double,  #y0
-                                                     c_double,  #dz
-                                                     c_double,  #dx
-                                                     c_double,  #dz
-                                                     c_int,     #nsweeps
-                                                     c_double,  #eps
-                                                     c_double,  #convTol
-                                                     c_int,     #verbosity
-                                                     POINTER(c_int) #ierr
-                                                    )
+        lib.fteik_solver3d_initialize.argtypes = (c_int,     #nz
+                                                  c_int,     #nx
+                                                  c_int,     #ny
+                                                  c_double,  #z0
+                                                  c_double,  #x0
+                                                  c_double,  #y0
+                                                  c_double,  #dz
+                                                  c_double,  #dx
+                                                  c_double,  #dz
+                                                  c_int,     #nsweeps
+                                                  c_double,  #eps
+                                                  c_double,  #convTol
+                                                  c_int,     #verbosity
+                                                  POINTER(c_int) #ierr
+                                                 )
         lib.fteik_solver3d_setReceivers64f.argtypes = (c_int,             #nrec
                                                        POINTER(c_double), #zrec
                                                        POINTER(c_double), #xrec
@@ -190,12 +190,12 @@ class fteik3d:
            0 indicates success.
         """
         ierr = c_int(1)
-        self.fteik3d.fteik_solver3d_initialize64f(nz, nx, ny,
-                                                  z0, x0, y0,
-                                                  dz, dx, dy,
-                                                  nsweep, eps,
-                                                  convTol, verbose,
-                                                  byref(ierr))
+        self.fteik3d.fteik_solver3d_initialize(nz, nx, ny,
+                                               z0, x0, y0,
+                                               dz, dx, dy,
+                                               nsweep, eps,
+                                               convTol, verbose,
+                                               byref(ierr))
         if (ierr.value != 0):
             print("Error initializing solver")
             return -1

@@ -77,8 +77,8 @@ int converge2D(const int job)
             }
         }
         // Run the eikonal solver
-        fteik_solver2d_initialize64f(nz, nx, z0, x0, dz0, dx0, 
-                                     nsweep, eps, convTol, verbose, &ierr); 
+        fteik_solver2d_initialize(nz, nx, z0, x0, dz0, dx0, 
+                                  nsweep, eps, convTol, verbose, &ierr); 
         if (ierr != 0){return EXIT_FAILURE;}
         fteik_solver2d_setSources64f(nsrc, zsrc, xsrc, &ierr);
         if (ierr != 0){return EXIT_FAILURE;}

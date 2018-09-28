@@ -1,8 +1,14 @@
-!> @defgroup solver3d 3D Eikonal Solver
-!> @brief 3D eikonal equation solver.
+!> @defgroup fteik Eikonal Equation solver.
+!> @brief Eikonal equation solver for modeling travel times of first arrivals.
 !> @author Ben Baker
 !> @copyright Ben Baker distributed under the MIT license.
-MODULE FTEIK_SOLVER64F
+
+!> @defgroup solver3d 3D Eikonal Solver
+!> @ingroup fteik
+!> @brief 3D eikonal equation solver for isotropic media.
+!> @author Ben Baker
+!> @copyright Ben Baker distributed under the MIT license.
+MODULE FTEIK3D_SOLVER64F
   USE FTEIK_CONSTANTS64F, ONLY : zero
   USE FTEIK_CONSTANTS64F, ONLY : FTEIK_NATURAL_ORDERING, &
                                  FTEIK_ZXY_ORDERING,     &
@@ -15,11 +21,16 @@ MODULE FTEIK_SOLVER64F
                             levelPtr, nLevels, maxLevelSize
   USE FTEIK_SOURCE64F, ONLY : fteik_source_initialize64f, &
                               fteik_source_free
+  USE FTEIK_RAYS64F, ONLY : fteik_rays_initialize, &
+                            fteik_rays_free
   USE ISO_FORTRAN_ENV
   USE ISO_C_BINDING
   IMPLICIT NONE
   !> Holds the travel-times (seconds).  This has dimension [ngrd].
-  REAL(C_DOUBLE), PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: ttimes(:)
+  !> Holds the gradient of the travel time field.  This is a [3 x ngrd] matrix
+  !> whose leading dimension is 3.
+  DOUBLE PRECISION, PROTECTED, ALLOCATABLE, SAVE :: tgrad(:)
   !DIR$ ATTRIBUTES ALIGN: 64 :: ttimes
   !> Maps from the level'th level to the first node node in the level.
   !> This has dimension [nLevels+1].
@@ -27,23 +38,23 @@ MODULE FTEIK_SOLVER64F
 ! INTEGER(C_INT), PROTECTED, ALLOCATABLE, SAVE ::         &
 !                 ijkv1(:), ijkv2(:), ijkv3(:), ijkv4(:), &
 !                 ijkv5(:), ijkv6(:), ijkv7(:), ijkv8(:)
-  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE ::         &
-                   lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
-                   lupd5(:), lupd6(:), lupd7(:), lupd8(:)
-  LOGICAL(C_BOOL), PROTECTED, ALLOCATABLE, SAVE ::          &
-                   lupdInit1(:), lupdInit2(:), &
-                   lupdInit3(:), lupdInit4(:), &
-                   lupdInit5(:), lupdInit6(:), &
-                   lupdInit7(:), lupdInit8(:)
+  LOGICAL, PROTECTED, ALLOCATABLE, SAVE :: lupd1(:), lupd2(:), lupd3(:), lupd4(:), &
+                                           lupd5(:), lupd6(:), lupd7(:), lupd8(:)
+  LOGICAL, PROTECTED, ALLOCATABLE, SAVE :: lupdInit1(:), lupdInit2(:), &
+                                           lupdInit3(:), lupdInit4(:), &
+                                           lupdInit5(:), lupdInit6(:), &
+                                           lupdInit7(:), lupdInit8(:)
   !> Gauss-Seidel method converges when update is less than tol
-  REAL(C_DOUBLE), PROTECTED, SAVE :: convTol = zero 
+  DOUBLE PRECISION, PROTECTED, SAVE :: convTol = zero 
   !> Defines the transition from the spherical to the Cartesian solver solver
   !> during the initialization phase.  This has units of grid points.
-  REAL(C_DOUBLE), PROTECTED, SAVE :: epsS2C = zero
+  DOUBLE PRECISION, PROTECTED, SAVE :: epsS2C = zero
   !> Defines the number of Gauss-Seidel iterations.
-  INTEGER(C_INT), PROTECTED, SAVE :: nsweep = 0 
+  INTEGER, PROTECTED, SAVE :: nsweep = 0 
   !> Flag indicating whether or not the travel times were computed.
-  LOGICAL(C_BOOL), PROTECTED, SAVE :: lhaveTimes = .FALSE. 
+  LOGICAL, PROTECTED, SAVE :: lhaveTimes = .FALSE. 
+  !> Flag indicating whether or not the travel time gradient was computed.
+  LOGICAL, PROTECTED, SAVE :: lhaveGradient = .FALSE.
   INTEGER, PRIVATE, SAVE :: srcNumber =-1
   !> Number of levels in level scheduling method.
 ! INTEGER(C_INT), PROTECTED, SAVE :: nLevels = 0 
@@ -52,9 +63,9 @@ MODULE FTEIK_SOLVER64F
   !> This is for 3D 
   LOGICAL(C_BOOL), PARAMETER :: lis3d = .TRUE.
   !> Controls the verbosity
-  INTEGER(C_INT), PROTECTED, SAVE :: verbose = 0
+  INTEGER, PROTECTED, SAVE :: verbose = 0
   ! Public/private subroutines
-  PUBLIC :: fteik_solver3d_initialize64f
+  PUBLIC :: fteik_solver3d_initialize
   PUBLIC :: fteik_solver3d_solveSourceLSM
   PUBLIC :: fteik_solver3d_free
   PUBLIC :: fteik_solver3d_setVelocityModel64f
@@ -67,12 +78,18 @@ MODULE FTEIK_SOLVER64F
   PUBLIC :: fteik_solver3d_getNumberOfSources
   PUBLIC :: fteik_solver3d_getNumberOfReceivers
   PUBLIC :: fteik_solver3d_setNumberOfSweeps
+  PUBLIC :: fteik_solver3d_setReceivers64f
   PUBLIC :: fteik_solver3d_setSphereToCartEpsilon
+  PUBLIC :: fteik_solver3d_setVerobosity
   PUBLIC :: fteik_solver3d_setConvergenceTolerance
+  PUBLIC :: fteik_solver3d_traceRaysToReceivers
+  PUBLIC :: fteik_solver3d_traceRaysToPoints
+
   PRIVATE :: fteik_solver3d_getSweepLimits
   PRIVATE :: fteik_solver3d_computeGraph
   PRIVATE :: fteik_solver3d_setInitialUpdateNodes
   PRIVATE :: fteik_solver3d_setUpdateNodes
+  PRIVATE :: fteik_solver3d_finiteDifferenceGradient
 
   PRIVATE :: fteik_receiver_free
   PRIVATE :: fteik_source_initialize64f
@@ -104,20 +121,16 @@ MODULE FTEIK_SOLVER64F
 !>    @param[in] convTolIn  The Gauss-Seidel sweeping will stop if the updates
 !>                          to the travel time field are less than convTol (seconds).
 !>    @param[in] verboseIn  Controls the verbosity.  Less than 1 is quiet. 
-!>
 !>    @param[out] ierr      0 indicates success.
-!>
 !>    @ingroup solver3d
-      SUBROUTINE fteik_solver3d_initialize64f(nzIn, nxIn, nyIn,     &
-                                              z0In, x0In, y0In,     &
-                                              dzIn, dxIn, dyIn,     &
-                                              nsweepIn, epsIn,      &
-                                              convTolIn, verboseIn, &
-                                              ierr)                 &
-                 BIND(C, NAME='fteik_solver3d_initialize64f')
-      USE ISO_C_BINDING
+      SUBROUTINE fteik_solver3d_initialize(nzIn, nxIn, nyIn,     &
+                                           z0In, x0In, y0In,     &
+                                           dzIn, dxIn, dyIn,     &
+                                           nsweepIn, epsIn,      &
+                                           convTolIn, verboseIn, &
+                                           ierr)                 &
+                 BIND(C, NAME='fteik_solver3d_initialize')
       USE FTEIK_MODEL64F, ONLY : fteik_model_initializeGeometry, ngrd
-      IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, y0In, z0In
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: dxIn, dyIn, dzIn
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn, convTolIn
@@ -142,23 +155,31 @@ MODULE FTEIK_SOLVER64F
          WRITE(ERROR_UNIT,901)
          RETURN
       ENDIF
-      CALL fteik_solver3d_setSphereToCartEpsilon(epsIn, ierr)
+      CALL fteik_rays_initialize(ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,902)
          RETURN
       ENDIF
-      CALL fteik_solver3d_computeGraph(ierr)
+      CALL fteik_solver3d_setSphereToCartEpsilon(epsIn, ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,903)
          RETURN
       ENDIF
+      CALL fteik_solver3d_computeGraph(ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,904)
+         RETURN
+      ENDIF
       ! Set space for the travel-times
       IF (.NOT.ALLOCATED(ttimes)) ALLOCATE(ttimes(ngrd))
-  800 FORMAT('fteik_solver3d_initialize64f: Initializing...')
-  900 FORMAT('fteik_solver3d_initialize64f: Error setting grid geometry')
-  901 FORMAT('fteik_solver3d_initialize64f: Failed to set max number of sweeps')
-  902 FORMAT('fteik_solver3d_initialize64f: Failed to set epsilon')
-  903 FORMAT('fteik_solver3d_initialize64f: Failed to compute graph')
+      IF (.NOT.ALLOCATED(tgrad))  ALLOCATE(tgrad(3*ngrd))
+      tgrad(:) = 0.d0
+  800 FORMAT('fteik_solver3d_initialize: Initializing...')
+  900 FORMAT('fteik_solver3d_initialize: Error setting grid geometry')
+  901 FORMAT('fteik_solver3d_initialize: Failed to set max number of sweeps')
+  902 FORMAT('fteik_solver3d_initialize: Failed to initialize ray paths')
+  903 FORMAT('fteik_solver3d_initialize: Failed to set epsilon')
+  904 FORMAT('fteik_solver3d_initialize: Failed to compute graph')
       RETURN
       END SUBROUTINE
 !                                                                                        !
@@ -169,7 +190,6 @@ MODULE FTEIK_SOLVER64F
 !>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setVerobosity(verboseIn) &
       BIND(C, NAME='fteik_solver3d_setVerbosity')
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: verboseIn
       verbose = verboseIn
       RETURN
@@ -182,11 +202,9 @@ MODULE FTEIK_SOLVER64F
 !>    @param[in] convTolIn   The Gauss-Seidel sweeping will terminate when the updated
 !>                           travel time perturbation is less than convTolIn (seconds).
 !>                           Note that if convTolin <= 0 then it will be disabled.
-!>
 !>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setConvergenceTolerance(convTolIn) &
       BIND(C, NAME='fteik_solver3d_setConvergenceTolerance')
-      USE ISO_C_BINDING
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: convTolIn
       convTol = convTolIn
       RETURN
@@ -198,16 +216,14 @@ MODULE FTEIK_SOLVER64F
 !>    @result 0 indicates success.
 !>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_computeGraph(ierr)
-      USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz
       USE FTEIK_CONSTANTS64F, ONLY : FALSE, zero
       USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_initialize, &
                                 fteik_graph3d_makeLevelStructures
       !USE FTEIK_GRAPH
-      IMPLICIT NONE
-      INTEGER(C_INT), INTENT(OUT) :: ierr
+      INTEGER, INTENT(OUT) :: ierr
       !TYPE(GRAPH_TYPE) graph
-      INTEGER(C_INT) ierrs(8)
+      INTEGER ierrs(8)
       ierr = 0
       IF (nx < 1 .OR. ny < 1 .OR. nz < 1 .OR. ngrd < 1) THEN
          WRITE(ERROR_UNIT,900)
@@ -278,14 +294,14 @@ MODULE FTEIK_SOLVER64F
       IF (.NOT.ALLOCATED(lupd6)) ALLOCATE(lupd6(ngrd))
       IF (.NOT.ALLOCATED(lupd7)) ALLOCATE(lupd7(ngrd))
       IF (.NOT.ALLOCATED(lupd8)) ALLOCATE(lupd8(ngrd))
-      lupd1(:) = FALSE
-      lupd2(:) = FALSE
-      lupd3(:) = FALSE
-      lupd4(:) = FALSE
-      lupd5(:) = FALSE
-      lupd6(:) = FALSE
-      lupd7(:) = FALSE
-      lupd8(:) = FALSE
+      lupd1(:) = .FALSE.
+      lupd2(:) = .FALSE.
+      lupd3(:) = .FALSE.
+      lupd4(:) = .FALSE.
+      lupd5(:) = .FALSE.
+      lupd6(:) = .FALSE.
+      lupd7(:) = .FALSE.
+      lupd8(:) = .FALSE.
       CALL fteik_solver3d_setUpdateNodes(1, nlevels, FALSE, 0, levelPtr, &
                                          ijkv1, lupd1, ierrs(1))
       CALL fteik_solver3d_setUpdateNodes(2, nlevels, FALSE, 0, levelPtr, &
@@ -324,11 +340,9 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver3d_setInitialUpdateNodes(isrc, ierr)
       USE FTEIK_CONSTANTS64F, ONLY : TRUE, FALSE
       USE FTEIK_MODEL64F, ONLY : ngrd
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), INTENT(IN) :: isrc
-      INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) ierrs(8)
+      INTEGER, INTENT(IN) :: isrc
+      INTEGER, INTENT(OUT) :: ierr
+      INTEGER ierrs(8)
       ! Set the initial update grid.  This will mask nodes on the boundary and
       ! points preceding the source location.
       IF (.NOT.ALLOCATED(lupdInit1)) ALLOCATE(lupdInit1(ngrd))
@@ -339,14 +353,14 @@ MODULE FTEIK_SOLVER64F
       IF (.NOT.ALLOCATED(lupdInit6)) ALLOCATE(lupdInit6(ngrd))
       IF (.NOT.ALLOCATED(lupdInit7)) ALLOCATE(lupdInit7(ngrd))
       IF (.NOT.ALLOCATED(lupdInit8)) ALLOCATE(lupdInit8(ngrd))
-      lupdInit1(:) = FALSE
-      lupdInit2(:) = FALSE
-      lupdInit3(:) = FALSE
-      lupdInit4(:) = FALSE
-      lupdInit5(:) = FALSE
-      lupdInit6(:) = FALSE
-      lupdInit7(:) = FALSE
-      lupdInit8(:) = FALSE
+      lupdInit1(:) = .FALSE.
+      lupdInit2(:) = .FALSE.
+      lupdInit3(:) = .FALSE.
+      lupdInit4(:) = .FALSE.
+      lupdInit5(:) = .FALSE.
+      lupdInit6(:) = .FALSE.
+      lupdInit7(:) = .FALSE.
+      lupdInit8(:) = .FALSE.
       CALL fteik_solver3d_setUpdateNodes(1, nlevels, TRUE, isrc, levelPtr, &
                                          ijkv1, lupdInit1, ierrs(1))
       CALL fteik_solver3d_setUpdateNodes(2, nlevels, TRUE, isrc, levelPtr, &
@@ -392,28 +406,21 @@ MODULE FTEIK_SOLVER64F
 !>    @param[in,out] lupd   On input this contains the nodes to update.  \n
 !>                          On output this contains a new list of nodes to update based
 !>                          on the sweep and potentially the source information.
-!>
 !>    @param[out] ierr      0 indicates success. 
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>    
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setUpdateNodes(sweep, nLevels, linitk, &
                                                isrc, levelPtr, ijkv,   &
                                                lupd, ierr)
-      USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny
       USE FTEIK_SOURCE64F, ONLY : fteik_source_getSourceIndices32iF
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nLevels
+      INTEGER, INTENT(IN) :: sweep, nLevels
       LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
-      INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
-      INTEGER(C_INT), DIMENSION(:), INTENT(IN) :: levelPtr, ijkv
-      LOGICAL(C_BOOL), DIMENSION(:), INTENT(INOUT) :: lupd
-      INTEGER(C_INT), INTENT(OUT) :: ierr
-      INTEGER(C_INT) i, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
-                     x1, x2, xsi, y1, y2, ysi, z1, z2, zsi
+      INTEGER, INTENT(IN) :: isrc
+      INTEGER, DIMENSION(:), INTENT(IN) :: levelPtr, ijkv
+      LOGICAL, DIMENSION(:), INTENT(INOUT) :: lupd
+      INTEGER, INTENT(OUT) :: ierr
+      INTEGER i, ix, iy, iz, node, maxx, maxy, maxz, minx, miny, minz, &
+              x1, x2, xsi, y1, y2, ysi, z1, z2, zsi
       zsi =-1
       xsi =-1
       ysi =-1
@@ -482,22 +489,16 @@ MODULE FTEIK_SOLVER64F
 !>    @param[out] y1      Start index in grid for loop on y (Fortran numbered).
 !>    @param[out] y2      End index in grid for loop on y (Fortran numbered).
 !>    @param[out] ierr    0 indicates success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_getSweepLimits(sweep, linitk,          &
                                                nz, nx, ny,             &
                                                zsi, xsi, ysi,          &
                                                z1, z2, x1, x2, y1, y2, &
                                                ierr)
-      USE ISO_C_BINDING
-      IMPLICIT NONE
-      INTEGER(C_INT), VALUE, INTENT(IN) :: sweep, nz, nx, ny
-      INTEGER(C_INT), VALUE, INTENT(IN) ::  zsi, xsi, ysi
-      LOGICAL(C_BOOL), VALUE, INTENT(IN) :: linitk
-      INTEGER(C_INT), INTENT(OUT) :: x1, x2, y1, y2, z1, z2, ierr
+      INTEGER, INTENT(IN) :: sweep, nz, nx, ny
+      INTEGER, INTENT(IN) ::  zsi, xsi, ysi
+      LOGICAL(C_BOOL), INTENT(IN) :: linitk
+      INTEGER, INTENT(OUT) :: x1, x2, y1, y2, z1, z2, ierr
       ierr = 0
       IF (sweep == 1) THEN
          y1 = 2;  x1 = 2;  z1 = 2;
@@ -576,15 +577,15 @@ MODULE FTEIK_SOLVER64F
       USE FTEIK_GRAPH3D, ONLY : fteik_graph3d_free
       USE FTEIK_MODEL64F, ONLY : fteik_model_free
       USE FTEIK_CONSTANTS64F, ONLY : zero
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       lhaveTimes = .FALSE.
+      lhaveGradient = .FALSE.
       epsS2C = zero
       convTol = zero
       nsweep = 0
       verbose = 0
       srcNumber =-1
       IF (ALLOCATED(ttimes)) DEALLOCATE(ttimes)
+      IF (ALLOCATED(tgrad))  DEALLOCATE(tgrad)
       IF (ALLOCATED(lupd1)) DEALLOCATE(lupd1)
       IF (ALLOCATED(lupd2)) DEALLOCATE(lupd2)
       IF (ALLOCATED(lupd3)) DEALLOCATE(lupd3)
@@ -613,6 +614,7 @@ MODULE FTEIK_SOLVER64F
       CALL fteik_receiver_free()
       CALL fteik_source_free()
       CALL fteik_model_free()
+      CALL fteik_rays_free()
       RETURN
       END
 !                                                                                        !
@@ -637,11 +639,9 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver3d_setSphereToCartEpsilon(epsIn, ierr) &
       BIND(C, NAME='fteik_solver3d_setSphereToCartEpsilon')
-      USE ISO_C_BINDING
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny
       USE FTEIK_CONSTANTS64F, ONLY : zero
       USE FTEIK_RAYS64F, ONLY : fteik_rays_setEpsS2C
-      IMPLICIT NONE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: epsIn
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
@@ -682,8 +682,6 @@ MODULE FTEIK_SOLVER64F
 !>
       SUBROUTINE fteik_solver3d_setNumberOfSweeps(nsweepIn, ierr) &
       BIND(C, NAME='fteik_solver3d_setNumberOfSweeps')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsweepIn 
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
@@ -719,8 +717,6 @@ MODULE FTEIK_SOLVER64F
       SUBROUTINE fteik_solver3d_setSources64f(nsrc, zsrc, xsrc, ysrc, &
                                               ierr)                   &
       BIND(C, NAME='fteik_solver3d_setSources64f')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nsrc
       REAL(C_DOUBLE), INTENT(IN) :: zsrc(nsrc), xsrc(nsrc), ysrc(nsrc)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -736,14 +732,11 @@ MODULE FTEIK_SOLVER64F
 !>
 !>    @param[out] nsrc   Number of sources.
 !>    @param[out] ierr   0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
+!>    @ingroup solver3d
 !>
       SUBROUTINE fteik_solver3d_getNumberOfSources(nsrc, ierr) & 
       BIND(C, NAME='fteik_solver3d_getNumberOfSources')
       USE FTEIK_SOURCE64F, ONLY : fteik_source_getNumberOfSources
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), INTENT(OUT) :: nsrc, ierr
       CALL fteik_source_getNumberOfSources(nsrc, ierr)
       IF (ierr /= 0) THEN
@@ -753,6 +746,83 @@ MODULE FTEIK_SOLVER64F
   900 FORMAT('fteik_solver3d_getNumberOfSources: No sources initialized!')
       RETURN
       END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Computes the ray paths to receivers from the current source in the
+!>           corresponding travel time field.
+!>    @param[out] ierr   0 indicates success.
+!>    @ingroup solver3d
+      SUBROUTINE fteik_solver3d_traceRaysToReceivers(ierr) &
+      BIND(C, NAME='fteik_solver3d_traceRaysToReceivers')
+      USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, yrec, zrec
+      INTEGER(C_INT), INTENT(OUT) :: ierr
+      ierr = 0
+      IF (nrec < 1) THEN
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      CALL fteik_solver3d_traceRaysToPoints(nrec, zrec, xrec, yrec, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,901)
+         ierr = 1
+         RETURN
+      ENDIF
+  900 FORMAT('fteik_solver3d_traceRaysToReceivers: No receivers set')
+  901 FORMAT('fteik_solver3d_traceRaysToReceivers: Failed to compute rays')
+      RETURN
+      END
+!>    @brief Computes the ray paths from the current source to the given (xr,yr,zr)
+!>           points in the travel time field.
+!>    @param[in] np     Number of points.
+!>    @param[in] zp     z destinations of rays.  This has dimension [nr].
+!>    @param[in] xp     x destinations of rays.  This has dimension [nr].
+!>    @param[in] yp     y destinations of rays.  This has dimension [nr].
+!>    @param[out] ierr  0 indicates success.
+!>    @ingroup solver3d
+      SUBROUTINE fteik_solver3d_traceRaysToPoints(np, zp, xp, yp, ierr) &
+      BIND(C, NAME='fteik_solver3d_traceRaysToPoints')
+      USE FTEIK_MODEL64F, ONLY : ngrd 
+      USE FTEIK_SOURCE64F, ONLY : xstrue, ystrue, zstrue, xsrc, ysrc, zsrc 
+      USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations3D, &
+                                fteik_rays_setSource, fteik_rays_trace
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : xsi, ysi, zsi, xsa, ysa, zsa, szero
+      INTEGER(C_INT), VALUE, INTENT(IN) :: np
+      REAL(C_DOUBLE), DIMENSION(np), INTENT(IN) :: xp, yp, zp
+      INTEGER(C_INT), INTENT(OUT) :: ierr 
+      ierr = 0
+      IF (.NOT.lhaveTimes) THEN
+         WRITE(ERROR_UNIT,900)
+         ierr = 1
+         RETURN
+      ENDIF
+      ! Make sure the gradient is computed
+      IF (.NOT.lhaveGradient) THEN 
+         ! Differenate the travel times
+         CALL fteik_solver3d_finiteDifferenceGradient()
+         lhaveGradient = .TRUE.
+      ENDIF
+      ! Set the source information
+      CALL fteik_rays_setSource(zstrue(srcNumber), xstrue(srcNumber), ystrue(srcNumber), &
+                                zsrc(srcNumber),   xsrc(srcNumber),   ysrc(srcNumber),   &
+                                zsa, xsa, ysa,                                           &
+                                zsi, xsi, ysi,                                           &
+                                szero)
+      ! Set the ray destinations 
+      CALL fteik_rays_setRayDestinations3D(np, xp, yp, zp, ierr)
+      IF (ierr /= 0) THEN
+         WRITE(ERROR_UNIT,901)
+         ierr = 1
+         RETURN
+      ENDIF
+
+  900 FORMAT('fteik_solver3d_traceRaysToPoints: Travel time field not yet computed')
+  901 FORMAT('fteik_solver3d_traceRaysToPoints: Failed to set ray origins')
+  902 FORMAT('fteik_solver3d_traceRaysToPoints: Failed to compute rays')
+      RETURN
+      END
+
 !                                                                                        !
 !========================================================================================!
 !                                                                                        !
@@ -776,7 +846,6 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver3d_getTravelTimeField64f')
       USE FTEIK_MODEL64F, ONLY : ngrd, nx, ny, nz, nzx
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ngin, order
       REAL(C_DOUBLE), INTENT(OUT) :: ttout(ngin)
       INTEGER(C_INT), INTENT(OUT) :: ierr 
@@ -848,7 +917,6 @@ MODULE FTEIK_SOLVER64F
       BIND(C, NAME='fteik_solver3d_getTravelTimeFieldCell64f')
       USE FTEIK_MODEL64F, ONLY : ncell, nx, ny, nz, nzx
       USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncin, order
       REAL(C_DOUBLE), DIMENSION(ncin), INTENT(OUT) :: ttout
       INTEGER(C_INT), INTENT(OUT) :: ierr 
@@ -915,21 +983,15 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Extracts the travel times at the receivers.
-!>
 !>    @param[in] nrec   Number of receivers.
-!>
 !>    @param[out] ttr   Travel times (seconds) at the receivers.  This is a vector of
 !>                      dimension [nrec].
 !>    @param[out] ierr  0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_getTravelTimes64f(nrec, ttr, ierr) &
       BIND(C, NAME='fteik_solver3d_getTravelTimes64f')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getTravelTimes64f
       USE FTEIK_MODEL64F, ONLY : ngrd
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
       REAL(C_DOUBLE), INTENT(OUT) :: ttr(nrec)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -957,16 +1019,12 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Utility routine to return the number of receivers.
-!>
 !>    @param[out] nrec   Number of receivers.
 !>    @param[out] ierr   0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_getNumberOfReceivers(nrec, ierr) &
       BIND(C, NAME='fteik_solver3d_getNumberOfReceivers')
       USE FTEIK_RECEIVER64F, ONLY : fteik_receiver_getNumberOfReceivers
-      USE ISO_C_BINDING
       INTEGER(C_INT), INTENT(OUT) :: nrec, ierr
       ierr = 0
       CALL fteik_receiver_getNumberOfReceivers(nrec, ierr)
@@ -976,7 +1034,6 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the receivers in the model.
-!>
 !>    @param[in] nrec    Number of receivers to set.  
 !>    @param[in] zrec    z locations (meters) of receivers.  This is a vector of
 !>                       of dimension [nrec].
@@ -984,16 +1041,11 @@ MODULE FTEIK_SOLVER64F
 !>                       of dimension [nrec].
 !>    @param[in] yrec    y locations (meters) of receivers.  This is a vector of
 !>                       of dimension [nrec].
-!>
 !>    @param[out] ierr   0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setReceivers64f(nrec, zrec, xrec, yrec, &
                                                 ierr)                   &
       BIND(C, NAME='fteik_solver3d_setReceivers64f')
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: nrec
       REAL(C_DOUBLE), INTENT(IN) :: zrec(nrec), xrec(nrec), yrec(nrec)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -1013,7 +1065,6 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the nodal velocity model.
-!>
 !>    @param[in] ng     Number of grid points in velocity.  This should be equal to
 !>                      [nz x nx x ny] for 3D.
 !>    @param[in] order  Defines the column major order of vel. \n
@@ -1028,15 +1079,11 @@ MODULE FTEIK_SOLVER64F
 !>                      dimension 1 and nx is leading dimension 2. \n
 !>    @param[in] vel    Nodal velocity model whose leading dimension are given
 !>                      by order.
-!>
 !>    @param[out] ierr  0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setNodalVelocityModel64f(ng, order, vel, ierr)  &
       BIND(C, NAME='fteik_solver3d_setNodalVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setNodalVelocityModel64f
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: ng, order
       REAL(C_DOUBLE), INTENT(IN) :: vel(ng)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -1064,16 +1111,11 @@ MODULE FTEIK_SOLVER64F
 !>                      dimension 1 and nx-1 is leading dimension 2. \n
 !>    @param[in] vel    Cell-based velocity model whose leading dimension are given
 !>                      by order.
-!>
 !>    @param[out] ierr  0 indicates success.
-!>
-!>    @copyright Ben Baker distributed under the MIT license.
-!>
-
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setCellVelocityModel64f(nc, order, vel, ierr)  &
       BIND(C, NAME='fteik_solver3d_setCellVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setCellVelocityModel64f 
-      USE ISO_C_BINDING
       INTEGER(C_INT), VALUE, INTENT(IN) :: nc, order
       REAL(C_DOUBLE), INTENT(IN) :: vel(nc)
       INTEGER(C_INT), INTENT(OUT) :: ierr 
@@ -1086,7 +1128,6 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Sets the velocity model on the solver.
-!>
 !>    @param[in] ncell    Number of cells in velocity model.  This should be 
 !>                        (nz-1)*(nx-1)*(ny-1).
 !>    @param[in] vel      Velocity model (meters/second) in model cells.  This is
@@ -1094,16 +1135,10 @@ MODULE FTEIK_SOLVER64F
 !>                        z and whose slowest direction is y.
 !>
 !>    @param[out] ierr    0 indicates success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_setVelocityModel64f(ncell, vel, ierr) &
       BIND(C, NAME='fteik_solver3d_setVelocityModel64f')
       USE FTEIK_MODEL64F, ONLY : fteik_model_setVelocityModel64f
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: ncell
       REAL(C_DOUBLE), INTENT(IN) :: vel(ncell)
       INTEGER(C_INT), INTENT(OUT) :: ierr
@@ -1116,20 +1151,14 @@ MODULE FTEIK_SOLVER64F
 !========================================================================================!
 !                                                                                        !
 !>    @brief Solves the eikonal equation for the given source.
-!>
 !>    @param[in] isrc     Source number.  This must be in the range [1,nsrc].
-!>
 !>    @param[out] ierr    0 indicates success.
-!>
-!>    @author Ben Baker
-!>
-!>    @copyright MIT
-!>
+!>    @ingroup solver3d
       SUBROUTINE fteik_solver3d_solveSourceLSM(isrc, ierr)   &
                  BIND(C, NAME='fteik_solver3d_solveSourceLSM')
       USE FTEIK_SOURCE64F, ONLY : nsrc
       USE FTEIK_MODEL64F, ONLY : lhaveModel
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_initialize64fF
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_initialize64fF
       USE FTEIK_CONSTANTS64F, ONLY : FTEIK_HUGE, TRUE, FALSE
       USE FTEIK_AUTOCODE, ONLY : fteik_evaluateSweep1LS64fF, &
                                  fteik_evaluateSweep2LS64fF, &
@@ -1139,14 +1168,13 @@ MODULE FTEIK_SOLVER64F
                                  fteik_evaluateSweep6LS64fF, &
                                  fteik_evaluateSweep7LS64fF, &
                                  fteik_evaluateSweep8LS64fF
-      USE ISO_C_BINDING
-      IMPLICIT NONE
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
-      REAL(C_DOUBLE) ts8(8), t0, t1
-      INTEGER(C_INT) dest(8), kiter
+      DOUBLE PRECISION ts8(8), t0, t1
+      INTEGER dest(8), kiter
       ierr = 0
-      lhaveTimes = FALSE
+      lhaveTimes = .FALSE.
+      lhaveGradient = .FALSE.
       srcNumber =-1
       IF (.NOT.lhaveModel) THEN
          WRITE(ERROR_UNIT,900) 'fteik_solver3d_solveSourceLSM: Model not yet set'
@@ -1204,6 +1232,7 @@ MODULE FTEIK_SOLVER64F
       IF (ierr /= 0) THEN
          ttimes(:) = FTEIK_HUGE
          lhaveTimes = .FALSE.
+         srcNumber =-1
       ENDIF
   802 FORMAT('fteik_solver3d_solveSourceLSM: Solver time in seconds=', F14.8)
   900 FORMAT('fteik_solver3d_solveSourceLSM: Model not yet set')
@@ -1213,6 +1242,85 @@ MODULE FTEIK_SOLVER64F
   903 FORMAT('fteik_solver3d_solveSourceLSM: Error setting mesh constants')
       RETURN
       END
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Finite differences the travel time field.
+!>    @ingroup solver3d
+      SUBROUTINE fteik_solver3d_finiteDifferenceGradient()
+      USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF
+      USE FTEIK_MODEL64F, ONLY : dx, dy, dz, nx, ny, nz
+      INTEGER ix, iy, iz, m1, m2
+      tgrad(:) = 0.d0
+      ! Do the heavy lifting and forward difference the field for dT/dz
+      !$OMP PARALLEL DO COLLAPSE(3), DEFAULT(NONE) &
+      !$OMP FIRSTPRIVATE(dz, nx, ny, nz) &
+      !$OMP PRIVATE(m1, m2) &
+      !$OMP SHARED(tgrad, ttimes)
+      DO iy=1,ny
+         DO ix=1,nx
+            DO iz=1,nz-1
+               m1 = fteik_model_grid2indexF(iz,   ix, iy, nz, nz*nx)
+               m2 = fteik_model_grid2indexF(iz+1, ix, iy, nz, nz*nx)
+               tgrad(3*(m1-1)+3) = (ttimes(m2) - ttimes(m1))/dz
+            ENDDO
+         ENDDO
+      ENDDO
+      ! dT/dx
+      !$OMP PARALLEL DO COLLAPSE(3), DEFAULT(NONE) &
+      !$OMP FIRSTPRIVATE(dx, nx, ny, nz) &
+      !$OMP PRIVATE(m1, m2) &
+      !$OMP SHARED(tgrad, ttimes)
+      DO iy=1,ny
+         DO ix=1,nx-1
+            DO iz=1,nz
+               m1 = fteik_model_grid2indexF(iz, ix,   iy, nz, nz*nx)
+               m2 = fteik_model_grid2indexF(iz, ix+1, iy, nz, nz*nx)
+               tgrad(3*(m1-1)+1) = (ttimes(m2) - ttimes(m1))/dx
+            ENDDO
+         ENDDO
+      ENDDO
+      ! dT/dy
+      !$OMP PARALLEL DO COLLAPSE(3), DEFAULT(NONE) &
+      !$OMP FIRSTPRIVATE(dy, nx, ny, nz) &
+      !$OMP PRIVATE(m1, m2) &
+      !$OMP SHARED(tgrad, ttimes)
+      DO iy=1,ny-1
+         DO ix=1,nx
+            DO iz=1,nz
+               m1 = fteik_model_grid2indexF(iz, ix, iy,   nz, nz*nx)
+               m2 = fteik_model_grid2indexF(iz, ix, iy+1, nz, nz*nx)
+               tgrad(3*(m1-1)+2) = (ttimes(m2) - ttimes(m1))/dy
+            ENDDO
+         ENDDO
+      ENDDO
+      ! Backwards difference the xy face at nz
+      DO iy=1,ny
+         DO ix=1,nx
+            m1 = fteik_model_grid2indexF(nz-1, ix, iy, nz, nz*nx)
+            m2 = fteik_model_grid2indexF(nz,   ix, iy, nz, nz*nx)
+            tgrad(3*(m2-1)+3) = (ttimes(m2) - ttimes(m1))/dz
+         ENDDO
+      ENDDO
+      ! Backwards difference the yz face at nx
+      DO iy=1,ny
+         DO iz=1,nz
+            m1 = fteik_model_grid2indexF(iz, nx-1, iy, nz, nz*nx)
+            m2 = fteik_model_grid2indexF(iz, nx,   iy, nz, nz*nx)
+            tgrad(3*(m2-1)+1) = (ttimes(m2) - ttimes(m1))/dx
+         ENDDO
+      ENDDO
+      ! Backwards difference the xz face at ny
+      DO ix=1,nx
+         DO iz=1,nz
+            m1 = fteik_model_grid2indexF(iz, ix, ny-1, nz, nz*nx)
+            m2 = fteik_model_grid2indexF(iz, ix, ny,   nz, nz*nx)
+            tgrad(3*(m2-1)+2) = (ttimes(m2) - ttimes(m1))/dy
+         ENDDO
+      ENDDO
+      RETURN
+      END
+
 !----------------------------------------------------------------------------------------!
 !                                       End the Code                                     !
 !----------------------------------------------------------------------------------------!

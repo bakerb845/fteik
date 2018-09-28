@@ -110,6 +110,10 @@ MODULE FTEIK_RAYS64F
       PRIVATE :: fteik_rays_trace3d
       PRIVATE :: fteik_rays_resetRayPath
       PRIVATE :: fteik_rays_setRayOrigins
+      PRIVATE :: trilinear
+      PRIVATE :: bilinear
+      PRIVATE :: updatePosition2D
+      PRIVATE :: updatePosition3D
       PRIVATE :: updateMidpoint2D
       PRIVATE :: updateRK42D
       PRIVATE :: updateEuler2D
@@ -819,7 +823,23 @@ return
       zn1 = MIN(MAX(eps, zn1), DBLE(nz-1)*dz - eps)
       RETURN
       END
- 
+
+      PURE SUBROUTINE updatePosition3D(nx, ny, nz, dx, dy, dz,              &
+                                       xn, yn, zn, ds, dx1ds, dx2ds, dx3ds, &
+                                       xn1, yn1, zn1)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: nx, ny, nz
+      DOUBLE PRECISION, INTENT(IN) :: dx, dy, dz, xn, yn, zn, ds, dx1ds, dx2ds, dx3ds
+      DOUBLE PRECISION, INTENT(OUT) :: xn1, yn1, zn1
+      DOUBLE PRECISION, PARAMETER :: eps = EPSILON(1.d0)
+      xn1 = xn + ds*dx1ds
+      yn1 = yn + ds*dx2ds
+      zn1 = zn + ds*dx3ds
+      xn1 = MIN(MAX(eps, xn1), DBLE(nx-1)*dx - eps)
+      yn1 = MIN(MAX(eps, yn1), DBLE(ny-1)*dy - eps)
+      zn1 = MIN(MAX(eps, zn1), DBLE(nz-1)*dz - eps)
+      RETURN
+      END
 !>    @brief Evaluates the right hand side of the ray equations (Shearer pg. 85)
 !>           \f$ 
 !>               \frac{d \textbf{x}}{ds} =-\frac{\textbf{s}(\textbf{x})}{u(\textbf{x})}
@@ -873,12 +893,91 @@ return
       ! Interpolate the derivatives at the point
       dtdx = bilinear(xn, zn, x1, z1, x2, z2, tx)
       dtdz = bilinear(xn, zn, x1, z1, x2, z2, tz)
-      ! Step down the gradient
+      ! March down the gradient because of negative sign
       dx1ds =-dtdx/slow(icell)
       dx3ds =-dtdz/slow(icell) 
       RETURN
       END 
 
+      SUBROUTINE evalf3d(dx, dy, dz, xn, yn, zn,    &
+                         slow, tgrad,               &
+                         dx1ds, dx2ds, dx3ds)
+      USE FTEIK_MODEL64F, ONLY : fteik_model_velGrid2indexF, &
+                                 fteik_model_grid2indexF
+      DOUBLE PRECISION, INTENT(IN) :: dx, dy, dz, xn, yn, zn
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: slow
+      DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: tgrad
+      DOUBLE PRECISION, INTENT(OUT) :: dx1ds, dx2ds, dx3ds 
+      DOUBLE PRECISION, DIMENSION(2,2,2) :: tx, ty, tz 
+      INTEGER icell, ix, iy, iz, &
+              igrd000, igrd001, igrd010, igrd011, igrd100, igrd101, igrd110, igrd111
+      ix = MIN(MAX(1, INT(xn/dx + 1.d0)), nx - 1)
+      iy = MIN(MAX(1, INT(yn/dy + 1.d0)), ny - 1)
+      iz = MIN(MAX(1, INT(zn/dz + 1.d0)), nz - 1)
+      icell = fteik_model_velGrid2indexF(iz, ix, iy, nz-1, (nz-1)*(nx-1))
+      igrd000 = fteik_model_grid2indexF(iz,   ix,   iy,   nz, nz*nx)
+      igrd100 = fteik_model_grid2indexF(iz,   ix+1, iy,   nz, nz*nx)
+      igrd010 = fteik_model_grid2indexF(iz,   ix,   iy+1, nz, nz*nx)
+      igrd110 = fteik_model_grid2indexF(iz,   ix+1, iy+1, nz, nz*nx)
+      igrd001 = fteik_model_grid2indexF(iz+1, ix,   iy,   nz, nz*nx)
+      igrd101 = fteik_model_grid2indexF(iz+1, ix+1, iy,   nz, nz*nx)
+      igrd011 = fteik_model_grid2indexF(iz+1, ix,   iy+1, nz, nz*nx)
+      igrd111 = fteik_model_grid2indexF(iz+1, ix+1, iy+1, nz, nz*nx)
+      ! y changes fastest, x is intmediate, z changes slowest so extract in way most
+      ! likely to produce a cache hit
+      ! (x,y,z) 
+      tx(1,1,1) = tgrad(3*(igrd000-1)+1)
+      ty(1,1,1) = tgrad(3*(igrd000-1)+2)
+      tz(1,1,1) = tgrad(3*(igrd000-1)+3)
+      ! (x,+y,z)
+      tx(1,2,1) = tgrad(3*(igrd010-1)+1)
+      ty(1,2,1) = tgrad(3*(igrd010-1)+2)
+      tz(1,2,1) = tgrad(3*(igrd010-1)+3)
+      ! (+x,y,z)
+      tx(2,1,1) = tgrad(3*(igr1000-1)+1)
+      ty(2,1,1) = tgrad(3*(igr1000-1)+2)
+      tz(2,1,1) = tgrad(3*(igr1000-1)+3)
+      ! (+x,+y,z)
+      tx(2,2,1) = tgrad(3*(igrd110-1)+1)
+      ty(2,2,1) = tgrad(3*(igrd110-1)+2)
+      tz(2,2,1) = tgrad(3*(igrd110-1)+3)
+      ! (x,y,+z)
+      tx(1,1,2) = tgrad(3*(igrd001-1)+1)
+      ty(1,1,2) = tgrad(3*(igrd001-1)+2)
+      tz(1,1,2) = tgrad(3*(igrd001-1)+3)
+      ! (x,+y,+z)
+      tx(1,2,2) = tgrad(3*(igrd011-1)+1)
+      ty(1,2,2) = tgrad(3*(igrd011-1)+2)
+      tz(1,2,2) = tgrad(3*(igrd011-1)+3)
+      ! (+x,y,+z)
+      tx(2,1,2) = tgrad(3*(igr1001-1)+1)
+      ty(2,1,2) = tgrad(3*(igr1001-1)+2)
+      tz(2,1,2) = tgrad(3*(igr1001-1)+3)
+      ! (+x,+y,+z)
+      tx(2,2,2) = tgrad(3*(igrd111-1)+1)
+      ty(2,2,2) = tgrad(3*(igrd111-1)+2)
+      tz(2,2,2) = tgrad(3*(igrd111-1)+3)
+      
+      ! March down gradient because of negative sign
+      dx1ds =-dtdx/slow(icell)
+      dx2ds =-dtdy/slow(icell)
+      dx3ds =-dtdz/slow(icell) 
+      RETURN
+      END
+!>    @brief Computes the bilinear inteprolant
+!>           \f$ f(x,z) = a_0 + a_1 x + a_2 z + a_3 x z \f$.
+!>           where the coefficients are given by:
+!>           https://en.wikipedia.org/wiki/Bilinear_interpolation#Alternative_algorithm
+!>    @param[in] x         x position (meters).
+!>    @param[in] z         z position (meters).
+!>    @param[in] x1        Upper-left grid point (meters).
+!>    @param[in] z1        Upper-left grid point (meters).
+!>    @param[in] x2        Lower-right grid point (meters).
+!>    @param[in] z2        Lower-right grid point (meters).
+!>    @param[in] t         Travel-times (seconds) at grid points.  t(x0=1,y0=1) is the
+!>                         origin of the cell.
+!>    @result The bilinear interpolant of t(x,z).
+!>    @ingroup rays.
       DOUBLE PRECISION FUNCTION bilinear(x, z, x1, z1, x2, z2, t)
       IMPLICIT NONE
       DOUBLE PRECISION, DIMENSION(:,:), INTENT(IN) :: t
@@ -897,6 +996,62 @@ return
       bilinear = a0 + a1*x + a2*z + a3*x*z
       RETURN
       END
+!>    @brief Computes the gradient of the bilinear interpolant:
+!>           \f$ f(x,y,z) = a_0 + a_1 x + a_2 y + a_3 z 
+!>                        + a_4 x y  + a_5 x z + a_6 y z + a_7 x y z \f$.
+!>           where the coefficients are given by:
+!>           https://en.wikipedia.org/wiki/Trilinear_interpolation#Alternative_algorithm
+!>    @param[in] x         x position (meters).
+!>    @param[in] y         y position (meters).
+!>    @param[in] z         z position (meters).
+!>    @param[in] x0        North, west, upper grid point (meters).
+!>    @param[in] y0        North, west, upper grid point (meters).
+!>    @param[in] z0        North, west, upper grid point (meters).
+!>    @param[in] x1        South, east, lower grid point (meters).
+!>    @param[in] y1        South, east, lower grid point (meters).
+!>    @param[in] z1        South, east, lower grid point (meters).
+!>    @param[in] t         Travel-times (seconds) at grid points.  t(x0=1,y0=1,z0=1) is
+!>                         the origin of the cell.
+!>    @result The trilinear interpolant of t(x,y,z).
+!>    @ingroup rays
+      DOUBLE PRECISION FUNCTION trilinear(x, y, z,                   &
+                                          x0, y0, z0,                &
+                                          x1, y1, z1, t)
+      IMPLICIT NONE
+      DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(IN) :: t
+      DOUBLE PRECISION, INTENT(IN) :: x, y, z, x0, y0, z0, x1, y1, z1
+      DOUBLE PRECISION c000, c100, c010, c110, c001, c101, c011, c111
+      DOUBLE PRECISION a0, a1, a2, a3, a4, a5, a6, a7, den, dtdx, dtdy, dtdz, xnorm
+      den = (x0 - x1)*(y0 - y1)*(z0 - z1)
+      c000 = t(1,1,1)
+      c100 = t(2,1,1)
+      c010 = t(1,2,1)
+      c110 = t(2,2,1)
+      c001 = t(1,1,2)
+      c101 = t(2,1,2)
+      c011 = t(1,2,2)
+      c111 = t(2,2,2)
+      a0 =(-c000*x1*y1*z1 + c001*x1*y1*z0 + c010*x1*y0*z1 - c011*x1*y0*z0 &
+          + c100*x0*y1*z1 - c101*x0*y1*z0 - c110*x0*y0*z1 + c111*x0*y0*z0)/den
+      a1 =( c000*y1*z1    - c001*y1*z0    - c010*y0*z1    + c011*y0*z0    &
+          - c100*y1*z1    + c101*y1*z0    + c110*y0*z1    - c111*y0*z0)/den
+      a2 =( c000*x1*z1    - c001*x1*z0    - c010*x1*z1    + c011*x1*z0    &
+          - c100*x0*z1    + c101*x0*z0    + c110*x0*z1    - c111*x0*z0)/den
+      a3 =( c000*x1*y1    - c001*x1*y1    - c010*x1*y0    + c011*x1*y0    &
+          - c100*x0*y1    + c101*x0*y1    + c110*x0*y0    - c111*x0*y0)/den
+      a4 =(-c000*z1       + c001*z0       + c010*z1       - c011*z0       &
+          + c100*z1       - c101*z0       - c110*z1       + c111*z0)/den
+      a5 =(-c000*y1       + c001*y1       + c010*y0       - c011*y0       &
+          + c100*y1       - c101*y1       - c110*y0       + c111*y0)/den
+      a6 =(-c000*x1       + c001*x1       + c010*x1       - c011*x1       &
+          + c100*x0       - c101*x0       - c110*x0       + c111*x0)/den
+      a7 =( c000          - c001          - c010          + c011          &
+          - c100          + c101          + c110          - c111)/den
+      ! f(x,y,z) = a0 + a1*x + a2*y + a3*z + a4*x*y + a5*x*z + a6*y*z + a7*x*y*z
+      trilinear = a0 + a1*x + a2*y + a3*z + a4*x*y + a5*x*z + a6*y*z + a7*x*y*z
+      RETURN
+      END
+
 
       SUBROUTINE intersect2d(x0, z0,         &
                              dx1ds, dx3ds,   &
@@ -959,91 +1114,6 @@ return
             x1 = x2est
             z1 = z2est
          ENDIF
-      ENDIF
-      RETURN
-      END
-
-!>    @brief Computes the gradient of the bilinear interpolant:
-!>           \f$ f(x,y,z) = a_0 + a_1 x + a_2 y + a_3 z 
-!>                        + a_4 x y  + a_5 x z + a_6 y z + a_7 x y z \f$.
-!>           where the coefficients are given by:
-!>           https://en.wikipedia.org/wiki/Trilinear_interpolation#Alternative_algorithm
-!>    @param[in] x         x position (meters).
-!>    @param[in] y         y position (meters).
-!>    @param[in] z         z position (meters).
-!>    @param[in] x0        North, west, upper grid point (meters).
-!>    @param[in] y0        North, west, upper grid point (meters).
-!>    @param[in] z0        North, west, upper grid point (meters).
-!>    @param[in] x1        South, east, lower grid point (meters).
-!>    @param[in] y1        South, east, lower grid point (meters).
-!>    @param[in] z1        South, east, lower grid point (meters).
-!>    @param[in] t         Travel-times (seconds) at grid points where the first index
-!>                         corresponds to x0 and x1, respectively, and the second index
-!>                         corresponds to y0 and y1, respectively, and the third index
-!>                         corresponds to z0 and z1, respectively.
-!>    @param[out] tint     Interpolated travel time (seconds).
-!>    @param[out] dx1ds    Direction cosine in x1 direction.
-!>    @param[out] dx2ds    Direction cosine in x2 direction.
-!>    @param[out] dx3ds    Direction cosine in x3 direction.
-!>    @param[in] lnegGrad  If true then compute the negative of the gradient to move
-!>                         in the direction of max descent of the travel time field.
-!>    @param[in] lnegGrad  If false then move in the direction of max increase of the
-!>                         travel time field.
-!>    @ingroup rays
-      SUBROUTINE trilinearGrad(x, y, z,                   &
-                               x0, y0, z0,                &
-                               x1, y1, z1, t,             &
-                               tint, dx1ds, dx2ds, dx3ds, &
-                               lnegGrad)
-      IMPLICIT NONE
-      DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(IN) :: t
-      DOUBLE PRECISION, INTENT(IN) :: x, y, z, x0, y0, z0, x1, y1, z1
-      DOUBLE PRECISION, INTENT(OUT) :: tint, dx1ds, dx2ds, dx3ds
-      LOGICAL, INTENT(IN) :: lnegGrad
-      DOUBLE PRECISION c000, c100, c010, c110, c001, c101, c011, c111
-      DOUBLE PRECISION a0, a1, a2, a3, a4, a5, a6, a7, den, dtdx, dtdy, dtdz, xnorm
-      den = (x0 - x1)*(y0 - y1)*(z0 - z1)
-      c000 = t(1,1,1)
-      c100 = t(2,1,1)
-      c010 = t(1,2,1)
-      c110 = t(2,2,1)
-      c001 = t(1,1,2)
-      c101 = t(2,1,2)
-      c011 = t(1,2,2)
-      c111 = t(2,2,2)
-      a0 =(-c000*x1*y1*z1 + c001*x1*y1*z0 + c010*x1*y0*z1 - c011*x1*y0*z0 &
-          + c100*x0*y1*z1 - c101*x0*y1*z0 - c110*x0*y0*z1 + c111*x0*y0*z0)/den
-      a1 =( c000*y1*z1    - c001*y1*z0    - c010*y0*z1    + c011*y0*z0    &
-          - c100*y1*z1    + c101*y1*z0    + c110*y0*z1    - c111*y0*z0)/den
-      a2 =( c000*x1*z1    - c001*x1*z0    - c010*x1*z1    + c011*x1*z0    &
-          - c100*x0*z1    + c101*x0*z0    + c110*x0*z1    - c111*x0*z0)/den
-      a3 =( c000*x1*y1    - c001*x1*y1    - c010*x1*y0    + c011*x1*y0    &
-          - c100*x0*y1    + c101*x0*y1    + c110*x0*y0    - c111*x0*y0)/den
-      a4 =(-c000*z1       + c001*z0       + c010*z1       - c011*z0       &
-          + c100*z1       - c101*z0       - c110*z1       + c111*z0)/den
-      a5 =(-c000*y1       + c001*y1       + c010*y0       - c011*y0       &
-          + c100*y1       - c101*y1       - c110*y0       + c111*y0)/den
-      a6 =(-c000*x1       + c001*x1       + c010*x1       - c011*x1       &
-          + c100*x0       - c101*x0       - c110*x0       + c111*x0)/den
-      a7 =( c000          - c001          - c010          + c011          &
-          - c100          + c101          + c110          - c111)/den
-      ! f(x,y,z) = a0 + a1*x + a2*y + a3*z + a4*x*y + a5*x*z + a6*y*z + a7*x*y*z
-      tint = a0 + a1*x + a2*y + a3*z + a4*x*y + a5*x*z + a6*y*z + a7*x*y*z
-      dtdx = a1 + a4*y + a5*z + a7*y*z
-      dtdy = a2 + a4*x + a6*z + a7*x*z
-      dtdz = a3 + a5*x + a6*y + a7*x*y
-      ! Normalized vector requires hypotenuse is unity.
-      xnorm = DSQRT(dtdx*dtdx + dtdy*dtdy + dtdz*dtdz)
-      ! Compute direction cosines of Lay and Wallace 3.16 so that:
-      ! (dx1/ds)^2 + (dx2/ds)^2 + (dx3/ds)^2 = 1^2
-      IF (lnegGrad) THEN
-         dx1ds =-dtdx/xnorm
-         dx2ds =-dtdy/xnorm
-         dx3ds =-dtdz/xnorm
-      ELSE
-         dx1ds = dtdx/xnorm
-         dx2ds = dtdy/xnorm
-         dx3ds = dtdz/xnorm
       ENDIF
       RETURN
       END

@@ -219,13 +219,13 @@ def makeLS(sweep):
    cline = '      SUBROUTINE fteik_evaluateSweep%dLS64fF(linitk, ttimes, ierr) &\n'%(sweep) \
          + "      BIND(C, NAME='fteik_evaluateSweep%dLS64fF')\n"%(sweep) \
          + '      USE ISO_C_BINDING\n' \
-         + '      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &\n' \
-         + '                                       fteik_localSolver_init64fF\n' \
+         + '      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &\n' \
+         + '                                         fteik_localSolver_init64fF\n' \
          + '      !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &\n' \
          + '      !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF\n' \
          + '      USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep%dSlowness64fF, & \n'%(sweep) \
          + '                                 fteik_prefetchSweep%dTravelTimes64fF\n'%(sweep) \
-         + '      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd%d, lupdInit%d, ijkv%d, nLevels\n'%(sweep, sweep, sweep) \
+         + '      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd%d, lupdInit%d, ijkv%d, nLevels\n'%(sweep, sweep, sweep) \
          + '      !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd%d, lupdInit%d, ijkv%d, slow, &\n'%(sweep, sweep, sweep) \
          + '      !                           nLevels\n' \
          + '      USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1\n' \

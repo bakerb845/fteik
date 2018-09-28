@@ -160,11 +160,11 @@ omp_set_num_threads(1);
 //printf("INSPECTOR SAYS slow(?), i.e., prefetchSlowness ARE UNINITIALIZED - CHECK THERE FIRST\n");
 //getchar();
  int verbose = 2;
-    fteik_solver3d_initialize64f(nz, nx, ny,
-                                 z0, x0, y0,
-                                 dz, dx, dy,
-                                 nsweep, eps,
-                                 1.e-14, verbose, &ierr);
+    fteik_solver3d_initialize(nz, nx, ny,
+                              z0, x0, y0,
+                              dz, dx, dy,
+                              nsweep, eps,
+                              1.e-14, verbose, &ierr);
     // Set the sources
     printf("Setting sources...\n");
     fteik_solver3d_setSources64f(1, &zs, &xs, &ys, &ierr);

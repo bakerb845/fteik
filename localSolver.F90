@@ -356,14 +356,14 @@ END MODULE
 !> @defgroup localSolver3d 3D Local Solver
 !> @brief The 3D local solver.
 !> @ingroup solver3d
-MODULE FTEIK_LOCALSOLVER64F
+MODULE FTEIK_LOCALSOLVER3D64F
   USE ISO_FORTRAN_ENV
   USE FTEIK_CONSTANTS64F, ONLY : chunkSize
   IMPLICIT NONE
-  INTEGER, PRIVATE, SAVE :: zsi, xsi, ysi
-  DOUBLE PRECISION, PRIVATE, SAVE :: zsa, xsa, ysa  
+  DOUBLE PRECISION, PROTECTED, SAVE :: szero, xsa, ysa, zsa
+  INTEGER, PROTECTED, SAVE :: zsi, xsi, ysi
   DOUBLE PRECISION, PRIVATE, SAVE :: dz, dx, dy
-  DOUBLE PRECISION, PRIVATE, SAVE :: szero, szero2
+  DOUBLE PRECISION, PRIVATE, SAVE :: szero2
   DOUBLE PRECISION, PRIVATE, SAVE :: dxi, dyi, dzi
   DOUBLE PRECISION, PRIVATE, SAVE :: dx2, dy2, dz2
   DOUBLE PRECISION, PRIVATE, SAVE :: dx2i, dy2i, dz2i 

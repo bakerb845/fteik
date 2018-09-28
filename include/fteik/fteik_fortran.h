@@ -96,7 +96,7 @@ void fteik_source_getSzero64fF(const int isrc,
 //----------------------------------------------------------------------------//
 //                             Solver Module                                  //
 //----------------------------------------------------------------------------//
-void fteik_solver3d_initialize64f(
+void fteik_solver3d_initialize(
     const int nzIn, const int nxIn, const int nyIn,
     const double z0In, const double x0In, const double y0In,
     const double dzIn, const double dxIn, const double dyIn,
@@ -136,7 +136,7 @@ void fteik_solver3d_solveSourceLSM(const int isrc, int *ierr);
 //----------------------------------------------------------------------------//
 //                           2D Solver Module                                 //
 //----------------------------------------------------------------------------//
-void fteik_solver2d_initialize64f(const int nz, const int nx,
+void fteik_solver2d_initialize(const int nz, const int nx,
                                   const double z0, const double x0,
                                   const double dz, const double dx,
                                   const int nsweep, const double eps,

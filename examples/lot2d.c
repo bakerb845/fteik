@@ -71,12 +71,12 @@ printf("%d %d\n", nx, nz);
     }
     // Initialize the solver
     fprintf(stdout, "%s: Initializing solver...\n", __func__);
-    fteik_solver2d_initialize64f(nz, nx, 
-                                 z0, x0,  
-                                 dz, dx, 
-                                 nsweep, eps,
-                                 convTol, 0,
-                                 &ierr);
+    fteik_solver2d_initialize(nz, nx, 
+                              z0, x0,  
+                              dz, dx, 
+                              nsweep, eps,
+                              convTol, 0,
+                              &ierr);
     if (ierr != 0)
     {
         fprintf(stderr, "%s: Error initializing solver\n", __func__);

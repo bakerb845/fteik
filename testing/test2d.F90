@@ -12,12 +12,12 @@ end
       SUBROUTINE compare2d(ierr)
       USE ISO_FORTRAN_ENV
       USE FTEIK2D
-      USE FTEIK2D_SOLVER64F, ONLY : fteik_solver2d_initialize64f,            &
+      USE FTEIK2D_SOLVER64F, ONLY : fteik_solver2d_initialize,               &
                                     fteik_solver2d_setCellVelocityModel64f,  &
                                     fteik_solver2d_setSources64f,            &
                                     fteik_solver2d_solveSourceFSM,           &
                                     fteik_solver2d_solveSourceLSM,           &
-                                    fteik_solver2d_computeRaysToPoints,      &   
+                                    fteik_solver2d_traceRaysToPoints,        &
                                     fteik_solver2d_free
       USE FTEIK2D_SOLVER64F, ONLY : FTEIK_ZX_ORDERING, ttimes, tgradx, tgradz
       IMPLICIT NONE
@@ -57,12 +57,12 @@ end
 
       CALL solver2d(slow, tt, nz, nx, zsrc(1), xsrc(1), dz, dx, ngs_sweep, ttgrad)
 
-      CALL fteik_solver2d_initialize64f(nz, nx,           &
-                                        z0, x0,           &
-                                        dz, dx,           &
-                                        ngs_sweep,  eps,  &
-                                        conv, verb,       &
-                                        ierr)
+      CALL fteik_solver2d_initialize(nz, nx,           &
+                                     z0, x0,           &
+                                     dz, dx,           &
+                                     ngs_sweep,  eps,  &
+                                     conv, verb,       &
+                                     ierr)
       IF (ierr /= 0) THEN
          WRITE(ERROR_UNIT,*) 'compare2d: Failed to initialize solver'
          RETURN

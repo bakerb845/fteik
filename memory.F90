@@ -1,11 +1,17 @@
-#define ERRORMSG(msg) WRITE(0,'("[ERROR] at ",I4," in file ",/,A,/,"Error message: ",A)') __LINE__,__FILE__,msg
+#define ERRORMSG(msg) WRITE(ERROR_UNIT,'("[ERROR] at ",I4," in file ",/,A,/,"Error message: ",A)') __LINE__,__FILE__,msg
 
+!> @defgroup memory Memory
+!> @brief Memory allocation/deallocation routines.
+!> @copyright Ben Baker distributed under the MIT license.
 MODULE FTEIK_MEMORY
    USE ISO_C_BINDING
+   USE ISO_FORTRAN_ENV
+   IMPLICIT NONE
+
    PUBLIC :: allocate64f
    PUBLIC :: allocate32f
-   PUBLIC :: free64
-   PUBLIC :: free32
+   !PUBLIC :: free64
+   !PUBLIC :: free32
    PUBLIC :: padLength64F
    PUBLIC :: padLength32F
    CONTAINS
@@ -27,7 +33,6 @@ MODULE FTEIK_MEMORY
    !> @copyright MIT
    !>
    SUBROUTINE allocate64f(x, align, n)
-   USE ISO_C_BINDING
    REAL(C_DOUBLE), POINTER, DIMENSION(:), INTENT(INOUT) :: x
    INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
@@ -72,13 +77,8 @@ MODULE FTEIK_MEMORY
    !>  
    !> @param[in] align     Alignment value (e.g., 64 would be 64 bit alignment).
    !> @param[in] n         Number of elements in output double pointer. 
-   !>  
-   !> @author Ben Baker
-   !>  
-   !> @copyright MIT
-   !>
+   !> @ingroup memory
    SUBROUTINE allocate32f(x, align, n)
-   USE ISO_C_BINDING
    REAL(C_FLOAT), POINTER, DIMENSION(:), INTENT(INOUT) :: x
    INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: align, n
    INTEGER(C_SIZE_T) alignment, ns
@@ -121,13 +121,8 @@ MODULE FTEIK_MEMORY
    !>
    !> @param[in,out] x   On input this is an associated Fortran pointer. \n
    !>                    On ouptut the pointer has been freed and set to nullified. 
-   !>
-   !> @author Ben Baker
-   !>
-   !> @copyright MIT
-   !>
+   !> @ingroup memory
    SUBROUTINE free64f(x)
-   USE ISO_C_BINDING
    REAL(C_DOUBLE), POINTER, INTENT(INOUT) :: x(:)
    TYPE(C_PTR), TARGET :: cptr = C_NULL_PTR
    INTERFACE
@@ -147,16 +142,10 @@ MODULE FTEIK_MEMORY
    !=====================================================================================!
    !                                                                                     !
    !> @brief Frees a double precision Fortran pointer.
-   !>
    !> @param[in,out] x   On input this is an associated Fortran pointer. \n
    !>                    On ouptut the pointer has been freed and set to nullified. 
-   !>
-   !> @author Ben Baker
-   !>
-   !> @copyright MIT
-   !>
+   !> @ingroup memory
    SUBROUTINE free32f(x)
-   USE ISO_C_BINDING
    REAL(C_FLOAT), POINTER, INTENT(INOUT) :: x(:)
    TYPE(C_PTR), TARGET :: cptr = C_NULL_PTR
    INTERFACE
@@ -180,17 +169,10 @@ MODULE FTEIK_MEMORY
    !>
    !> @param[in] alignment   Bit alignment.  This must be a power of 2 (e.g., 64).
    !> @param[in] n           Number of elements for which to compute padding.
-   !>
-   !> @result The padding so that n + padLength is bit aligned row or column.
-   !>
-   !> @author Ben Baker
-   !>
-   !> @copyright MIT
+   !> @ingroup memory
    !>
    INTEGER(C_INT) FUNCTION padLength64F(alignment, n) &
    BIND(C, NAME='padLength64fF')
-   USE ISO_C_BINDING
-   IMPLICIT NONE
    INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: alignment
    INTEGER(C_INT), VALUE, INTENT(IN) :: n
    INTEGER(C_INT) xmod
@@ -200,7 +182,6 @@ MODULE FTEIK_MEMORY
    IF (xmod /= 0) padLength64F = (INT(alignment) - xmod)/sizeof_double
    RETURN
    END FUNCTION
-
    !> @brief Computes the requisite padding so that n + padLength will yield a float
    !>        matrix that is aligned on the given bit boundary.
    !>  
@@ -208,15 +189,10 @@ MODULE FTEIK_MEMORY
    !> @param[in] n           Number of elements for which to compute padding.
    !>  
    !> @result The padding so that n + padLength is bit aligned row or column.
-   !>  
-   !> @author Ben Baker
-   !>  
-   !> @copyright MIT
+   !> @ingroup memory
    !>
    INTEGER(C_INT) FUNCTION padLength32F(alignment, n) &
    BIND(C, NAME='padLength32fF')
-   USE ISO_C_BINDING
-   IMPLICIT NONE
    INTEGER(C_SIZE_T), VALUE, INTENT(IN) :: alignment
    INTEGER(C_INT), VALUE, INTENT(IN) :: n
    INTEGER(C_INT) xmod

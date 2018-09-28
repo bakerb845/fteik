@@ -34,18 +34,18 @@ class fteik2d:
             print("Couldn't find %s"%fteik_library)
             return
         # Make the interfaces
-        lib.fteik_solver2d_initialize64f.argtypes = (c_int,     #nz 
-                                                     c_int,     #nx 
-                                                     c_double,  #z0 
-                                                     c_double,  #x0 
-                                                     c_double,  #dz 
-                                                     c_double,  #dx 
-                                                     c_int,     #nsweeps
-                                                     c_double,  #eps
-                                                     c_double,  #convTol
-                                                     c_int,     #verbosity
-                                                     POINTER(c_int) #ierr
-                                                    )
+        lib.fteik_solver2d_initialize.argtypes = (c_int,     #nz 
+                                                  c_int,     #nx 
+                                                  c_double,  #z0 
+                                                  c_double,  #x0 
+                                                  c_double,  #dz 
+                                                  c_double,  #dx 
+                                                  c_int,     #nsweeps
+                                                  c_double,  #eps
+                                                  c_double,  #convTol
+                                                  c_int,     #verbosity
+                                                  POINTER(c_int) #ierr
+                                                 )
         lib.fteik_solver2d_setCellVelocityModel64f.argtypes = (c_int,             #ncell
                                                                c_int,             #order
                                                                POINTER(c_double), #velocity
@@ -169,11 +169,11 @@ class fteik2d:
            an increasing number of messages from the module to standard out.
         """
         ierr = c_int(1)
-        self.fteik2d.fteik_solver2d_initialize64f(nz, nx,
-                                                  z0, x0,
-                                                  dz, dx,
-                                                  nsweep, eps,
-                                                  convTol, verbose, byref(ierr))
+        self.fteik2d.fteik_solver2d_initialize(nz, nx,
+                                               z0, x0,
+                                               dz, dx,
+                                               nsweep, eps,
+                                               convTol, verbose, byref(ierr))
         if (ierr.value != 0):
             print("Error initializing solver")
             return -1

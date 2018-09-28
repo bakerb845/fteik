@@ -1,4 +1,5 @@
 !> @defgroup solver2d 2D Eikonal Solver
+!> @ingroup fteik 
 !> @brief 2D eikonal equation solver.
 !> @author Ben Baker
 !> @copyright Ben Baker distributed under the MIT license.
@@ -47,7 +48,7 @@ MODULE FTEIK2D_SOLVER64F
   INTEGER, PROTECTED, SAVE :: nsweep = 1
   !> Flag indicating whether or not the travel times were computed.
   LOGICAL, PROTECTED, SAVE :: lhaveTimes = .FALSE.
-  !> Flag indicating whether or not the gradients were computed.
+  !> Flag indicating whether or not the travel time gradient was computed.
   LOGICAL, PROTECTED, SAVE :: lhaveGradient = .FALSE.
   !> Enforces that this is for 2D only.
   LOGICAL(C_BOOL), PRIVATE, PARAMETER :: lis3d = .FALSE.
@@ -64,7 +65,7 @@ MODULE FTEIK2D_SOLVER64F
   PUBLIC :: fteik_solver2d_setVelocityModel64f
   PUBLIC :: fteik_solver2d_setNodalVelocityModel64f
   PUBLIC :: fteik_solver2d_setCellVelocityModel64f 
-  PUBLIC :: fteik_solver2d_initialize64f
+  PUBLIC :: fteik_solver2d_initialize
   PUBLIC :: fteik_solver2d_free
   PUBLIC :: fteik_solver2d_solveSourceLSM
   PUBLIC :: fteik_solver2d_solveSourceFSM
@@ -77,6 +78,8 @@ MODULE FTEIK2D_SOLVER64F
   PUBLIC :: fteik_solver2d_setSphereToCartEpsilon
   PUBLIC :: fteik_solver2d_getNumberOfReceivers
   PUBLIC :: fteik_solver2d_setConvergenceTolerance
+  PUBLIC :: fteik_solver2d_traceRaysToReceivers
+  PUBLIC :: fteik_solver2d_traceRaysToPoints
   PRIVATE :: fteik_solver2d_isUpdateNode
   PRIVATE :: fteik_solver2d_prefetchTravelTimes64f
   PRIVATE :: fteik_solver2d_prefetchSlowness64f
@@ -118,13 +121,13 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] verboseIn  Controls the verbosity.  Less than 1 is quiet. 
 !>    @param[out] ierr      0 indicates success.
 !>    @ingroup solver2d
-      SUBROUTINE fteik_solver2d_initialize64f(nzIn, nxIn,           &
-                                              z0In, x0In,           &
-                                              dzIn, dxIn,           &
-                                              nsweepIn, epsIn,      &
-                                              convTolIn, verboseIn, &
-                                              ierr)                 &
-      BIND(C, NAME='fteik_solver2d_initialize64f')
+      SUBROUTINE fteik_solver2d_initialize(nzIn, nxIn,           &
+                                           z0In, x0In,           &
+                                           dzIn, dxIn,           &
+                                           nsweepIn, epsIn,      &
+                                           convTolIn, verboseIn, &
+                                           ierr)                 &
+      BIND(C, NAME='fteik_solver2d_initialize')
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_CONSTANTS64F, ONLY : one, zero, FALSE
       REAL(C_DOUBLE), VALUE, INTENT(IN) :: x0In, z0In
@@ -178,6 +181,8 @@ MODULE FTEIK2D_SOLVER64F
       ALLOCATE(gxWork(maxLevelSize))
       ALLOCATE(gzWork(maxLevelSize))
       ALLOCATE(ttold(ngrd))
+      tgradx(:) = 0.d0
+      tgradz(:) = 0.d0
       lupdWork(:) = FALSE
       slocWork(:) = zero
       ttvecWork(:) = zero
@@ -275,8 +280,8 @@ MODULE FTEIK2D_SOLVER64F
 !>           corresponding travel time field.
 !>    @param[out] ierr   0 indicates success.
 !>    @ingroup solver2d
-      SUBROUTINE fteik_solver2d_computeRaysToReceivers(ierr) &
-      BIND(C, NAME='fteik_solver2d_computeRaysToReceivers')
+      SUBROUTINE fteik_solver2d_traceRaysToReceivers(ierr) &
+      BIND(C, NAME='fteik_solver2d_traceRaysToReceivers')
       USE FTEIK_RECEIVER64F, ONLY : nrec, xrec, zrec
       INTEGER(C_INT), INTENT(OUT) :: ierr
       ierr = 0
@@ -285,14 +290,14 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          RETURN
       ENDIF
-      CALL fteik_solver2d_computeRaysToPoints(nrec, xrec, zrec, ierr)
+      CALL fteik_solver2d_traceRaysToPoints(nrec, xrec, zrec, ierr)
       IF (ierr /= 0) THEN
-         WRITE(ERROR_uNIT,901)
+         WRITE(ERROR_UNIT,901)
          ierr = 1
          RETURN
       ENDIF
-  900 FORMAT('fteik_solver2d_computeRaysToReceivers: No receivers set')
-  901 FORMAT('fteik_solver2d_computeRaysToReceivers: Failed to compute rays')
+  900 FORMAT('fteik_solver2d_traceRaysToReceivers: No receivers set')
+  901 FORMAT('fteik_solver2d_traceRaysToReceivers: Failed to compute rays')
       RETURN
       END
 !>    @brief Computes the ray paths from the current source to the given (xr,zr)
@@ -302,8 +307,8 @@ MODULE FTEIK2D_SOLVER64F
 !>    @param[in] zp     z destinations of rays.  This has dimension [nr].
 !>    @param[out] ierr  0 indicates success.
 !>    @ingroup solver2d
-      SUBROUTINE fteik_solver2d_computeRaysToPoints(np, xp, zp, ierr) &
-      BIND(C, NAME='fteik_solver2d_computeRaysToPoints')
+      SUBROUTINE fteik_solver2d_traceRaysToPoints(np, xp, zp, ierr) &
+      BIND(C, NAME='fteik_solver2d_traceRaysToPoints')
       USE FTEIK_MODEL64F, ONLY : ngrd
       USE FTEIK_SOURCE64F, ONLY : xstrue, zstrue, xsrc, zsrc
       USE FTEIK_RAYS64F, ONLY : fteik_rays_setRayDestinations2D, &
@@ -344,9 +349,9 @@ MODULE FTEIK2D_SOLVER64F
          ierr = 1
          RETURN
       ENDIF
-  900 FORMAT('fteik_solver2d_computeRaysToPoints: Travel time field not yet computed')
-  901 FORMAT('fteik_solver2d_computeRaysToPoints: Failed to set ray origins')
-  902 FORMAT('fteik_solver2d_computeRaysToPoints: Failed to compute rays')
+  900 FORMAT('fteik_solver2d_traceRaysToPoints: Travel time field not yet computed')
+  901 FORMAT('fteik_solver2d_traceRaysToPoints: Failed to set ray origins')
+  902 FORMAT('fteik_solver2d_traceRaysToPoints: Failed to compute rays')
       RETURN
       END
 !                                                                                        !
@@ -787,7 +792,7 @@ MODULE FTEIK2D_SOLVER64F
       INTEGER(C_INT), VALUE, INTENT(IN) :: isrc
       INTEGER(C_INT), INTENT(OUT) :: ierr
       DOUBLE PRECISION ts4(4), t0, t1, tdiff
-      INTEGER dest(4), i, i1, i2, indx, kiter, level, nnodes, sweep
+      INTEGER dest(4), i, i1, i2, kiter, level, nnodes, sweep
       INTEGER iz, ix, sgntz, sgntx, sgnvz, sgnvx
       ierr = 0
       lhaveTimes = .FALSE.
@@ -811,8 +816,6 @@ MODULE FTEIK2D_SOLVER64F
       t0 = 0.d0
       CALL CPU_TIME(t0)
       ttimes(:) = FTEIK_HUGE
-      tgradx(:) = 0.d0
-      tgradz(:) = 0.d0 
       ttimes(dest(1:4)) = ts4(1:4)
 !print *, dest
 !print *, ts4
@@ -973,11 +976,17 @@ MODULE FTEIK2D_SOLVER64F
 !print *, lhaveTimes
       RETURN
       END
-
+!                                                                                        !
+!========================================================================================!
+!                                                                                        !
+!>    @brief Finite differences the travel time field for a gradient travel time field.
+!>    @ingroup solver2d
       SUBROUTINE fteik_solver2d_finiteDifferenceGradient()
-      USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi
+      !USE FTEIK_LOCALSOLVER2D64F, ONLY : xsi, zsi
       USE FTEIK_MODEL64F, ONLY : dx, dz, nx, nz
       INTEGER ix, iz, m1, m2, m3
+      tgradx(:) = 0.d0
+      tgradz(:) = 0.d0
       ! Do the heavy lifting and forward difference the field 
       DO ix=1,nx
          DO iz=2,nz-1
@@ -1000,7 +1009,7 @@ MODULE FTEIK2D_SOLVER64F
       ! Top/bottom boundaries
       DO ix=1,nx
          ! Forward difference top boundary
-         m1 = (ix-1)*nz + 1     ! home
+         m1 = (ix-1)*nz + 1 ! home
          m2 = (ix-1)*nz + 2 ! ahead
          tgradz(m1) = (ttimes(m2) - ttimes(m1))/dz
          ! Backwards difference bottom boundary

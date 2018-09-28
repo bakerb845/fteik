@@ -1001,13 +1001,13 @@
       SUBROUTINE fteik_evaluateSweep1LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep1LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep1Slowness64fF, & 
                                  fteik_prefetchSweep1TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd1, lupdInit1, ijkv1, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -1317,13 +1317,13 @@
       SUBROUTINE fteik_evaluateSweep2LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep2LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep2Slowness64fF, & 
                                  fteik_prefetchSweep2TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd2, lupdInit2, ijkv2, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -1633,13 +1633,13 @@
       SUBROUTINE fteik_evaluateSweep3LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep3LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep3Slowness64fF, & 
                                  fteik_prefetchSweep3TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd3, lupdInit3, ijkv3, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -1949,13 +1949,13 @@
       SUBROUTINE fteik_evaluateSweep4LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep4LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep4Slowness64fF, & 
                                  fteik_prefetchSweep4TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd4, lupdInit4, ijkv4, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -2265,13 +2265,13 @@
       SUBROUTINE fteik_evaluateSweep5LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep5LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep5Slowness64fF, & 
                                  fteik_prefetchSweep5TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd5, lupdInit5, ijkv5, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -2581,13 +2581,13 @@
       SUBROUTINE fteik_evaluateSweep6LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep6LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep6Slowness64fF, & 
                                  fteik_prefetchSweep6TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd6, lupdInit6, ijkv6, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -2897,13 +2897,13 @@
       SUBROUTINE fteik_evaluateSweep7LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep7LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
                                        fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep7Slowness64fF, & 
                                  fteik_prefetchSweep7TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd7, lupdInit7, ijkv7, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1
@@ -3213,13 +3213,13 @@
       SUBROUTINE fteik_evaluateSweep8LS64fF(linitk, ttimes, ierr) &
       BIND(C, NAME='fteik_evaluateSweep8LS64fF')
       USE ISO_C_BINDING
-      USE FTEIK_LOCALSOLVER64F, ONLY : fteik_localSolver_noInit64fF, &
-                                       fteik_localSolver_init64fF
+      USE FTEIK_LOCALSOLVER3D64F, ONLY : fteik_localSolver_noInit64fF, &
+                                         fteik_localSolver_init64fF
       !USE FTEIK_UTILS64F, ONLY : fteik_localSolver64fF, fteik_localSolverExplicit64fF, &
       !                           fteik_localSolverNoInit64fF, fteik_localSolverInit64fF
       USE FTEIK_AUTOCODE, ONLY : fteik_prefetchSweep8Slowness64fF, & 
                                  fteik_prefetchSweep8TravelTimes64fF
-      USE FTEIK_SOLVER64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, nLevels
       !USE FTEIK_UTILS64F, ONLY : levelPtr, lupd8, lupdInit8, ijkv8, slow, &
       !                           nLevels
       USE FTEIK_MODEL64F, ONLY : slow, dx, dy, dz, nx, ny, nz, nzx, nzm1, nzm1_nxm1

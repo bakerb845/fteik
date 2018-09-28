@@ -196,9 +196,9 @@ MODULE FTEIK_H5IO64F
 !>    @ingroup h5io
       INTEGER(C_INT) FUNCTION fteik_h5io_writeLevelSchedulesF( ) &
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeLevelSchedulesF')
-      USE FTEIK_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
-                                  ijkv5, ijkv6, ijkv7, ijkv8,    &
-                                  levelPtr, nLevels
+      USE FTEIK3D_SOLVER64F, ONLY : ijkv1, ijkv2, ijkv3, ijkv4,    &
+                                    ijkv5, ijkv6, ijkv7, ijkv8,    &
+                                    levelPtr, nLevels
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lhaveModel, lis3dModel
       USE ISO_C_BINDING
       IMPLICIT NONE
@@ -271,8 +271,8 @@ MODULE FTEIK_H5IO64F
       RESULT(ierr) BIND(C, NAME='fteik_h5io_writeTravelTimesF')
       !USE FTEIK_MODEL64F, ONLY : fteik_model_grid2indexF !fteik_model_grid2indexF
       USE FTEIK_MODEL64F, ONLY : nz, nx, ny, ngrd, lis3dModel
-      USE FTEIK_SOLVER64F, ONLY : ttimes3d => ttimes
-      USE FTEIK_SOLVER64F, ONlY : lhaveTimes3d => lhaveTimes
+      USE FTEIK3D_SOLVER64F, ONLY : ttimes3d => ttimes
+      USE FTEIK3D_SOLVER64F, ONLY : lhaveTimes3d => lhaveTimes
       USE FTEIK2D_SOLVER64F, ONLY : ttimes2d => ttimes
       USE FTEIK2D_SOLVER64F, ONLY : lhaveTimes2d => lhaveTimes
       USE ISO_C_BINDING
