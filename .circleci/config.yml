@@ -38,6 +38,7 @@ jobs:
             -DCMAKE_C_FLAGS="-g -O2 -Wall -std=c11" \
             -DCMAKE_Fortran_FLAGS="-g -O2 -fbounds-check -Wall -m64" \
             -DFTEIK_USE_INTEL=TRUE \
+            -DIPP_INCLUDE_DIR=/opt/intel/ipp/include \
             -DIPP_LIBRARY="${IPP_LIB_ROOT}/libipps.so;${IPP_LIB_ROOT}/libippvm.so;${IPP_LIB_ROOT}/libippcore.so"
       - run:
           name: Build
