@@ -27,7 +27,7 @@ IF (OPENMP_FOUND)
 ENDIF()
 
 SET(ORIGINAL_SRC refsrc/fteik.f90 refsrc/fteik2d.F90 refsrc/lay2vel.f90)
-SET(UTILS_SRC h5io.c h5io.F90 io.c memory.F90 os.c xdmf.c)# xdmfOri.c)
+SET(UTILS_SRC io.c memory.F90 os.c)# xdmfOri.c)
 # Order matters here
 SET(F90_SRC constants.F90 ipps.F90 model.F90 source.F90
             receiver.F90 localSolver.F90 rays.F90
@@ -35,6 +35,7 @@ SET(F90_SRC constants.F90 ipps.F90 model.F90 source.F90
 SET(NEW_SRC fwrapper.c sort.c ${F90_SRC} modules.F90 graph3d.F90
             autoCode.f90 fteik_utils.F90 solveEikonal.F90 analytic.F90)
 IF (FTEIK_USE_H5)
+   SET(UTILS_SRC ${UTILS_SRC} h5io.c h5io.F90 xdmf.c)
    SET(NEW_SRC ${NEW_SRC} h5io_utils.c)
 ENDIF (FTEIK_USE_H5)
 #IF (FTEIK_USE_MPI)

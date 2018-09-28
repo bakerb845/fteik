@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <limits.h>
 #include "fteik/fteik_config.h"
+
+#ifdef FTEIK_USE_H5
 #include <hdf5.h>
 
 struct xdmf_struct
@@ -65,5 +67,6 @@ int fteik_xdmf_finalize(struct xdmf_struct *xdmf);
 
 #ifdef __cplusplus
 }
+#endif
 #endif
 #endif
